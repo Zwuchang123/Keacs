@@ -5,7 +5,7 @@
 | 项目 | 规范 |
 | --- | --- |
 | 产品气质 | 简单、轻量、清爽、可信赖 |
-| 图片风格 | 浅色背景、蓝色主操作、白色圆角卡片、彩色圆形分类图标、底部导航、轻阴影、低干扰图表 |
+| 图片风格 | 浅色背景、蓝色主操作、近白圆角卡片、彩色圆形分类图标、底部导航、轻阴影、低干扰图表 |
 | 设计关键词 | Clean Mobile、Soft Cards、Finance Minimal、Fast Entry |
 | 首屏目标 | 看余额、看最近记录、快速记账 |
 | 禁止出现 | 登录、云同步、会员、营销横幅、复杂理财入口、装饰性插画堆叠 |
@@ -17,12 +17,13 @@
 | Primary | `#3F82F6` | 主按钮、选中态、重点图表线 |
 | Primary Light | `#EAF2FF` | 选中背景、浅蓝提示 |
 | Background | `#F6F8FC` | 页面背景 |
-| Surface | `#FFFFFF` | 卡片、输入框、列表 |
-| Surface Subtle | `#F1F3F7` | 分段控件、键盘块、搜索框 |
+| Surface | `#FCFDFF` | 卡片、输入框、列表 |
+| Surface Subtle | `#F1F4F8` | 分段控件、键盘块、搜索框 |
 | Text Primary | `#1F2937` | 主文字、金额 |
 | Text Secondary | `#6B7280` | 副标题、说明值 |
 | Text Tertiary | `#A0A7B3` | 占位、弱信息 |
-| Border | `#E9EDF3` | 分割线、输入框边 |
+| Border | `#E6EBF2` | 分割线、输入框边 |
+| Focus | `#2563EB` | 焦点环、键盘选中态 |
 | Income | `#35C785` | 收入、正向金额 |
 | Expense | `#FF5A5F` | 支出、负向金额 |
 | Warning | `#FFB020` | 导入确认、风险提示 |
@@ -83,7 +84,7 @@
 - 顶部保留系统状态栏安全距离。
 - 内容区底部避开底部导航和键盘。
 - 页面背景统一使用 `Background`。
-- 主要内容使用白色卡片或白色列表区。
+- 主要内容使用近白卡片或近白列表区。
 - 页面标题居中或左对齐保持同页一致。
 
 ### 首页
@@ -146,7 +147,7 @@
 | `KeacsScaffold` | 页面外壳、背景、状态栏、底部安全区 |
 | `KeacsTopBar` | 返回、标题、右侧操作 |
 | `KeacsBottomBar` | 首页、账单、新增、图表、我的 |
-| `KeacsCard` | 白底、`12dp` 圆角、轻阴影 |
+| `KeacsCard` | 近白底、`12dp` 圆角、轻阴影 |
 | `OverviewCard` | 蓝底、余额、收入、支出 |
 | `QuickActionGrid` | 2-4 个快捷入口，不超过 4 个 |
 | `RecordListItem` | 固定高度不小于 `64dp` |
@@ -161,12 +162,17 @@
 | `ConfirmDialog` | 标题、正文、取消、确认 |
 | `KeacsSnackbar` | 保存失败、导入失败、删除完成 |
 
+### 组件状态
+
+- 所有可点击组件必须包含默认、按下、焦点、禁用、加载、错误状态；禁用状态仍需可读。
+- 同类操作只使用一种组件样式，焦点颜色使用 `Focus`。
+
 ## 7. 图标
 
 | 场景 | 规范 |
 | --- | --- |
-| 图标来源 | Material Symbols 或 Material Icons |
-| 图标风格 | 线性、圆角、统一线宽 |
+| 图标来源 | Compose Material Icons Rounded |
+| 图标风格 | 圆角、统一线宽，全局只使用同一套 |
 | 常规尺寸 | `24dp` |
 | 分类图标 | `20dp`，白色，放入 `40dp` 圆形底 |
 | 底部导航 | `24dp`，选中蓝色，未选中灰色 |
@@ -175,7 +181,7 @@
 ### 业务图标映射
 
 - 导航：首页 `home`、账单 `receipt_long`、新增 `add`、图表 `monitoring`、我的 `person`。
-- 操作：搜索 `search`、更多 `more_horiz`、返回 `arrow_back`、保存使用文本按钮。
+- 操作：搜索 `search`、更多 `more_horiz`、返回 `AutoMirrored.Rounded.ArrowBack`、保存使用文本按钮。
 - 分类：餐饮 `restaurant`、交通 `directions_bus`、购物 `shopping_bag`、住房 `home`、娱乐 `sports_esports`、医疗 `local_hospital`、教育 `school`、工资 `work`、其他 `category`。
 - 账户：现金 `payments`、银行卡 `credit_card`、钱包 `account_balance_wallet`。
 
@@ -186,7 +192,7 @@
 | 页面进入 | `220ms` | `fadeIn + slideInHorizontally` |
 | 页面退出 | `180ms` | `fadeOut + slideOutHorizontally` |
 | 卡片出现 | `180ms` | `fadeIn + slideInVertically(8dp)` |
-| 列表增删 | `180ms` | `animateItemPlacement` |
+| 列表增删 | `180ms` | 使用 Compose 官方 LazyList 项位移动画 |
 | 分段切换 | `160ms` | 背景滑动、文字变色 |
 | 按钮按下 | `80ms` | 透明度或涟漪反馈 |
 | 金额变化 | `180ms` | 数字淡入，不滚动跳字 |
@@ -196,9 +202,10 @@
 ### 动效限制
 
 - 只使用 Compose Animation。
-- Lottie 只用于空状态、导入导出结果、一次性成功反馈。
+- Lottie 不默认引入；仅在不明显增加体积时用于导入导出结果等一次性反馈。
 - 禁止循环装饰动画。
 - 禁止缩放导致布局跳动。
+- 只动画透明度、位移和颜色，避免动画改变布局尺寸。
 - 遵循系统“移除动画”和动画缩放设置。
 
 ## 9. 图表
@@ -268,8 +275,8 @@
 | --- | --- | --- |
 | 组件 | Jetpack Compose Material 3 | https://developer.android.com/develop/ui/compose/designsystems/material3 |
 | 组件规范 | Material Design 3 Components | https://m3.material.io/components |
-| 图标 | Material Symbols | https://fonts.google.com/icons |
-| 图标说明 | Material Symbols Guide | https://developers.google.com/fonts/docs/material_symbols |
+| 图标 | Compose Material Icons | https://developer.android.com/reference/kotlin/androidx/compose/material/icons/Icons |
+| 圆角图标 | Icons.Rounded | https://developer.android.com/reference/kotlin/androidx/compose/material/icons/Icons.Rounded |
 | 动画 | Compose Animation | https://developer.android.com/develop/ui/compose/animation/introduction |
 | 动画素材 | Lottie Android | https://github.com/airbnb/lottie-android |
 | 图表 | Vico Compose Charts | https://guide.vico.patrykandpatrick.com/android/compose/overview |
