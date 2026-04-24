@@ -21,6 +21,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { fileURLToPath } from 'node:url';
 import { parseDesignMd } from './design-parser.mjs';
+import { loadContext } from './load-context.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // PID file in the project root so both the server and agent can find it
@@ -108,14 +109,7 @@ function loadBrowserScripts() {
 }
 
 function hasProjectContext() {
-  // PRODUCT.md carries brand voice / anti-references — that's what determines
-  // whether variants are brand-aware. DESIGN.md (visual tokens) is a separate
-  // concern, surfaced by the design panel's own empty state. Legacy
-  // .impeccable.md is auto-migrated to PRODUCT.md by load-context.mjs.
-  try {
-    fs.accessSync(path.join(process.cwd(), 'PRODUCT.md'), fs.constants.R_OK);
-    return true;
-  } catch { return false; }
+  return loadContext(process.cwd()).hasProduct;
 }
 
 function statOrNull(filePath) {
@@ -315,7 +309,8 @@ function createRequestHandler({ detectScript, livePath }) {
       const token = url.searchParams.get('token');
       if (token !== state.token) { res.writeHead(401); res.end('Unauthorized'); return; }
 
-      const mdPath = path.join(process.cwd(), 'DESIGN.md');
+      const ctx = loadContext(process.cwd());
+      const mdPath = ctx.designPath ? path.join(process.cwd(), ctx.designPath) : path.join(process.cwd(), 'DESIGN.md');
       const jsonPath = path.join(process.cwd(), 'DESIGN.json');
       const mdStat = statOrNull(mdPath);
       const jsonStat = statOrNull(jsonPath);

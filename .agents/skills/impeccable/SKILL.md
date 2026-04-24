@@ -11,10 +11,12 @@ Two steps before any design work. Both are required. Skipping either produces ge
 
 ### 1. Context gathering
 
-Two files at the project root, case-insensitive:
+Two project context files:
 
-- **PRODUCT.md** — required. Users, brand, tone, anti-references, strategic principles.
-- **DESIGN.md** — optional, strongly recommended. Colors, typography, elevation, components.
+- **docs/prd.md** — required. Users, brand, tone, anti-references, strategic principles.
+- **docs/design.md** — optional, strongly recommended. Colors, typography, elevation, components.
+
+Root-level **PRODUCT.md** and **DESIGN.md** remain fallback-compatible for projects that use the original Impeccable convention.
 
 Load both in one call:
 
@@ -28,9 +30,9 @@ If the output is already in this session's conversation history, don't re-run. E
 
 `$impeccable live` already warms context via `live.mjs` — if you've run `live.mjs`, don't also run `load-context.mjs` this session.
 
-If PRODUCT.md is missing, empty, or placeholder (`[TODO]` markers, <200 chars): run `$impeccable teach`, then resume the user's original task with the fresh context.
+If product context is missing, empty, or placeholder (`[TODO]` markers, <200 chars): run `$impeccable teach`, then resume the user's original task with the fresh context.
 
-If DESIGN.md is missing: nudge once per session (*"Run `$impeccable document` for more on-brand output"*), then proceed.
+If design context is missing: nudge once per session (*"Run `$impeccable document` for more on-brand output"*), then proceed.
 
 ### 2. Register
 

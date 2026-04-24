@@ -6,31 +6,30 @@
  *
  * Output (JSON to stdout):
  *   {
- *     hasProduct: boolean,        // PRODUCT.md found (or auto-migrated)
- *     product: string | null,     // PRODUCT.md contents
+ *     hasProduct: boolean,        // product context found (or auto-migrated)
+ *     product: string | null,     // product context contents
  *     productPath: string | null, // relative path
- *     hasDesign: boolean,         // DESIGN.md found
- *     design: string | null,      // DESIGN.md contents
+ *     hasDesign: boolean,         // design context found
+ *     design: string | null,      // design context contents
  *     designPath: string | null,
  *     migrated: boolean,          // true if we auto-renamed .impeccable.md -> PRODUCT.md
  *   }
  *
- * Filename matching is case-insensitive for PRODUCT.md and DESIGN.md. The
- * Google DESIGN.md convention is uppercase at repo root; Kiro-style and
- * lowercase variants are also matched so users don't get punished for case.
+ * This project keeps product and design context under docs/. Root-level
+ * PRODUCT.md / DESIGN.md remain fallback-compatible for the original skill.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 
-const PRODUCT_NAMES = ['PRODUCT.md', 'Product.md', 'product.md'];
-const DESIGN_NAMES = ['DESIGN.md', 'Design.md', 'design.md'];
+const PRODUCT_NAMES = ['docs/prd.md', 'docs/PRD.md', 'PRODUCT.md', 'Product.md', 'product.md'];
+const DESIGN_NAMES = ['docs/design.md', 'docs/DESIGN.md', 'DESIGN.md', 'Design.md', 'design.md'];
 const LEGACY_NAMES = ['.impeccable.md'];
 
 export function loadContext(cwd = process.cwd()) {
   let migrated = false;
 
-  // 1. Look for PRODUCT.md (case-insensitive)
+  // 1. Look for product context
   let productPath = firstExisting(cwd, PRODUCT_NAMES);
 
   // 2. Legacy: if no PRODUCT.md but .impeccable.md exists, rename in place
@@ -49,7 +48,7 @@ export function loadContext(cwd = process.cwd()) {
     }
   }
 
-  // 3. DESIGN.md (case-insensitive)
+  // 3. Look for design context
   const designPath = firstExisting(cwd, DESIGN_NAMES);
 
   const product = productPath ? safeRead(productPath) : null;
