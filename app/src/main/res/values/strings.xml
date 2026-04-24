@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Keacs</string>
+    <string name="nav_home">首页</string>
+    <string name="nav_records">账单</string>
+    <string name="nav_add">新增</string>
+    <string name="nav_stats">统计</string>
+    <string name="nav_mine">我的</string>
+    <string name="nav_to_home">切换到首页</string>
+    <string name="nav_to_records">切换到账单</string>
+    <string name="nav_to_add">切换到新增</string>
+    <string name="nav_to_stats">切换到统计</string>
+    <string name="nav_to_mine">切换到我的</string>
+</resources>
