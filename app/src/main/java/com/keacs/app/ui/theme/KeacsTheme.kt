@@ -1,6 +1,6 @@
 package com.keacs.app.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -24,25 +24,39 @@ object KeacsColors {
     val TextSecondary = Color(0xFF6B7280)
     val TextTertiary = Color(0xFFA0A7B3)
     val Border = Color(0xFFE6EBF2)
-    val Focus = Color(0xFF2563EB)
     val Income = Color(0xFF35C785)
     val Expense = Color(0xFFFF5A5F)
     val Warning = Color(0xFFFFB020)
     val Error = Color(0xFFE5484D)
+
+    val CategoryOrange = Color(0xFFFFB45F)
+    val CategoryGreen = Color(0xFF54C88A)
+    val CategoryBlue = Color(0xFF5B8EF7)
+    val CategoryPurple = Color(0xFFA77CF8)
+    val CategoryGray = Color(0xFFE9EDF3)
 }
 
 object KeacsSpacing {
     val PageHorizontal = 16.dp
+    val PageVertical = 12.dp
+    val Section = 12.dp
     val CardPadding = 16.dp
-    val Section = 16.dp
-    val ListItem = 8.dp
-    val ControlGap = 12.dp
+    val ControlGap = 10.dp
+    val ItemGap = 8.dp
 }
 
 object KeacsRadius {
-    val Card = 12.dp
-    val Input = 8.dp
-    val Button = 10.dp
+    val Card = 14.dp
+    val Input = 10.dp
+    val Button = 12.dp
+    val Pill = 18.dp
+}
+
+object KeacsSize {
+    val MinTouch = 48.dp
+    val CategoryIcon = 40.dp
+    val BottomBarHeight = 82.dp
+    val AddButton = 56.dp
 }
 
 private val LightColors: ColorScheme = lightColorScheme(
@@ -88,6 +102,12 @@ private val KeacsTypography = Typography(
         fontWeight = FontWeight.Normal,
         lineHeight = 17.sp,
     ),
+    labelMedium = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium,
+        lineHeight = 18.sp,
+    ),
     labelSmall = TextStyle(
         fontFamily = FontFamily.Default,
         fontSize = 11.sp,
@@ -109,17 +129,15 @@ private val KeacsTypography = Typography(
 )
 
 private val KeacsShapes = Shapes(
-    extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(KeacsRadius.Input),
-    small = androidx.compose.foundation.shape.RoundedCornerShape(KeacsRadius.Input),
-    medium = androidx.compose.foundation.shape.RoundedCornerShape(KeacsRadius.Button),
-    large = androidx.compose.foundation.shape.RoundedCornerShape(KeacsRadius.Card),
+    extraSmall = RoundedCornerShape(KeacsRadius.Input),
+    small = RoundedCornerShape(KeacsRadius.Input),
+    medium = RoundedCornerShape(KeacsRadius.Button),
+    large = RoundedCornerShape(KeacsRadius.Card),
+    extraLarge = RoundedCornerShape(KeacsRadius.Pill),
 )
 
 @Composable
-fun KeacsTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit,
-) {
+fun KeacsTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = LightColors,
         typography = KeacsTypography,

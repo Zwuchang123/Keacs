@@ -2,6 +2,12 @@ package com.keacs.app.ui
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CalendarToday
+import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,14 +24,27 @@ import com.keacs.app.ui.record.AddRecordScreen
 import com.keacs.app.ui.record.RecordScreen
 import com.keacs.app.ui.settings.MineScreen
 import com.keacs.app.ui.stats.StatsScreen
+import com.keacs.app.ui.theme.KeacsColors
 
 @Composable
 fun KeacsApp() {
     var currentRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
     val currentDestination = destinationForRoute(currentRoute)
+    val screenTitle = if (currentDestination == KeacsDestination.Add) {
+        "新增记录"
+    } else {
+        stringResource(currentDestination.titleRes)
+    }
 
     KeacsScaffold(
-        title = stringResource(currentDestination.titleRes),
+        title = screenTitle,
+        showBack = currentDestination == KeacsDestination.Add,
+        actionText = if (currentDestination == KeacsDestination.Add) "保存" else null,
+        actionEnabled = false,
+        onBackClick = { currentRoute = KeacsDestination.Home.route },
+        actions = {
+            TopActions(destination = currentDestination)
+        },
         bottomBar = {
             KeacsBottomBar(
                 currentDestination = currentDestination,
@@ -51,9 +70,45 @@ fun KeacsApp() {
                 )
 
                 KeacsDestination.Add -> AddRecordScreen()
-                KeacsDestination.Stats -> StatsScreen()
+                KeacsDestination.Stats -> StatsScreen(onAddClick = { currentRoute = KeacsDestination.Add.route })
                 KeacsDestination.Mine -> MineScreen()
             }
         }
+    }
+}
+
+@Composable
+private fun TopActions(destination: KeacsDestination) {
+    when (destination) {
+        KeacsDestination.Home -> {
+            IconButton(onClick = {}) {
+                Icon(
+                    imageVector = Icons.Rounded.CalendarToday,
+                    contentDescription = "打开日历",
+                    tint = KeacsColors.TextPrimary,
+                )
+            }
+        }
+
+        KeacsDestination.Records -> {
+            IconButton(onClick = {}) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = "搜索账单",
+                    tint = KeacsColors.TextPrimary,
+                )
+            }
+            IconButton(onClick = {}) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreHoriz,
+                    contentDescription = "更多操作",
+                    tint = KeacsColors.TextPrimary,
+                )
+            }
+        }
+
+        KeacsDestination.Add,
+        KeacsDestination.Stats,
+        KeacsDestination.Mine -> Unit
     }
 }

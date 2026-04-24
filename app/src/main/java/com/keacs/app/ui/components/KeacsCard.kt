@@ -1,5 +1,6 @@
 package com.keacs.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Card
@@ -22,6 +23,7 @@ fun KeacsCard(
             containerColor = KeacsColors.Surface,
             contentColor = KeacsColors.TextPrimary,
         ),
+        border = BorderStroke(0.5.dp, KeacsColors.Border),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         content(contentPadding)

@@ -19,7 +19,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -30,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.keacs.app.ui.navigation.KeacsDestination
 import com.keacs.app.ui.navigation.bottomDestinations
 import com.keacs.app.ui.theme.KeacsColors
+import com.keacs.app.ui.theme.KeacsSize
 import com.keacs.app.ui.theme.icon
 
 @Composable
@@ -39,13 +39,13 @@ fun KeacsBottomBar(
 ) {
     Surface(
         color = KeacsColors.Surface,
-        shadowElevation = 2.dp,
+        shadowElevation = 3.dp,
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(82.dp),
+                .height(KeacsSize.BottomBarHeight),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -80,12 +80,9 @@ private fun BottomDestinationItem(
 
     Column(
         modifier = Modifier
-            .size(width = 58.dp, height = 64.dp)
+            .size(width = 58.dp, height = 62.dp)
             .clip(MaterialTheme.shapes.medium)
-            .clickable(
-                role = Role.Tab,
-                onClick = onClick,
-            )
+            .clickable(role = Role.Tab, onClick = onClick)
             .semantics {
                 contentDescription = description
                 this.selected = selected
@@ -97,7 +94,7 @@ private fun BottomDestinationItem(
             imageVector = destination.icon(),
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(23.dp),
         )
         Text(
             text = label,
@@ -120,10 +117,7 @@ private fun AddDestinationItem(
     Column(
         modifier = Modifier
             .size(width = 64.dp, height = 74.dp)
-            .clickable(
-                role = Role.Tab,
-                onClick = onClick,
-            )
+            .clickable(role = Role.Tab, onClick = onClick)
             .semantics {
                 contentDescription = description
                 this.selected = selected
@@ -133,9 +127,9 @@ private fun AddDestinationItem(
     ) {
         Box(
             modifier = Modifier
-                .size(56.dp)
+                .size(KeacsSize.AddButton)
                 .clip(CircleShape)
-                .background(if (selected) KeacsColors.Focus else KeacsColors.Primary),
+                .background(KeacsColors.Primary),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -147,8 +141,9 @@ private fun AddDestinationItem(
         }
         Text(
             text = label,
-            color = if (selected) KeacsColors.Focus else KeacsColors.TextSecondary,
+            color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
             style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
         )
     }
 }

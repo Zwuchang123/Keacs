@@ -1,38 +1,40 @@
 package com.keacs.app.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
-import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.BarChart
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.EmptyState
 import com.keacs.app.ui.components.KeacsCard
-import com.keacs.app.ui.theme.AccountIcon
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 
@@ -48,11 +50,11 @@ fun HomeScreen(
             .fillMaxSize()
             .testTag("screen-home")
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.Section),
+            .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
-        OverviewCard()
-        QuickActionRow(
+        OverviewCard(onClick = onStatsClick)
+        QuickActionCard(
             onAddClick = onAddClick,
             onRecordsClick = onRecordsClick,
             onStatsClick = onStatsClick,
@@ -63,14 +65,17 @@ fun HomeScreen(
 }
 
 @Composable
-private fun OverviewCard() {
+private fun OverviewCard(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .clipLarge()
             .background(
-                color = KeacsColors.Primary,
-                shape = MaterialTheme.shapes.large,
+                Brush.verticalGradient(
+                    listOf(Color(0xFF65A2FF), KeacsColors.Primary),
+                ),
             )
+            .clickable(onClick = onClick)
             .padding(KeacsSpacing.CardPadding),
     ) {
         Column {
@@ -86,14 +91,13 @@ private fun OverviewCard() {
                 style = MaterialTheme.typography.displaySmall,
                 fontFamily = FontFamily.Monospace,
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                AmountSummary(label = "收入", amount = "¥0.00", color = KeacsColors.PrimaryLight)
-                AmountSummary(label = "支出", amount = "¥0.00", color = KeacsColors.PrimaryLight)
-                AmountSummary(label = "净资产", amount = "¥0.00", color = KeacsColors.PrimaryLight)
+                AmountSummary(label = "收入", amount = "¥0.00", color = KeacsColors.Income)
+                AmountSummary(label = "支出", amount = "¥0.00", color = KeacsColors.Expense)
             }
         }
     }
@@ -103,17 +107,17 @@ private fun OverviewCard() {
 private fun AmountSummary(
     label: String,
     amount: String,
-    color: androidx.compose.ui.graphics.Color,
+    color: Color,
 ) {
     Column {
         Text(
             text = label,
-            color = color,
+            color = KeacsColors.PrimaryLight,
             style = MaterialTheme.typography.bodySmall,
         )
         Text(
             text = amount,
-            color = KeacsColors.Surface,
+            color = color,
             style = MaterialTheme.typography.titleMedium,
             fontFamily = FontFamily.Monospace,
         )
@@ -121,40 +125,24 @@ private fun AmountSummary(
 }
 
 @Composable
-private fun QuickActionRow(
+private fun QuickActionCard(
     onAddClick: () -> Unit,
     onRecordsClick: () -> Unit,
     onStatsClick: () -> Unit,
     onMineClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        QuickAction(
-            text = "记一笔",
-            icon = Icons.Rounded.Add,
-            onClick = onAddClick,
-            modifier = Modifier.weight(1f),
-        )
-        QuickAction(
-            text = "账单",
-            icon = Icons.AutoMirrored.Rounded.ReceiptLong,
-            onClick = onRecordsClick,
-            modifier = Modifier.weight(1f),
-        )
-        QuickAction(
-            text = "图表",
-            icon = Icons.Rounded.BarChart,
-            onClick = onStatsClick,
-            modifier = Modifier.weight(1f),
-        )
-        QuickAction(
-            text = "账户",
-            icon = AccountIcon,
-            onClick = onMineClick,
-            modifier = Modifier.weight(1f),
-        )
+    KeacsCard(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(it),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            QuickAction("记账", Icons.Rounded.Edit, KeacsColors.Primary, onAddClick)
+            QuickAction("账户", Icons.Rounded.AccountBalanceWallet, KeacsColors.Income, onMineClick)
+            QuickAction("图表", Icons.Rounded.BarChart, KeacsColors.Warning, onStatsClick)
+            QuickAction("更多", Icons.Rounded.MoreHoriz, KeacsColors.TextSecondary, onRecordsClick)
+        }
     }
 }
 
@@ -162,34 +150,28 @@ private fun QuickActionRow(
 private fun QuickAction(
     text: String,
     icon: ImageVector,
+    color: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.height(72.dp),
-        shape = MaterialTheme.shapes.medium,
+    Column(
+        modifier = Modifier
+            .height(76.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(KeacsColors.PrimaryLight, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = KeacsColors.Primary,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(text = text, style = MaterialTheme.typography.labelSmall)
-        }
+        CategoryIcon(
+            icon = icon,
+            backgroundColor = color.copy(alpha = 0.14f),
+            tint = color,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = text,
+            color = KeacsColors.TextPrimary,
+            style = MaterialTheme.typography.labelMedium,
+        )
     }
 }
 
@@ -211,17 +193,25 @@ private fun RecentRecords(onAddClick: () -> Unit) {
                     color = KeacsColors.TextPrimary,
                     style = MaterialTheme.typography.titleMedium,
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "查看更多",
+                    color = KeacsColors.TextTertiary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
-            Spacer(modifier = Modifier.height(18.dp))
             EmptyState(
-                title = "还没有账单",
+                title = "暂无记录",
+                description = "快去记一笔吧，养成记账习惯",
                 actionText = "记一笔",
+                icon = Icons.AutoMirrored.Rounded.ReceiptLong,
                 onActionClick = onAddClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(156.dp),
+                    .height(226.dp),
             )
         }
     }
 }
+
+@Composable
+private fun Modifier.clipLarge(): Modifier = clip(MaterialTheme.shapes.large)
