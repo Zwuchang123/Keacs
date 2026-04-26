@@ -9,6 +9,10 @@ import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.local.entity.CategoryEntity
 import com.keacs.app.data.local.entity.RecordEntity
 import com.keacs.app.data.repository.LocalDataRepository
+import com.keacs.app.domain.model.RecordType
+import com.keacs.app.domain.rule.balanceFor
+import com.keacs.app.domain.rule.totalExpense
+import com.keacs.app.domain.rule.totalIncome
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -174,5 +178,60 @@ class KeacsDatabaseTest {
 
         assertEquals(0, database.categoryDao().count())
         assertEquals(0, database.recordDao().count())
+    }
+
+    @Test
+    fun recordRulesAffectBalancesAndBasicStats() = runTest {
+        repository.initializePresets()
+        val incomeCategory = repository.getCategories().first { it.name == "工资" }
+        val expenseCategory = repository.getCategories().first { it.name == "餐饮" }
+        val asset = repository.getAccounts().first { it.name == "现金" }
+        val liability = repository.getAccounts().first { it.name == "信用卡" }
+
+        repository.saveRecord(null, RecordType.INCOME, 10_000, 1_000, incomeCategory.id, null, asset.id, "")
+        repository.saveRecord(null, RecordType.EXPENSE, 2_500, 1_000, expenseCategory.id, asset.id, null, "")
+        repository.saveRecord(null, RecordType.EXPENSE, 5_000, 1_000, expenseCategory.id, liability.id, null, "")
+        repository.saveRecord(null, RecordType.INCOME, 1_000, 1_000, incomeCategory.id, null, liability.id, "")
+        repository.saveRecord(null, RecordType.TRANSFER, 2_000, 1_000, null, asset.id, liability.id, "")
+        repository.saveRecord(null, RecordType.TRANSFER, 3_000, 1_000, null, liability.id, asset.id, "")
+
+        val records = repository.getRecords()
+
+        assertEquals(8_500, balanceFor(asset, records))
+        assertEquals(3_000, balanceFor(liability, records))
+        assertEquals(11_000, totalIncome(records))
+        assertEquals(7_500, totalExpense(records))
+    }
+
+    @Test
+    fun editingAndDeletingRecordRecalculatesBalance() = runTest {
+        repository.initializePresets()
+        val expenseCategory = repository.getCategories().first { it.name == "餐饮" }
+        val asset = repository.getAccounts().first { it.name == "现金" }
+
+        repository.saveRecord(null, RecordType.EXPENSE, 2_500, 1_000, expenseCategory.id, asset.id, null, "")
+        val record = repository.getRecords().first()
+        repository.saveRecord(record.id, RecordType.EXPENSE, 4_000, 1_000, expenseCategory.id, asset.id, null, "")
+
+        assertEquals(-4_000, balanceFor(asset, repository.getRecords()))
+
+        repository.deleteRecord(record.id)
+
+        assertEquals(0, balanceFor(asset, repository.getRecords()))
+        assertEquals(0, totalExpense(repository.getRecords()))
+    }
+
+    @Test
+    fun recordValidationRejectsInvalidInput() = runTest {
+        repository.initializePresets()
+        val expenseCategory = repository.getCategories().first { it.name == "餐饮" }
+        val asset = repository.getAccounts().first { it.name == "现金" }
+
+        assertEquals("金额大于0才可保存", runCatching {
+            repository.saveRecord(null, RecordType.EXPENSE, 0, 1_000, expenseCategory.id, asset.id, null, "")
+        }.exceptionOrNull()?.message)
+        assertEquals("转出和转入账户不能相同", runCatching {
+            repository.saveRecord(null, RecordType.TRANSFER, 100, 1_000, null, asset.id, asset.id, "")
+        }.exceptionOrNull()?.message)
     }
 }

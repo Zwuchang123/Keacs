@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.repository.LocalDataRepository
+import com.keacs.app.domain.rule.balanceFor
 import com.keacs.app.domain.usecase.AccountManagementUseCase
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.theme.KeacsColors
@@ -47,10 +48,11 @@ fun AccountListScreen(
     onEditAccount: (Long?) -> Unit,
 ) {
     val accounts by repository.observeAccounts().collectAsState(initial = emptyList())
+    val records by repository.observeRecords().collectAsState(initial = emptyList())
     val assets = accounts.filter { it.nature == PresetSeedData.ACCOUNT_ASSET }
     val liabilities = accounts.filter { it.nature == PresetSeedData.ACCOUNT_LIABILITY }
-    val totalAsset = assets.sumOf { it.initialBalanceCent }
-    val totalLiability = liabilities.sumOf { it.initialBalanceCent }
+    val totalAsset = assets.sumOf { balanceFor(it, records) }
+    val totalLiability = liabilities.sumOf { balanceFor(it, records) }
 
     Column(
         modifier = Modifier
@@ -61,8 +63,8 @@ fun AccountListScreen(
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
         AccountSummary(totalAsset = totalAsset, totalLiability = totalLiability)
-        AccountGroup("资产账户", assets, onEditAccount)
-        AccountGroup("负债账户", liabilities, onEditAccount)
+        AccountGroup("资产账户", assets, records, onEditAccount)
+        AccountGroup("负债账户", liabilities, records, onEditAccount)
         Button(onClick = { onEditAccount(null) }, modifier = Modifier.fillMaxWidth()) {
             Text("＋ 新增账户")
         }
@@ -200,6 +202,7 @@ private fun AccountSummary(totalAsset: Long, totalLiability: Long) {
 private fun AccountGroup(
     title: String,
     accounts: List<com.keacs.app.data.local.entity.AccountEntity>,
+    records: List<com.keacs.app.data.local.entity.RecordEntity>,
     onEditAccount: (Long?) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -213,7 +216,7 @@ private fun AccountGroup(
                         icon = iconFor(account.iconKey),
                         color = colorFor(account.colorKey),
                         enabled = account.isEnabled,
-                        trailing = formatCent(account.initialBalanceCent),
+                        trailing = formatCent(balanceFor(account, records)),
                         onClick = { onEditAccount(account.id) },
                     )
                     if (index != accounts.lastIndex) ListDivider()

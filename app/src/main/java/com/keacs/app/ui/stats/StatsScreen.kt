@@ -19,6 +19,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -26,14 +28,22 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.keacs.app.data.repository.LocalDataRepository
+import com.keacs.app.domain.rule.totalExpense
+import com.keacs.app.domain.rule.totalIncome
 import com.keacs.app.ui.components.EmptyState
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.SegmentedTabs
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
+import java.text.DecimalFormat
 
 @Composable
-fun StatsScreen() {
+fun StatsScreen(repository: LocalDataRepository) {
+    val records by repository.observeRecords().collectAsState(initial = emptyList())
+    val income = totalIncome(records)
+    val expense = totalExpense(records)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -44,7 +54,8 @@ fun StatsScreen() {
     ) {
         SegmentedTabs(items = listOf("支出", "收入", "资产"), selectedIndex = 0)
         MonthSelector()
-        TrendCard()
+        TrendCard(expense)
+        IncomeExpenseCard(income, expense)
         RankCard()
     }
 }
@@ -66,7 +77,7 @@ private fun MonthSelector() {
 }
 
 @Composable
-private fun TrendCard() {
+private fun TrendCard(expense: Long) {
     KeacsCard {
         Column(modifier = Modifier.padding(it)) {
             Text(
@@ -76,7 +87,7 @@ private fun TrendCard() {
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = "¥0.00",
+                text = formatCent(expense),
                 color = KeacsColors.TextPrimary,
                 style = MaterialTheme.typography.headlineSmall,
                 fontFamily = FontFamily.Monospace,
@@ -90,6 +101,30 @@ private fun TrendCard() {
                 style = MaterialTheme.typography.bodySmall,
             )
         }
+    }
+}
+
+@Composable
+private fun IncomeExpenseCard(income: Long, expense: Long) {
+    KeacsCard {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(it),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            StatAmount("收入", income, KeacsColors.Income)
+            StatAmount("支出", expense, KeacsColors.Expense)
+            StatAmount("结余", income - expense, KeacsColors.Primary)
+        }
+    }
+}
+
+@Composable
+private fun StatAmount(label: String, value: Long, color: androidx.compose.ui.graphics.Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+        Text(formatCent(value), color = color, style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
     }
 }
 
@@ -186,3 +221,6 @@ private fun RankCard() {
         }
     }
 }
+
+private fun formatCent(value: Long): String =
+    "¥" + DecimalFormat("#,##0.00").format(value / 100.0)

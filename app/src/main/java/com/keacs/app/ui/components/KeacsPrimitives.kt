@@ -227,61 +227,6 @@ fun AmountText(
 }
 
 @Composable
-fun NumberPad(
-    modifier: Modifier = Modifier,
-) {
-    val rows = listOf(
-        listOf("1", "2", "3", "⌫"),
-        listOf("4", "5", "6", "+"),
-        listOf("7", "8", "9", "-"),
-        listOf(".", "0", "保存"),
-    )
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        rows.forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                row.forEach { label ->
-                    NumberKey(
-                        label = label,
-                        modifier = Modifier.weight(if (label == "保存") 2f else 1f),
-                        enabled = label != "保存",
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun NumberKey(
-    label: String,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val background = if (enabled) KeacsColors.Surface else KeacsColors.SurfaceSubtle
-    val textColor = if (enabled) KeacsColors.TextPrimary else KeacsColors.TextTertiary
-    Box(
-        modifier = modifier
-            .height(44.dp)
-            .clip(MaterialTheme.shapes.medium)
-            .background(background),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            color = textColor,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-        )
-    }
-}
-
-@Composable
 fun DividedMenuCard(
     rows: @Composable ColumnScope.() -> Unit,
 ) {

@@ -42,6 +42,7 @@ fun KeacsApp(repository: LocalDataRepository) {
         currentRoute.startsWith(ROUTE_CATEGORY_EDIT) -> "编辑分类"
         currentRoute == ROUTE_ACCOUNT_LIST -> "账户管理"
         currentRoute.startsWith(ROUTE_ACCOUNT_EDIT) -> "编辑账户"
+        currentRoute.startsWith(ROUTE_RECORD_EDIT) -> "编辑账目"
         currentDestination == KeacsDestination.Add -> "新增记录"
         currentDestination != null -> stringResource(currentDestination.titleRes)
         else -> stringResource(destinationForRoute(currentRoute).titleRes)
@@ -54,8 +55,6 @@ fun KeacsApp(repository: LocalDataRepository) {
     KeacsScaffold(
         title = screenTitle,
         showBack = currentDestination == null || currentDestination == KeacsDestination.Add,
-        actionText = if (currentDestination == KeacsDestination.Add) "保存" else null,
-        actionEnabled = false,
         onBackClick = { currentRoute = backRoute(currentRoute) },
         actions = {
             currentDestination?.let { TopActions(destination = it) }
@@ -82,9 +81,15 @@ fun KeacsApp(repository: LocalDataRepository) {
                     onMineClick = { currentRoute = KeacsDestination.Mine.route },
                 )
 
-                route == KeacsDestination.Records.route -> RecordScreen()
-                route == KeacsDestination.Add.route -> AddRecordScreen(repository)
-                route == KeacsDestination.Stats.route -> StatsScreen()
+                route == KeacsDestination.Records.route -> RecordScreen(
+                    repository = repository,
+                    onEditRecord = { currentRoute = recordEditRoute(it) },
+                )
+                route == KeacsDestination.Add.route -> AddRecordScreen(
+                    repository = repository,
+                    onDone = { currentRoute = KeacsDestination.Records.route },
+                )
+                route == KeacsDestination.Stats.route -> StatsScreen(repository)
                 route == KeacsDestination.Mine.route -> MineScreen(
                     onCategoryClick = { currentRoute = ROUTE_CATEGORY_LIST },
                     onAccountClick = { currentRoute = ROUTE_ACCOUNT_LIST },
@@ -107,6 +112,11 @@ fun KeacsApp(repository: LocalDataRepository) {
                     accountId = routeId(route, ROUTE_ACCOUNT_EDIT),
                     onDone = { currentRoute = ROUTE_ACCOUNT_LIST },
                 )
+                route.startsWith(ROUTE_RECORD_EDIT) -> AddRecordScreen(
+                    repository = repository,
+                    recordId = routeId(route, ROUTE_RECORD_EDIT),
+                    onDone = { currentRoute = KeacsDestination.Records.route },
+                )
             }
         }
     }
@@ -116,10 +126,13 @@ private const val ROUTE_CATEGORY_LIST = "category-list"
 private const val ROUTE_CATEGORY_EDIT = "category-edit/"
 private const val ROUTE_ACCOUNT_LIST = "account-list"
 private const val ROUTE_ACCOUNT_EDIT = "account-edit/"
+private const val ROUTE_RECORD_EDIT = "record-edit/"
 
 private fun categoryEditRoute(id: Long?): String = ROUTE_CATEGORY_EDIT + (id?.toString() ?: "new")
 
 private fun accountEditRoute(id: Long?): String = ROUTE_ACCOUNT_EDIT + (id?.toString() ?: "new")
+
+private fun recordEditRoute(id: Long): String = ROUTE_RECORD_EDIT + id
 
 private fun routeId(route: String, prefix: String): Long? =
     route.removePrefix(prefix).takeIf { it != "new" }?.toLongOrNull()
@@ -128,6 +141,7 @@ private fun backRoute(route: String): String = when {
     route == KeacsDestination.Add.route -> KeacsDestination.Home.route
     route.startsWith(ROUTE_CATEGORY_EDIT) -> ROUTE_CATEGORY_LIST
     route.startsWith(ROUTE_ACCOUNT_EDIT) -> ROUTE_ACCOUNT_LIST
+    route.startsWith(ROUTE_RECORD_EDIT) -> KeacsDestination.Records.route
     route == ROUTE_CATEGORY_LIST || route == ROUTE_ACCOUNT_LIST -> KeacsDestination.Mine.route
     else -> KeacsDestination.Home.route
 }
