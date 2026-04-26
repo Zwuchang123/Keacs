@@ -36,6 +36,7 @@ import com.keacs.app.ui.theme.KeacsColors
 @Composable
 fun KeacsApp(repository: LocalDataRepository) {
     var currentRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
+    var accountDeleteRequest by rememberSaveable { mutableStateOf(0) }
     val currentDestination = bottomDestinations.firstOrNull { it.route == currentRoute }
     val screenTitle = when {
         currentRoute == ROUTE_CATEGORY_LIST -> "分类管理"
@@ -55,6 +56,8 @@ fun KeacsApp(repository: LocalDataRepository) {
     KeacsScaffold(
         title = screenTitle,
         showBack = currentDestination == null || currentDestination == KeacsDestination.Add,
+        actionText = if (isExistingAccountEditRoute(currentRoute)) "删除" else null,
+        onActionClick = { accountDeleteRequest += 1 },
         onBackClick = { currentRoute = backRoute(currentRoute) },
         actions = {
             currentDestination?.let { TopActions(destination = it) }
@@ -110,6 +113,7 @@ fun KeacsApp(repository: LocalDataRepository) {
                 route.startsWith(ROUTE_ACCOUNT_EDIT) -> AccountEditScreen(
                     repository = repository,
                     accountId = routeId(route, ROUTE_ACCOUNT_EDIT),
+                    deleteRequest = accountDeleteRequest,
                     onDone = { currentRoute = ROUTE_ACCOUNT_LIST },
                 )
                 route.startsWith(ROUTE_RECORD_EDIT) -> AddRecordScreen(
@@ -136,6 +140,9 @@ private fun recordEditRoute(id: Long): String = ROUTE_RECORD_EDIT + id
 
 private fun routeId(route: String, prefix: String): Long? =
     route.removePrefix(prefix).takeIf { it != "new" }?.toLongOrNull()
+
+private fun isExistingAccountEditRoute(route: String): Boolean =
+    route.startsWith(ROUTE_ACCOUNT_EDIT) && routeId(route, ROUTE_ACCOUNT_EDIT) != null
 
 private fun backRoute(route: String): String = when {
     route == KeacsDestination.Add.route -> KeacsDestination.Home.route

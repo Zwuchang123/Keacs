@@ -26,7 +26,6 @@ import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.model.RecordType
 import com.keacs.app.domain.usecase.DeleteRecordUseCase
-import com.keacs.app.ui.components.NumberPad
 import com.keacs.app.ui.components.SegmentedTabs
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
@@ -114,8 +113,6 @@ fun AddRecordScreen(
             } else {
                 CategoryGrid(availableCategories, categoryId) { categoryId = it }
             }
-            AmountArea(amount, parsedAmount)
-            RecordErrorText(validationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, error))
             FormArea(
                 accounts = enabledAccounts,
                 accountId = accountId,
@@ -139,12 +136,15 @@ fun AddRecordScreen(
                 )
             }
         }
-        NumberPad(
+        AmountKeyboardPanel(
             modifier = Modifier.padding(top = KeacsSpacing.ItemGap),
+            amount = amount,
+            parsedAmount = parsedAmount,
+            message = validationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, error),
             saveEnabled = canSave && !isSaving,
             onKeyClick = { key -> amount = nextAmount(amount, key); error = null },
             onSaveClick = {
-                val cents = parsedAmount ?: return@NumberPad
+                val cents = parsedAmount ?: return@AmountKeyboardPanel
                 scope.launch {
                     isSaving = true
                     runCatching {

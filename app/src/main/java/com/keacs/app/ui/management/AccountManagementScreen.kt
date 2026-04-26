@@ -1,6 +1,5 @@
 package com.keacs.app.ui.management
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,14 +28,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.rule.balanceFor
 import com.keacs.app.domain.usecase.AccountManagementUseCase
+import com.keacs.app.ui.components.AmountText
 import com.keacs.app.ui.components.KeacsCard
+import com.keacs.app.ui.components.NumberPad
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 import kotlinx.coroutines.launch
@@ -75,6 +78,7 @@ fun AccountListScreen(
 fun AccountEditScreen(
     repository: LocalDataRepository,
     accountId: Long?,
+    deleteRequest: Int = 0,
     onDone: () -> Unit,
 ) {
     val accounts by repository.observeAccounts().collectAsState(initial = emptyList())
@@ -91,6 +95,7 @@ fun AccountEditScreen(
     var isEnabled by rememberSaveable(accountId) { mutableStateOf(true) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var handledDeleteRequest by rememberSaveable(accountId) { mutableStateOf(deleteRequest) }
 
     LaunchedEffect(editing?.id) {
         editing?.let {
@@ -101,6 +106,13 @@ fun AccountEditScreen(
             iconKey = it.iconKey
             colorKey = it.colorKey
             isEnabled = it.isEnabled
+        }
+    }
+
+    LaunchedEffect(deleteRequest) {
+        if (deleteRequest > handledDeleteRequest && accountId != null) {
+            handledDeleteRequest = deleteRequest
+            confirmDelete = true
         }
     }
 
@@ -120,14 +132,17 @@ fun AccountEditScreen(
             ManagementTextField("账户名称", name, { name = it; error = null }, error = error)
             NatureSelector(nature) { nature = it }
             ManagementTextField("账户类型", type, { type = it }, error = null)
-            ManagementTextField("当前余额", balance, { balance = it; error = null }, error = null)
             SwitchCard(isEnabled, onCheckedChange = { isEnabled = it })
             ErrorText(error)
         }
-        ActionButtons(
-            deleteText = "删除账户",
-            saveText = "保存账户",
-            onDeleteClick = { confirmDelete = true },
+        AccountBalanceKeyboardPanel(
+            balance = balance,
+            error = balanceError(balance),
+            saveEnabled = name.isNotBlank() && parseCent(balance) != null,
+            onKeyClick = {
+                balance = nextBalanceAmount(balance, it)
+                error = null
+            },
             onSaveClick = {
                 scope.launch {
                     val cents = parseCent(balance)
@@ -141,7 +156,6 @@ fun AccountEditScreen(
                         .onFailure { error = it.message ?: "保存失败，请稍后重试" }
                 }
             },
-            saveEnabled = name.isNotBlank(),
         )
     }
 
@@ -249,6 +263,39 @@ private fun natureText(nature: String): String =
 private fun formatCent(value: Long): String =
     "¥" + DecimalFormat("#,##0.00").format(value / 100.0)
 
+@Composable
+private fun AccountBalanceKeyboardPanel(
+    balance: String,
+    error: String?,
+    saveEnabled: Boolean,
+    onKeyClick: (String) -> Unit,
+    onSaveClick: () -> Unit,
+) {
+    KeacsCard(contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(it),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text("当前余额", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+            AmountText(amount = balanceDisplay(balance))
+            Text(
+                text = error ?: " ",
+                color = KeacsColors.Error,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+            )
+            NumberPad(
+                saveEnabled = saveEnabled,
+                onKeyClick = onKeyClick,
+                onSaveClick = onSaveClick,
+            )
+        }
+    }
+}
+
 private fun centsToInput(value: Long): String =
     DecimalFormat("0.00").format(value / 100.0)
 
@@ -258,3 +305,23 @@ private fun parseCent(text: String): Long? =
         if (value.scale() > 2) return null
         value.movePointRight(2).toLong()
     }.getOrNull()
+
+private fun balanceDisplay(balance: String): String =
+    if (balance.startsWith("-")) "-¥${balance.removePrefix("-").ifBlank { "0.00" }}" else "¥${balance.ifBlank { "0.00" }}"
+
+private fun balanceError(balance: String): String? =
+    if (parseCent(balance) == null) "余额格式不正确" else null
+
+private fun nextBalanceAmount(current: String, key: String): String {
+    if (key == "-") return if (current.startsWith("-")) current.removePrefix("-") else "-$current"
+    if (key == "+") return current.removePrefix("-")
+    if (key == "⌫") return current.dropLast(1).ifBlank { "0" }
+    if (key == "." && current.contains(".")) return current
+    val negative = current.startsWith("-")
+    val raw = current.removePrefix("-")
+    val base = if (raw == "0.00" || raw == "0") "" else raw
+    val next = if (key == "." && base.isBlank()) "0." else base + key
+    if (next.substringAfter('.', "").length > 2) return current
+    val normalized = if (next.startsWith("0.")) next else next.trimStart('0').ifBlank { "0" }
+    return if (negative) "-$normalized" else normalized
+}

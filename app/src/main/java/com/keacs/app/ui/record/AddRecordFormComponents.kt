@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -32,6 +33,7 @@ import com.keacs.app.ui.components.AmountText
 import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.FormFieldRow
 import com.keacs.app.ui.components.KeacsCard
+import com.keacs.app.ui.components.NumberPad
 import com.keacs.app.ui.management.OptionChip
 import com.keacs.app.ui.management.colorFor
 import com.keacs.app.ui.management.iconFor
@@ -79,37 +81,74 @@ fun TransferAccounts(
     onFrom: (Long) -> Unit,
     onTo: (Long) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        AccountChips("转出账户", accounts, fromId, onFrom)
-        AccountChips("转入账户", accounts, toId, onTo)
+    KeacsCard(contentPadding = PaddingValues(12.dp)) {
+        Column(Modifier.padding(it), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            AccountChips("转出", accounts, fromId, onFrom)
+            AccountChips("转入", accounts, toId, onTo)
+        }
     }
 }
 
 @Composable
 private fun AccountChips(title: String, accounts: List<AccountEntity>, selectedId: Long?, onSelected: (Long) -> Unit) {
-    KeacsCard(contentPadding = PaddingValues(12.dp)) {
-        Column(Modifier.padding(it), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-            accounts.take(6).chunked(3).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    row.forEach { account ->
-                        OptionChip(account.name, selectedId == account.id, Modifier.weight(1f)) { onSelected(account.id) }
-                    }
-                    repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+        accounts.take(6).chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                row.forEach { account ->
+                    OptionChip(account.name, selectedId == account.id, Modifier.weight(1f)) { onSelected(account.id) }
                 }
+                repeat(3 - row.size) { Spacer(modifier = Modifier.weight(1f)) }
             }
         }
     }
 }
 
 @Composable
-fun AmountArea(amount: String, parsedAmount: Long?) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-        AmountText(amount = if (amount.isBlank()) "¥0.00" else "¥$amount")
+fun AmountKeyboardPanel(
+    amount: String,
+    parsedAmount: Long?,
+    message: String?,
+    saveEnabled: Boolean,
+    onKeyClick: (String) -> Unit,
+    onSaveClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    KeacsCard(
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(it),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            AmountText(amount = if (amount.isBlank()) "¥0.00" else "¥$amount")
+            Text(
+                text = message ?: if (parsedAmount == null) "金额大于0才可保存" else " ",
+                color = if (message == null) KeacsColors.TextTertiary else KeacsColors.Error,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+            )
+            NumberPad(
+                saveEnabled = saveEnabled,
+                onKeyClick = onKeyClick,
+                onSaveClick = onSaveClick,
+            )
+        }
+    }
+}
+
+@Composable
+fun RecordErrorText(message: String?) {
+    if (message != null) {
         Text(
-            text = if (parsedAmount == null) "金额大于0才可保存" else " ",
-            color = KeacsColors.TextTertiary,
+            text = message,
+            color = KeacsColors.Error,
             style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
         )
     }
@@ -127,8 +166,8 @@ fun FormArea(
     onYesterday: () -> Unit,
     onNoteChange: (String) -> Unit,
 ) {
-    KeacsCard(contentPadding = PaddingValues(10.dp)) {
-        Column(Modifier.padding(it), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    KeacsCard(contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
+        Column(Modifier.padding(it), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (showAccount) {
                 FormFieldRow(Icons.Rounded.AccountBalanceWallet, "账户", accounts.firstOrNull { it.id == accountId }?.name ?: "不选账户")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -150,7 +189,13 @@ fun FormArea(
 
 @Composable
 private fun NoteField(note: String, onNoteChange: (String) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .padding(horizontal = 12.dp),
+    ) {
         Icon(Icons.AutoMirrored.Rounded.Notes, contentDescription = null, tint = KeacsColors.TextSecondary)
         Spacer(modifier = Modifier.width(10.dp))
         BasicTextField(
@@ -166,17 +211,6 @@ private fun NoteField(note: String, onNoteChange: (String) -> Unit) {
             },
         )
     }
-}
-
-@Composable
-fun RecordErrorText(message: String?) {
-    Text(
-        text = message ?: " ",
-        color = KeacsColors.Error,
-        style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.fillMaxWidth(),
-        textAlign = TextAlign.Center,
-    )
 }
 
 @Composable
