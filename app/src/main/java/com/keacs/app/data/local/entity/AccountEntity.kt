@@ -16,6 +16,8 @@ data class AccountEntity(
     val name: String,
     val nature: String,
     val type: String,
+    val iconKey: String,
+    val colorKey: String,
     val initialBalanceCent: Long,
     val isEnabled: Boolean,
     val createdAt: Long,

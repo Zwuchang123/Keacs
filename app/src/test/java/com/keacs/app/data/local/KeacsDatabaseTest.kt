@@ -38,8 +38,8 @@ class KeacsDatabaseTest {
     }
 
     @Test
-    fun databaseVersionStartsAtOne() {
-        assertEquals(1, database.openHelper.readableDatabase.version)
+    fun databaseVersionIsCurrent() {
+        assertEquals(2, database.openHelper.readableDatabase.version)
     }
 
     @Test
@@ -83,6 +83,61 @@ class KeacsDatabaseTest {
     }
 
     @Test
+    fun categoryManagementValidatesAndSavesState() = runTest {
+        repository.initializePresets()
+
+        repository.saveCategory(
+            id = null,
+            name = "咖啡",
+            direction = PresetSeedData.CATEGORY_EXPENSE,
+            iconKey = "food",
+            colorKey = "orange",
+            isEnabled = true,
+        )
+        val created = repository.getCategories().first { it.name == "咖啡" }
+
+        repository.saveCategory(
+            id = created.id,
+            name = "咖啡店",
+            direction = PresetSeedData.CATEGORY_EXPENSE,
+            iconKey = "food",
+            colorKey = "orange",
+            isEnabled = false,
+        )
+
+        val updated = repository.getCategories().first { it.id == created.id }
+        assertEquals("咖啡店", updated.name)
+        assertEquals(false, updated.isEnabled)
+        assertEquals("已有同名分类，请换一个名称", runCatching {
+            repository.saveCategory(null, "餐饮", PresetSeedData.CATEGORY_EXPENSE, "food", "orange", true)
+        }.exceptionOrNull()?.message)
+    }
+
+    @Test
+    fun accountManagementValidatesAndDeletesUnusedAccount() = runTest {
+        repository.initializePresets()
+
+        repository.saveAccount(
+            id = null,
+            name = "备用卡",
+            nature = PresetSeedData.ACCOUNT_ASSET,
+            type = "银行卡",
+            iconKey = "bank",
+            colorKey = "blue",
+            initialBalanceCent = 12345,
+            isEnabled = true,
+        )
+        val created = repository.getAccounts().first { it.name == "备用卡" }
+
+        repository.deleteAccount(created.id)
+
+        assertTrue(repository.getAccounts().none { it.id == created.id })
+        assertEquals("已有同名账户，请换一个名称", runCatching {
+            repository.saveAccount(null, "现金", PresetSeedData.ACCOUNT_ASSET, "现金", "wallet", "green", 0, true)
+        }.exceptionOrNull()?.message)
+    }
+
+    @Test
     fun failedTransactionDoesNotKeepPartialData() = runTest {
         try {
             database.withTransaction {
@@ -90,6 +145,8 @@ class KeacsDatabaseTest {
                     CategoryEntity(
                         name = "测试分类",
                         direction = PresetSeedData.CATEGORY_EXPENSE,
+                        iconKey = "more",
+                        colorKey = "gray",
                         isPreset = false,
                         isEnabled = true,
                         sortOrder = 99,

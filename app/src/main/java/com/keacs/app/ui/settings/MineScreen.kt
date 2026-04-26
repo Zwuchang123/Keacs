@@ -23,7 +23,10 @@ import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 
 @Composable
-fun MineScreen() {
+fun MineScreen(
+    onCategoryClick: () -> Unit,
+    onAccountClick: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -33,9 +36,9 @@ fun MineScreen() {
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
         DividedMenuCard {
-            MenuRow(Icons.Rounded.Category, "分类管理", KeacsColors.Primary)
+            MenuRow(Icons.Rounded.Category, "分类管理", KeacsColors.Primary, onClick = onCategoryClick)
             MenuDivider()
-            MenuRow(Icons.Rounded.AccountBalanceWallet, "账户管理", KeacsColors.Income)
+            MenuRow(Icons.Rounded.AccountBalanceWallet, "账户管理", KeacsColors.Income, onClick = onAccountClick)
         }
         DividedMenuCard {
             MenuRow(Icons.Rounded.FileUpload, "导出备份", KeacsColors.Warning)

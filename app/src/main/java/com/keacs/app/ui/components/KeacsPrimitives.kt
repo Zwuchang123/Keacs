@@ -43,6 +43,7 @@ fun SegmentedTabs(
     items: List<String>,
     selectedIndex: Int,
     modifier: Modifier = Modifier,
+    onSelected: (Int) -> Unit = {},
 ) {
     Row(
         modifier = modifier
@@ -65,7 +66,7 @@ fun SegmentedTabs(
                     .selectable(
                         selected = selected,
                         role = Role.Tab,
-                        onClick = {},
+                        onClick = { onSelected(index) },
                     )
                     .padding(vertical = 8.dp),
                 color = if (selected) KeacsColors.Surface else KeacsColors.TextSecondary,
@@ -179,12 +180,13 @@ fun MenuRow(
     title: String,
     iconColor: Color,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(58.dp)
-            .clickable(onClick = {})
+            .clickable(onClick = onClick)
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -15,6 +15,8 @@ data class CategoryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val direction: String,
+    val iconKey: String,
+    val colorKey: String,
     val isPreset: Boolean,
     val isEnabled: Boolean,
     val sortOrder: Int,

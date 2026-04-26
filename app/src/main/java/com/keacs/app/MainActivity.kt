@@ -27,15 +27,15 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
 
+        val repository = LocalDataRepository(KeacsDatabase.getInstance(applicationContext))
+
         lifecycleScope.launch {
-            InitializeLocalDataUseCase(
-                LocalDataRepository(KeacsDatabase.getInstance(applicationContext)),
-            )()
+            InitializeLocalDataUseCase(repository)()
         }
 
         setContent {
             KeacsTheme {
-                KeacsApp()
+                KeacsApp(repository)
             }
         }
     }

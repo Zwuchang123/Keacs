@@ -20,6 +20,106 @@ class LocalDataRepository(
 
     suspend fun getAccounts(): List<AccountEntity> = database.accountDao().getAll()
 
+    suspend fun saveCategory(
+        id: Long?,
+        name: String,
+        direction: String,
+        iconKey: String,
+        colorKey: String,
+        isEnabled: Boolean,
+    ) {
+        val trimmedName = name.trim()
+        require(trimmedName.isNotEmpty()) { "名称不能为空" }
+        require(database.categoryDao().countByName(trimmedName, direction, id ?: 0L) == 0) {
+            "已有同名分类，请换一个名称"
+        }
+        val now = clock()
+        if (id == null) {
+            database.categoryDao().insert(
+                CategoryEntity(
+                    name = trimmedName,
+                    direction = direction,
+                    iconKey = iconKey,
+                    colorKey = colorKey,
+                    isPreset = false,
+                    isEnabled = isEnabled,
+                    sortOrder = (database.categoryDao().maxSortOrder(direction) ?: -1) + 1,
+                    createdAt = now,
+                    updatedAt = now,
+                ),
+            )
+        } else {
+            val old = requireNotNull(database.categoryDao().getById(id)) { "分类不存在" }
+            database.categoryDao().update(
+                old.copy(
+                    name = trimmedName,
+                    direction = direction,
+                    iconKey = iconKey,
+                    colorKey = colorKey,
+                    isEnabled = isEnabled,
+                    updatedAt = now,
+                ),
+            )
+        }
+    }
+
+    suspend fun deleteCategory(id: Long) {
+        require(database.categoryDao().usageCount(id) == 0) { "已有历史记录，只能停用" }
+        database.categoryDao().deleteById(id)
+    }
+
+    suspend fun saveAccount(
+        id: Long?,
+        name: String,
+        nature: String,
+        type: String,
+        iconKey: String,
+        colorKey: String,
+        initialBalanceCent: Long,
+        isEnabled: Boolean,
+    ) {
+        val trimmedName = name.trim()
+        require(trimmedName.isNotEmpty()) { "名称不能为空" }
+        require(database.accountDao().countByName(trimmedName, id ?: 0L) == 0) {
+            "已有同名账户，请换一个名称"
+        }
+        val now = clock()
+        if (id == null) {
+            database.accountDao().insert(
+                AccountEntity(
+                    name = trimmedName,
+                    nature = nature,
+                    type = type,
+                    iconKey = iconKey,
+                    colorKey = colorKey,
+                    initialBalanceCent = initialBalanceCent,
+                    isEnabled = isEnabled,
+                    createdAt = now,
+                    updatedAt = now,
+                ),
+            )
+        } else {
+            val old = requireNotNull(database.accountDao().getById(id)) { "账户不存在" }
+            database.accountDao().update(
+                old.copy(
+                    name = trimmedName,
+                    nature = nature,
+                    type = type,
+                    iconKey = iconKey,
+                    colorKey = colorKey,
+                    initialBalanceCent = initialBalanceCent,
+                    isEnabled = isEnabled,
+                    updatedAt = now,
+                ),
+            )
+        }
+    }
+
+    suspend fun deleteAccount(id: Long) {
+        require(database.accountDao().usageCount(id) == 0) { "已有历史记录，只能停用" }
+        database.accountDao().deleteById(id)
+    }
+
     suspend fun initializePresets() {
         database.withTransaction {
             val now = clock()
