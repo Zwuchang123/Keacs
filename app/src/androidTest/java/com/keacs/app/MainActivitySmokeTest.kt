@@ -1,7 +1,9 @@
 package com.keacs.app
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -24,6 +26,10 @@ class MainActivitySmokeTest {
 
         composeRule.onNodeWithContentDescription("切换到新增").performClick()
         composeRule.onNodeWithTag("screen-add").assertIsDisplayed()
+        composeRule.onAllNodesWithContentDescription("切换到统计").assertCountEquals(0)
+
+        composeRule.onNodeWithContentDescription("返回").performClick()
+        composeRule.onNodeWithTag("screen-home").assertIsDisplayed()
 
         composeRule.onNodeWithContentDescription("切换到统计").performClick()
         composeRule.onNodeWithTag("screen-stats").assertIsDisplayed()

@@ -4,13 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,7 +40,7 @@ fun EmptyState(
     ) {
         Box(
             modifier = Modifier
-                .size(72.dp)
+                .size(68.dp)
                 .background(KeacsColors.PrimaryLight, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
@@ -45,7 +48,7 @@ fun EmptyState(
                 imageVector = icon,
                 contentDescription = null,
                 tint = KeacsColors.Primary,
-                modifier = Modifier.size(34.dp),
+                modifier = Modifier.size(32.dp),
             )
         }
         Spacer(modifier = Modifier.height(12.dp))
@@ -64,7 +67,18 @@ fun EmptyState(
         }
         if (actionText != null && onActionClick != null) {
             Spacer(modifier = Modifier.height(14.dp))
-            Button(onClick = onActionClick) {
+            Button(
+                onClick = onActionClick,
+                modifier = Modifier
+                    .width(104.dp)
+                    .height(40.dp),
+                shape = MaterialTheme.shapes.extraLarge,
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = KeacsColors.Primary,
+                    contentColor = KeacsColors.Surface,
+                ),
+            ) {
                 Text(text = actionText)
             }
         }

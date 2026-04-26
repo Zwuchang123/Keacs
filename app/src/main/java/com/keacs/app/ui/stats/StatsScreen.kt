@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.WorkspacePremium
@@ -21,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -31,7 +33,7 @@ import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 
 @Composable
-fun StatsScreen(onAddClick: () -> Unit) {
+fun StatsScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -43,7 +45,7 @@ fun StatsScreen(onAddClick: () -> Unit) {
         SegmentedTabs(items = listOf("支出", "收入", "资产"), selectedIndex = 0)
         MonthSelector()
         TrendCard()
-        RankCard(onAddClick = onAddClick)
+        RankCard()
     }
 }
 
@@ -93,42 +95,79 @@ private fun TrendCard() {
 
 @Composable
 private fun ChartPlaceholder() {
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(136.dp),
-    ) {
-        val gridColor = KeacsColors.Border.copy(alpha = 0.75f)
-        repeat(4) { index ->
-            val y = size.height * (index + 1) / 5f
-            drawLine(
-                color = gridColor,
-                start = Offset(0f, y),
-                end = Offset(size.width, y),
-                strokeWidth = 1f,
-            )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(128.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .width(32.dp)
+                    .height(128.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+            ) {
+                listOf("300", "200", "100", "0").forEach { label ->
+                    Text(
+                        text = label,
+                        color = KeacsColors.TextTertiary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            Canvas(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(128.dp),
+            ) {
+                val gridColor = KeacsColors.Border.copy(alpha = 0.75f)
+                repeat(4) { index ->
+                    val y = size.height * index / 3f
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = 1f,
+                    )
+                }
+                val points = listOf(
+                    Offset(0f, size.height * 0.72f),
+                    Offset(size.width * 0.18f, size.height * 0.50f),
+                    Offset(size.width * 0.38f, size.height * 0.62f),
+                    Offset(size.width * 0.58f, size.height * 0.34f),
+                    Offset(size.width * 0.78f, size.height * 0.48f),
+                    Offset(size.width, size.height * 0.26f),
+                )
+                points.zipWithNext().forEach { (start, end) ->
+                    drawLine(
+                        color = KeacsColors.Primary,
+                        start = start,
+                        end = end,
+                        strokeWidth = 3f,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)),
+                    )
+                }
+            }
         }
-        val points = listOf(
-            Offset(0f, size.height * 0.74f),
-            Offset(size.width * 0.18f, size.height * 0.62f),
-            Offset(size.width * 0.38f, size.height * 0.68f),
-            Offset(size.width * 0.58f, size.height * 0.44f),
-            Offset(size.width * 0.78f, size.height * 0.52f),
-            Offset(size.width, size.height * 0.36f),
-        )
-        points.zipWithNext().forEach { (start, end) ->
-            drawLine(
-                color = KeacsColors.Primary,
-                start = start,
-                end = end,
-                strokeWidth = 3f,
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 32.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            listOf("4-1", "4-8", "4-15", "4-22", "4-30").forEach { label ->
+                Text(
+                    text = label,
+                    color = KeacsColors.TextTertiary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun RankCard(onAddClick: () -> Unit) {
+private fun RankCard() {
     KeacsCard {
         Column(modifier = Modifier.padding(it)) {
             Text(
@@ -139,9 +178,7 @@ private fun RankCard(onAddClick: () -> Unit) {
             EmptyState(
                 title = "暂无数据",
                 description = "快去记账吧，查看分类排行",
-                actionText = "记一笔",
                 icon = Icons.Rounded.WorkspacePremium,
-                onActionClick = onAddClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(220.dp),

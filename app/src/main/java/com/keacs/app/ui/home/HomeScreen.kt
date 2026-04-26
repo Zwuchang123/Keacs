@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -60,7 +61,7 @@ fun HomeScreen(
             onStatsClick = onStatsClick,
             onMineClick = onMineClick,
         )
-        RecentRecords(onAddClick = onAddClick)
+        RecentRecords()
     }
 }
 
@@ -94,10 +95,28 @@ private fun OverviewCard(onClick: () -> Unit) {
             Spacer(modifier = Modifier.height(14.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                AmountSummary(label = "收入", amount = "¥0.00", color = KeacsColors.Income)
-                AmountSummary(label = "支出", amount = "¥0.00", color = KeacsColors.Expense)
+                AmountSummary(
+                    label = "收入",
+                    amount = "¥0.00",
+                    color = KeacsColors.Income,
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.Start,
+                )
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(28.dp)
+                        .background(KeacsColors.PrimaryLight.copy(alpha = 0.45f)),
+                )
+                AmountSummary(
+                    label = "支出",
+                    amount = "¥0.00",
+                    color = KeacsColors.Expense,
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.End,
+                )
             }
         }
     }
@@ -108,8 +127,13 @@ private fun AmountSummary(
     label: String,
     amount: String,
     color: Color,
+    modifier: Modifier = Modifier,
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
 ) {
-    Column {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = horizontalAlignment,
+    ) {
         Text(
             text = label,
             color = KeacsColors.PrimaryLight,
@@ -176,7 +200,7 @@ private fun QuickAction(
 }
 
 @Composable
-private fun RecentRecords(onAddClick: () -> Unit) {
+private fun RecentRecords() {
     KeacsCard {
         Column(
             modifier = Modifier
@@ -202,9 +226,7 @@ private fun RecentRecords(onAddClick: () -> Unit) {
             EmptyState(
                 title = "暂无记录",
                 description = "快去记一笔吧，养成记账习惯",
-                actionText = "记一笔",
                 icon = Icons.AutoMirrored.Rounded.ReceiptLong,
-                onActionClick = onAddClick,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(226.dp),

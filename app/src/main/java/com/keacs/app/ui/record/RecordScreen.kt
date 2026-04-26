@@ -30,7 +30,7 @@ import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 
 @Composable
-fun RecordScreen(onAddClick: () -> Unit) {
+fun RecordScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -41,7 +41,7 @@ fun RecordScreen(onAddClick: () -> Unit) {
     ) {
         SearchBox(text = "搜索账单")
         MonthSummaryCard()
-        EmptyRecordCard(onAddClick = onAddClick)
+        EmptyRecordCard()
     }
 }
 
@@ -104,14 +104,12 @@ private fun SummaryAmount(
 }
 
 @Composable
-private fun EmptyRecordCard(onAddClick: () -> Unit) {
+private fun EmptyRecordCard() {
     KeacsCard {
         EmptyState(
             title = "暂无记录",
             description = "当前没有账单，快去记一笔吧",
-            actionText = "记一笔",
             icon = Icons.AutoMirrored.Rounded.ReceiptLong,
-            onActionClick = onAddClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(360.dp)
