@@ -28,11 +28,13 @@ fun KeacsScaffold(
     onBackClick: () -> Unit = {},
     onActionClick: () -> Unit = {},
     actions: @Composable () -> Unit = {},
+    snackbarHost: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
     Scaffold(
         modifier = modifier,
         containerColor = KeacsColors.Background,
+        snackbarHost = snackbarHost,
         topBar = {
             CenterAlignedTopAppBar(
                 navigationIcon = {

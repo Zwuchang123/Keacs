@@ -39,13 +39,27 @@ import com.keacs.app.ui.settings.MineScreen
 import com.keacs.app.ui.stats.StatsScreen
 import com.keacs.app.ui.theme.KeacsColors
 
-class HomeViewModelFactory(
+import com.keacs.app.data.backup.BackupService
+import com.keacs.app.domain.usecase.ExportBackupUseCase
+import com.keacs.app.domain.usecase.ImportBackupUseCase
+import com.keacs.app.ui.backup.BackupScreen
+import com.keacs.app.ui.backup.BackupViewModel
+import com.keacs.app.ui.settings.SettingsScreen
+
+class KeacsViewModelFactory(
     private val repository: LocalDataRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
             return HomeViewModel(repository) as T
+        }
+        if (modelClass.isAssignableFrom(BackupViewModel::class.java)) {
+            val backupService = BackupService(repository)
+            return BackupViewModel(
+                exportBackupUseCase = ExportBackupUseCase(backupService),
+                importBackupUseCase = ImportBackupUseCase(backupService)
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
@@ -63,6 +77,8 @@ fun KeacsApp(repository: LocalDataRepository) {
         currentRoute.startsWith(ROUTE_ACCOUNT_EDIT) -> "编辑账户"
         currentRoute.startsWith(ROUTE_RECORD_DETAIL) -> "账目详情"
         currentRoute.startsWith(ROUTE_RECORD_EDIT) -> "编辑账目"
+        currentRoute == ROUTE_SETTINGS -> "设置"
+        currentRoute == ROUTE_BACKUP -> "数据备份"
         currentDestination == KeacsDestination.Add -> "新增记录"
         currentDestination != null -> stringResource(currentDestination.titleRes)
         else -> stringResource(destinationForRoute(currentRoute).titleRes)
@@ -98,7 +114,7 @@ fun KeacsApp(repository: LocalDataRepository) {
             when {
                 route == KeacsDestination.Home.route -> {
                     val homeViewModel: HomeViewModel = viewModel(
-                        factory = HomeViewModelFactory(repository),
+                        factory = KeacsViewModelFactory(repository),
                     )
                     HomeScreen(
                         viewModel = homeViewModel,
@@ -125,7 +141,18 @@ fun KeacsApp(repository: LocalDataRepository) {
                 route == KeacsDestination.Mine.route -> MineScreen(
                     onCategoryClick = { currentRoute = ROUTE_CATEGORY_LIST },
                     onAccountClick = { currentRoute = ROUTE_ACCOUNT_LIST },
+                    onSettingsClick = { currentRoute = ROUTE_SETTINGS },
+                    onBackupClick = { currentRoute = ROUTE_BACKUP }
                 )
+
+                route == ROUTE_SETTINGS -> SettingsScreen()
+
+                route == ROUTE_BACKUP -> {
+                    val backupViewModel: BackupViewModel = viewModel(
+                        factory = KeacsViewModelFactory(repository)
+                    )
+                    BackupScreen(viewModel = backupViewModel)
+                }
 
                 route == ROUTE_CATEGORY_LIST -> CategoryListScreen(
                     repository = repository,
@@ -173,6 +200,8 @@ private const val ROUTE_ACCOUNT_LIST = "account-list"
 private const val ROUTE_ACCOUNT_EDIT = "account-edit/"
 private const val ROUTE_RECORD_DETAIL = "record-detail/"
 private const val ROUTE_RECORD_EDIT = "record-edit/"
+private const val ROUTE_SETTINGS = "settings"
+private const val ROUTE_BACKUP = "backup"
 
 private fun categoryEditRoute(id: Long?): String = ROUTE_CATEGORY_EDIT + (id?.toString() ?: "new")
 private fun accountEditRoute(id: Long?): String = ROUTE_ACCOUNT_EDIT + (id?.toString() ?: "new")
@@ -194,7 +223,7 @@ private fun backRoute(route: String): String = when {
         val id = routeId(route, ROUTE_RECORD_EDIT)
         if (id != null) KeacsDestination.Records.route else KeacsDestination.Records.route
     }
-    route == ROUTE_CATEGORY_LIST || route == ROUTE_ACCOUNT_LIST -> KeacsDestination.Mine.route
+    route == ROUTE_CATEGORY_LIST || route == ROUTE_ACCOUNT_LIST || route == ROUTE_SETTINGS || route == ROUTE_BACKUP -> KeacsDestination.Mine.route
     else -> KeacsDestination.Home.route
 }
 

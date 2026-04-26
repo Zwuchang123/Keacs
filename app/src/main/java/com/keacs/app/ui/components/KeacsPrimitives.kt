@@ -180,6 +180,7 @@ fun MenuRow(
     title: String,
     iconColor: Color,
     modifier: Modifier = Modifier,
+    value: String? = null,
     onClick: () -> Unit = {},
 ) {
     Row(
@@ -202,6 +203,14 @@ fun MenuRow(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
+        if (value != null) {
+            Text(
+                text = value,
+                color = KeacsColors.TextSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(end = 4.dp),
+            )
+        }
         Icon(
             imageVector = Icons.Rounded.ChevronRight,
             contentDescription = null,

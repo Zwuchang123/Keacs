@@ -26,6 +26,8 @@ import com.keacs.app.ui.theme.KeacsSpacing
 fun MineScreen(
     onCategoryClick: () -> Unit,
     onAccountClick: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onBackupClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -41,12 +43,12 @@ fun MineScreen(
             MenuRow(Icons.Rounded.AccountBalanceWallet, "账户管理", KeacsColors.Income, onClick = onAccountClick)
         }
         DividedMenuCard {
-            MenuRow(Icons.Rounded.FileUpload, "导出备份", KeacsColors.Warning)
+            MenuRow(Icons.Rounded.FileUpload, "导出备份", KeacsColors.Warning, onClick = onBackupClick)
             MenuDivider()
-            MenuRow(Icons.Rounded.FileDownload, "导入备份", KeacsColors.Primary)
+            MenuRow(Icons.Rounded.FileDownload, "导入备份", KeacsColors.Primary, onClick = onBackupClick)
         }
         DividedMenuCard {
-            MenuRow(Icons.Rounded.Settings, "设置", KeacsColors.TextSecondary)
+            MenuRow(Icons.Rounded.Settings, "设置", KeacsColors.TextSecondary, onClick = onSettingsClick)
             MenuDivider()
             MenuRow(Icons.Rounded.Info, "关于", KeacsColors.Primary)
         }

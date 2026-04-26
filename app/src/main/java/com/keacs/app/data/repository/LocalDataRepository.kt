@@ -199,6 +199,58 @@ class LocalDataRepository(
         return database.appMetaDao().get(META_PRESET_VERSION)?.value
     }
 
+    suspend fun importBackup(
+        categories: List<CategoryEntity>,
+        accounts: List<AccountEntity>,
+        records: List<RecordEntity>
+    ) {
+        database.withTransaction {
+            val now = clock()
+            // Import categories (No deduplication per PRD)
+            val categoryIdMap = mutableMapOf<Long, Long>() // oldId -> newId
+
+            for (cat in categories) {
+                val newId = database.categoryDao().insert(
+                    cat.copy(
+                        id = 0,
+                        createdAt = now,
+                        updatedAt = now,
+                        sortOrder = (database.categoryDao().maxSortOrder(cat.direction) ?: -1) + 1
+                    )
+                )
+                categoryIdMap[cat.id] = newId
+            }
+
+            // Import accounts (No deduplication per PRD)
+            val accountIdMap = mutableMapOf<Long, Long>()
+
+            for (acc in accounts) {
+                val newId = database.accountDao().insert(
+                    acc.copy(id = 0, createdAt = now, updatedAt = now)
+                )
+                accountIdMap[acc.id] = newId
+            }
+
+            // Import records
+            for (rec in records) {
+                val newCategoryId = rec.categoryId?.let { categoryIdMap[it] }
+                val newFromAccountId = rec.fromAccountId?.let { accountIdMap[it] }
+                val newToAccountId = rec.toAccountId?.let { accountIdMap[it] }
+
+                database.recordDao().insert(
+                    rec.copy(
+                        id = 0,
+                        categoryId = newCategoryId,
+                        fromAccountId = newFromAccountId,
+                        toAccountId = newToAccountId,
+                        createdAt = now,
+                        updatedAt = now
+                    )
+                )
+            }
+        }
+    }
+
     private companion object {
         const val META_PRESET_VERSION = "preset_version"
     }
