@@ -24,6 +24,8 @@ import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,20 +34,31 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.keacs.app.data.local.entity.CategoryEntity
+import com.keacs.app.data.local.entity.RecordEntity
+import com.keacs.app.domain.model.RecordType
 import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.EmptyState
 import com.keacs.app.ui.components.KeacsCard
+import com.keacs.app.ui.components.RecordListItem
+import com.keacs.app.ui.management.colorFor
+import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 
 @Composable
 fun HomeScreen(
+    viewModel: HomeViewModel,
     onAddClick: () -> Unit,
     onRecordsClick: () -> Unit,
     onStatsClick: () -> Unit,
     onMineClick: () -> Unit,
+    onRecordClick: (Long) -> Unit,
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -54,19 +67,38 @@ fun HomeScreen(
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
-        OverviewCard(onClick = onStatsClick)
+        OverviewCard(
+            totalIncome = uiState.totalIncome,
+            totalExpense = uiState.totalExpense,
+            totalAsset = uiState.totalAsset,
+            totalLiability = uiState.totalLiability,
+            onClick = onStatsClick,
+        )
         QuickActionCard(
             onAddClick = onAddClick,
             onRecordsClick = onRecordsClick,
             onStatsClick = onStatsClick,
             onMineClick = onMineClick,
         )
-        RecentRecords()
+        RecentRecords(
+            records = uiState.recentRecords,
+            categories = uiState.categories,
+            onRecordClick = onRecordClick,
+            onViewMoreClick = onRecordsClick,
+        )
     }
 }
 
 @Composable
-private fun OverviewCard(onClick: () -> Unit) {
+private fun OverviewCard(
+    totalIncome: Long,
+    totalExpense: Long,
+    totalAsset: Long,
+    totalLiability: Long,
+    onClick: () -> Unit,
+) {
+    val netBalance = totalAsset - totalLiability
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -80,18 +112,41 @@ private fun OverviewCard(onClick: () -> Unit) {
             .padding(KeacsSpacing.CardPadding),
     ) {
         Column {
-            Text(
-                text = "本月结余",
-                color = KeacsColors.PrimaryLight,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "¥0.00",
-                color = KeacsColors.Surface,
-                style = MaterialTheme.typography.displaySmall,
-                fontFamily = FontFamily.Monospace,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "本月结余",
+                    color = KeacsColors.PrimaryLight,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    text = "净资产",
+                    color = KeacsColors.PrimaryLight,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = HomeViewModel.formatCent(netBalance),
+                    color = KeacsColors.Surface,
+                    style = MaterialTheme.typography.displaySmall,
+                    fontFamily = FontFamily.Monospace,
+                )
+                Text(
+                    text = HomeViewModel.formatCent(totalAsset),
+                    color = KeacsColors.Surface.copy(alpha = 0.85f),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
             Spacer(modifier = Modifier.height(14.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -99,7 +154,7 @@ private fun OverviewCard(onClick: () -> Unit) {
             ) {
                 AmountSummary(
                     label = "收入",
-                    amount = "¥0.00",
+                    amount = HomeViewModel.formatCent(totalIncome),
                     color = KeacsColors.Income,
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.Start,
@@ -112,7 +167,7 @@ private fun OverviewCard(onClick: () -> Unit) {
                 )
                 AmountSummary(
                     label = "支出",
-                    amount = "¥0.00",
+                    amount = HomeViewModel.formatCent(totalExpense),
                     color = KeacsColors.Expense,
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.End,
@@ -200,7 +255,12 @@ private fun QuickAction(
 }
 
 @Composable
-private fun RecentRecords() {
+private fun RecentRecords(
+    records: List<RecordEntity>,
+    categories: Map<Long, CategoryEntity>,
+    onRecordClick: (Long) -> Unit,
+    onViewMoreClick: () -> Unit,
+) {
     KeacsCard {
         Column(
             modifier = Modifier
@@ -221,19 +281,74 @@ private fun RecentRecords() {
                     text = "查看更多",
                     color = KeacsColors.TextTertiary,
                     style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.clickable(onClick = onViewMoreClick),
                 )
             }
-            EmptyState(
-                title = "暂无记录",
-                description = "快去记一笔吧，养成记账习惯",
-                icon = Icons.AutoMirrored.Rounded.ReceiptLong,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(226.dp),
-            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (records.isEmpty()) {
+                EmptyState(
+                    title = "暂无记录",
+                    description = "快去记一笔吧，养成记账习惯",
+                    icon = Icons.AutoMirrored.Rounded.ReceiptLong,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                )
+            } else {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    records.forEach { record ->
+                        RecordListItem(
+                            icon = if (record.type == RecordType.TRANSFER) Icons.Rounded.AccountBalanceWallet
+                                   else iconFor(categories[record.categoryId]?.iconKey ?: "more"),
+                            iconColor = if (record.type == RecordType.TRANSFER) KeacsColors.Primary
+                                        else colorFor(categories[record.categoryId]?.colorKey ?: "gray"),
+                            title = recordTitle(record, categories),
+                            note = record.note ?: "无备注",
+                            account = recordAccount(record),
+                            amount = recordAmount(record),
+                            amountColor = recordColor(record),
+                            modifier = Modifier.clickable { onRecordClick(record.id) },
+                        )
+                    }
+                }
+            }
         }
     }
 }
+
+private fun recordTitle(record: RecordEntity, categories: Map<Long, CategoryEntity>): String {
+    val category = categories[record.categoryId]
+    return when (record.type) {
+        RecordType.INCOME -> category?.name ?: "收入"
+        RecordType.TRANSFER -> "转账"
+        else -> category?.name ?: "支出"
+    }
+}
+
+private fun recordAccount(record: RecordEntity): String {
+    return when (record.type) {
+        RecordType.INCOME -> "收入"
+        RecordType.EXPENSE -> "支出"
+        else -> "转账"
+    }
+}
+
+private fun recordAmount(record: RecordEntity): String =
+    when (record.type) {
+        RecordType.INCOME -> "+${HomeViewModel.formatCent(record.amountCent)}"
+        RecordType.EXPENSE -> "-${HomeViewModel.formatCent(record.amountCent)}"
+        else -> HomeViewModel.formatCent(record.amountCent)
+    }
+
+private fun recordColor(record: RecordEntity): Color =
+    when (record.type) {
+        RecordType.INCOME -> KeacsColors.Income
+        RecordType.EXPENSE -> KeacsColors.Expense
+        else -> KeacsColors.TextPrimary
+    }
 
 @Composable
 private fun Modifier.clipLarge(): Modifier = clip(MaterialTheme.shapes.large)

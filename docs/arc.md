@@ -112,7 +112,6 @@ keacs.db
 - `categories`
 - `accounts`
 - `records`
-- `account_adjustments`
 - `app_meta`
 
 索引：
@@ -122,8 +121,6 @@ keacs.db
 - `records.categoryId`
 - `records.fromAccountId`
 - `records.toAccountId`
-- `account_adjustments.accountId`
-- `account_adjustments.occurredAt`
 
 ## 6. 核心服务
 
@@ -138,12 +135,9 @@ keacs.db
 ### AccountService
 
 - 创建账户
-- 编辑账户
+- 编辑账户（支持直接修改余额）
 - 停用账户
 - 计算账户余额
-- 创建账户调整记录
-- 编辑账户调整记录
-- 删除账户调整记录
 
 ### CategoryService
 
@@ -175,11 +169,8 @@ keacs.db
 - `CreateIncomeUseCase`
 - `CreateExpenseUseCase`
 - `CreateTransferUseCase`
-- `CreateAccountAdjustmentUseCase`
 - `UpdateRecordUseCase`
 - `DeleteRecordUseCase`
-- `UpdateAccountAdjustmentUseCase`
-- `DeleteAccountAdjustmentUseCase`
 - `ImportBackupUseCase`
 - `ExportBackupUseCase`
 
@@ -194,8 +185,10 @@ Cent
 账户余额：
 
 ```text
-balance = initialBalance + recordEffects + adjustmentEffects
+balance = initialBalance + recordEffects
 ```
+
+其中 recordEffects 为该账户关联的收入、支出和转账记录的影响总和。
 
 资产负债：
 
@@ -213,8 +206,7 @@ netAsset = totalAsset - totalLiability
   "exportedAt": 0,
   "categories": [],
   "accounts": [],
-  "records": [],
-  "accountAdjustments": []
+  "records": []
 }
 ```
 
