@@ -37,6 +37,11 @@ data class DailyStats(
     val amount: Long,
 )
 
+data class MonthlyNetAssetStats(
+    val month: String,
+    val netAsset: Long,
+)
+
 data class AccountBalanceStats(
     val accountId: Long,
     val accountName: String,
@@ -58,6 +63,7 @@ data class StatsUiState(
     val netAsset: Long = 0L,
     val categoryStats: List<CategoryStats> = emptyList(),
     val dailyTrend: List<DailyStats> = emptyList(),
+    val monthlyNetAssetTrend: List<MonthlyNetAssetStats> = emptyList(),
     val accountBalances: List<AccountBalanceStats> = emptyList(),
     val categories: Map<Long, CategoryEntity> = emptyMap(),
     val accounts: Map<Long, AccountEntity> = emptyMap(),
@@ -112,6 +118,7 @@ class StatsViewModel(
         val categoryStatsResult = buildCategoryStats(periodRecords, categoryMap, tab)
         val dailyTrend = buildDailyTrend(periodRecords, period, periodStart)
         val accountBalances = buildAccountBalances(accounts, records)
+        val monthlyNetAssetTrend = buildMonthlyNetAssetTrend(records, accounts)
 
         StatsUiState(
             selectedTab = tab,
@@ -125,6 +132,7 @@ class StatsViewModel(
             netAsset = totalAsset - totalLiability,
             categoryStats = categoryStatsResult,
             dailyTrend = dailyTrend,
+            monthlyNetAssetTrend = monthlyNetAssetTrend,
             accountBalances = accountBalances,
             categories = categoryMap,
             accounts = accountMap,
@@ -261,6 +269,41 @@ class StatsViewModel(
                 isAsset = account.nature == PresetSeedData.ACCOUNT_ASSET,
             )
         }.sortedByDescending { it.balance }
+    }
+
+    private fun buildMonthlyNetAssetTrend(
+        records: List<RecordEntity>,
+        accounts: List<AccountEntity>,
+    ): List<MonthlyNetAssetStats> {
+        val monthFormat = java.text.SimpleDateFormat("yyyy年MM月", Locale.getDefault())
+        val recentMonths = (0..11).map { offset ->
+            val calendar = Calendar.getInstance(Locale.getDefault())
+            calendar.add(Calendar.MONTH, -offset)
+            monthFormat.format(calendar.time)
+        }.reversed()
+
+        return recentMonths.map { monthStr ->
+            val calendar = Calendar.getInstance(Locale.getDefault())
+            calendar.time = monthFormat.parse(monthStr) ?: calendar.time
+            calendar.set(Calendar.DAY_OF_MONTH, 1)
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            val monthEnd = calendar.timeInMillis
+            calendar.add(Calendar.MONTH, 1)
+            val nextMonthStart = calendar.timeInMillis
+
+            val monthRecords = records.filter { it.occurredAt < nextMonthStart }
+
+            val assetAccounts = accounts.filter { it.nature == PresetSeedData.ACCOUNT_ASSET && it.isEnabled }
+            val liabilityAccounts = accounts.filter { it.nature == PresetSeedData.ACCOUNT_LIABILITY && it.isEnabled }
+            val totalAsset = assetAccounts.sumOf { balanceFor(it, monthRecords) }
+            val totalLiability = liabilityAccounts.sumOf { balanceFor(it, monthRecords) }
+            val netAsset = totalAsset - totalLiability
+
+            MonthlyNetAssetStats(month = monthStr.removePrefix(Calendar.getInstance().get(Calendar.YEAR).toString() + "年").replace("月", ""), netAsset = netAsset)
+        }
     }
 
     companion object {

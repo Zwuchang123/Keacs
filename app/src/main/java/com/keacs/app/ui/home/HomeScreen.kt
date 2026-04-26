@@ -14,13 +14,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
-import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,10 +53,8 @@ import com.keacs.app.ui.theme.KeacsSpacing
 fun HomeScreen(
     viewModel: HomeViewModel,
     onAddClick: () -> Unit,
-    onRecordsClick: () -> Unit,
-    onStatsClick: () -> Unit,
-    onMineClick: () -> Unit,
     onRecordClick: (Long) -> Unit,
+    onRecordsClick: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -67,18 +66,15 @@ fun HomeScreen(
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
+        PrivacyBanner()
         OverviewCard(
             totalIncome = uiState.totalIncome,
             totalExpense = uiState.totalExpense,
             totalAsset = uiState.totalAsset,
             totalLiability = uiState.totalLiability,
-            onClick = onStatsClick,
         )
         QuickActionCard(
             onAddClick = onAddClick,
-            onRecordsClick = onRecordsClick,
-            onStatsClick = onStatsClick,
-            onMineClick = onMineClick,
         )
         RecentRecords(
             records = uiState.recentRecords,
@@ -90,12 +86,41 @@ fun HomeScreen(
 }
 
 @Composable
+private fun PrivacyBanner() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(KeacsColors.SurfaceSubtle)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Lock,
+                contentDescription = null,
+                tint = KeacsColors.TextSecondary,
+                modifier = Modifier.height(16.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "数据仅保存在本设备 · 支持支出导入和导出",
+                color = KeacsColors.TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
 private fun OverviewCard(
     totalIncome: Long,
     totalExpense: Long,
     totalAsset: Long,
     totalLiability: Long,
-    onClick: () -> Unit,
 ) {
     val netBalance = totalAsset - totalLiability
 
@@ -108,7 +133,6 @@ private fun OverviewCard(
                     listOf(Color(0xFF65A2FF), KeacsColors.Primary),
                 ),
             )
-            .clickable(onClick = onClick)
             .padding(KeacsSpacing.CardPadding),
     ) {
         Column {
@@ -206,21 +230,15 @@ private fun AmountSummary(
 @Composable
 private fun QuickActionCard(
     onAddClick: () -> Unit,
-    onRecordsClick: () -> Unit,
-    onStatsClick: () -> Unit,
-    onMineClick: () -> Unit,
 ) {
-    KeacsCard(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp)) {
+    KeacsCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(it),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.Center,
         ) {
             QuickAction("记账", Icons.Rounded.Edit, KeacsColors.Primary, onAddClick)
-            QuickAction("账户", Icons.Rounded.AccountBalanceWallet, KeacsColors.Income, onMineClick)
-            QuickAction("图表", Icons.Rounded.BarChart, KeacsColors.Warning, onStatsClick)
-            QuickAction("更多", Icons.Rounded.MoreHoriz, KeacsColors.TextSecondary, onRecordsClick)
         }
     }
 }

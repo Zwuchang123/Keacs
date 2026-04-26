@@ -5,14 +5,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -49,8 +54,17 @@ fun CategoryListScreen(
 ) {
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
     var selectedIndex by rememberSaveable { mutableStateOf(0) }
-    val direction = if (selectedIndex == 0) PresetSeedData.CATEGORY_EXPENSE else PresetSeedData.CATEGORY_INCOME
-    val visibleCategories = categories.filter { it.direction == direction }
+    val tabItems = listOf("支出分类", "收入分类", "账户分类")
+    val direction = when (selectedIndex) {
+        0 -> PresetSeedData.CATEGORY_EXPENSE
+        1 -> PresetSeedData.CATEGORY_INCOME
+        else -> null
+    }
+    val visibleCategories = if (direction != null) {
+        categories.filter { it.direction == direction }
+    } else {
+        emptyList()
+    }
 
     Column(
         modifier = Modifier
@@ -60,23 +74,34 @@ fun CategoryListScreen(
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
         SegmentedTabs(
-            items = listOf("支出分类", "收入分类"),
+            items = tabItems,
             selectedIndex = selectedIndex,
             onSelected = { selectedIndex = it },
         )
         KeacsCard(contentPadding = PaddingValues(0.dp), modifier = Modifier.weight(1f)) {
             LazyColumn(modifier = Modifier.padding(it)) {
-                itemsIndexed(visibleCategories, key = { _, item -> item.id }) { index, category ->
-                    ManagementListItem(
-                        title = category.name,
-                        subtitle = if (category.isEnabled) "新建记录可选" else "历史记录仍会显示",
-                        icon = iconFor(category.iconKey),
-                        color = colorFor(category.colorKey),
-                        enabled = category.isEnabled,
-                        onClick = { onEditCategory(category.id) },
-                    )
-                    if (index != visibleCategories.lastIndex) {
-                        ListDivider()
+                if (direction != null) {
+                    itemsIndexed(visibleCategories, key = { _, item -> item.id }) { index, category ->
+                        ManagementListItem(
+                            title = category.name,
+                            subtitle = if (category.isEnabled) "新建记录可选" else "历史记录仍会显示",
+                            icon = iconFor(category.iconKey),
+                            color = colorFor(category.colorKey),
+                            enabled = category.isEnabled,
+                            onClick = { onEditCategory(category.id) },
+                        )
+                        if (index != visibleCategories.lastIndex) {
+                            ListDivider()
+                        }
+                    }
+                } else {
+                    item {
+                        Text(
+                            text = "账户分类用于对账户进行分组管理",
+                            color = KeacsColors.TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(16.dp),
+                        )
                     }
                 }
             }
@@ -199,25 +224,28 @@ private fun IconSelector(direction: String, selectedKey: String, onSelected: (Ic
     KeacsCard {
         Column(Modifier.padding(it)) {
             Text("选择图标", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+            Spacer(modifier = Modifier.height(10.dp))
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(5),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.height(200.dp),
             ) {
-                categoryOptions(direction).take(5).forEach { option ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                items(categoryOptions(direction)) { option ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable { onSelected(option) },
+                    ) {
                         CategoryIcon(
                             icon = option.icon,
-                            backgroundColor = colorFor(option.colorKey),
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clickable { onSelected(option) },
+                            backgroundColor = if (selectedKey == option.key) KeacsColors.Primary else colorFor(option.colorKey),
+                            modifier = Modifier.size(36.dp),
                         )
                         Text(
                             text = option.label,
                             color = if (selectedKey == option.key) KeacsColors.Primary else KeacsColors.TextSecondary,
                             style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
                         )
                     }
                 }

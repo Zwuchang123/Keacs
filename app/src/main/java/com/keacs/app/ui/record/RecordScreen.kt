@@ -11,24 +11,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
-import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,11 +41,11 @@ import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.model.RecordType
 import com.keacs.app.domain.rule.totalExpense
 import com.keacs.app.domain.rule.totalIncome
-import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.EmptyState
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.RecordListItem
 import com.keacs.app.ui.components.SearchBox
+import com.keacs.app.ui.components.WheelPickerBottomSheet
 import com.keacs.app.ui.management.colorFor
 import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.theme.KeacsColors
@@ -65,6 +60,7 @@ import java.util.Locale
 @Composable
 fun RecordScreen(
     repository: LocalDataRepository,
+    onViewRecord: (Long) -> Unit,
     onEditRecord: (Long) -> Unit,
 ) {
     val allRecords by repository.observeRecords().collectAsState(initial = emptyList())
@@ -73,7 +69,6 @@ fun RecordScreen(
 
     var selectedYearMonth by remember { mutableStateOf(getCurrentYearMonth()) }
     var showMonthPicker by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
 
     val categoryMap = categories.associateBy { it.id }
     val accountMap = accounts.associateBy { it.id }
@@ -156,7 +151,7 @@ fun RecordScreen(
                                         account = recordAccount(record, accountMap),
                                         amount = recordAmount(record),
                                         amountColor = recordColor(record),
-                                        modifier = Modifier.clickable { onEditRecord(record.id) },
+                                        modifier = Modifier.clickable { onViewRecord(record.id) },
                                     )
                                 }
                             }
@@ -171,19 +166,15 @@ fun RecordScreen(
     }
 
     if (showMonthPicker) {
-        ModalBottomSheet(
-            onDismissRequest = { showMonthPicker = false },
-            sheetState = sheetState,
-        ) {
-            MonthPickerContent(
-                currentYearMonth = selectedYearMonth,
-                allRecords = allRecords,
-                onMonthSelected = { yearMonth ->
-                    selectedYearMonth = yearMonth
-                    showMonthPicker = false
-                },
-            )
-        }
+        MonthPickerBottomSheet(
+            currentYearMonth = selectedYearMonth,
+            allRecords = allRecords,
+            onMonthSelected = { yearMonth ->
+                selectedYearMonth = yearMonth
+                showMonthPicker = false
+            },
+            onDismiss = { showMonthPicker = false },
+        )
     }
 }
 
@@ -213,14 +204,6 @@ private fun MonthSummaryCard(
                     contentDescription = "选择月份",
                     tint = KeacsColors.TextSecondary,
                 )
-                Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = onMonthClick) {
-                    Icon(
-                        Icons.Rounded.CalendarToday,
-                        contentDescription = "选择月份",
-                        tint = KeacsColors.TextSecondary,
-                    )
-                }
             }
             Spacer(modifier = Modifier.height(18.dp))
             Row(
@@ -278,11 +261,13 @@ private fun DateGroupHeader(date: String, dayNetAmount: Long) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MonthPickerContent(
+private fun MonthPickerBottomSheet(
     currentYearMonth: String,
     allRecords: List<RecordEntity>,
     onMonthSelected: (String) -> Unit,
+    onDismiss: () -> Unit,
 ) {
     val availableMonths = remember(allRecords) {
         allRecords.asSequence()
@@ -293,48 +278,18 @@ private fun MonthPickerContent(
             .ifEmpty { listOf(getCurrentYearMonth()) }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
-    ) {
-        Text(
-            text = "选择月份",
-            color = KeacsColors.TextPrimary,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 16.dp),
-        )
+    val currentIndex = availableMonths.indexOf(currentYearMonth).coerceAtLeast(0)
 
-        availableMonths.forEach { month ->
-            val isSelected = month == currentYearMonth
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onMonthSelected(month) }
-                    .background(
-                        if (isSelected) KeacsColors.PrimaryLight else Color.Transparent,
-                        MaterialTheme.shapes.medium,
-                    )
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = month,
-                    color = if (isSelected) KeacsColors.Primary else KeacsColors.TextPrimary,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-                if (isSelected) {
-                    Text(
-                        text = "当前",
-                        color = KeacsColors.Primary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-        }
-        Spacer(modifier = Modifier.height(32.dp))
-    }
+    WheelPickerBottomSheet(
+        title = "选择月份",
+        items = availableMonths,
+        selectedIndex = currentIndex,
+        itemToString = { it },
+        onItemSelected = { index ->
+            onMonthSelected(availableMonths[index])
+        },
+        onDismiss = onDismiss,
+    )
 }
 
 private fun recordTitle(

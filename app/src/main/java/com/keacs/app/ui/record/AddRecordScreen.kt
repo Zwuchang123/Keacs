@@ -120,8 +120,7 @@ fun AddRecordScreen(
                 occurredAt = occurredAt,
                 note = note,
                 onAccountSelected = { accountId = it },
-                onToday = { occurredAt = System.currentTimeMillis() },
-                onYesterday = { occurredAt = System.currentTimeMillis() - ONE_DAY },
+                onDateSelected = { occurredAt = it },
                 onNoteChange = { note = it },
             )
             if (recordId != null) {

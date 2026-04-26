@@ -254,3 +254,41 @@ fun MenuDivider() {
         color = KeacsColors.Border,
     )
 }
+
+@Composable
+fun DisabledMenuRow(
+    icon: ImageVector,
+    title: String,
+    iconColor: Color,
+    modifier: Modifier = Modifier,
+    value: String? = null,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CategoryIcon(
+            icon = icon,
+            backgroundColor = iconColor.copy(alpha = 0.14f),
+            tint = iconColor.copy(alpha = 0.5f),
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = title,
+            color = KeacsColors.TextSecondary.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        if (value != null) {
+            Text(
+                text = value,
+                color = KeacsColors.TextSecondary.copy(alpha = 0.6f),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(end = 4.dp),
+            )
+        }
+    }
+}

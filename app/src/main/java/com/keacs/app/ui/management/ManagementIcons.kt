@@ -6,6 +6,8 @@ import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.Business
 import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.DirectionsBus
@@ -14,6 +16,7 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.LocalMall
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.School
@@ -44,30 +47,87 @@ val expenseIconOptions = listOf(
     IconOption("school", "教育", Icons.Rounded.School, "yellow"),
     IconOption("chart", "投资", Icons.Rounded.BarChart, "green"),
     IconOption("heart", "人情", Icons.Rounded.Favorite, "pink"),
+    IconOption("pet", "宠物", Icons.Rounded.Favorite, "pink"),
+    IconOption("baby", "母婴", Icons.Rounded.Favorite, "orange"),
+    IconOption("clothes", "服饰", Icons.Rounded.ShoppingBag, "purple"),
+    IconOption("beauty", "美容", Icons.Rounded.Favorite, "pink"),
+    IconOption("sport", "运动", Icons.Rounded.SportsEsports, "blue"),
+    IconOption("book", "书籍", Icons.Rounded.School, "green"),
+    IconOption("coffee", "咖啡", Icons.Rounded.Restaurant, "orange"),
+    IconOption("travel", "旅行", Icons.Rounded.DirectionsBus, "cyan"),
+    IconOption("rent", "房租", Icons.Rounded.Home, "indigo"),
+    IconOption("gift", "礼物", Icons.Rounded.CardGiftcard, "pink"),
+    IconOption("repair", "维修", Icons.Rounded.Build, "gray"),
+    IconOption("tax", "税费", Icons.Rounded.AccountBalance, "red"),
+    IconOption("insurance", "保险", Icons.Rounded.Favorite, "indigo"),
     IconOption("more", "其他", Icons.Rounded.MoreHoriz, "gray"),
 )
 
 val incomeIconOptions = listOf(
     IconOption("work", "工资", Icons.Rounded.Work, "blue"),
-    IconOption("gift", "奖金", Icons.Rounded.CardGiftcard, "yellow"),
+    IconOption("bonus", "奖金", Icons.Rounded.CardGiftcard, "yellow"),
+    IconOption("overtime", "加班费", Icons.Rounded.Work, "orange"),
     IconOption("receipt", "报销", Icons.AutoMirrored.Rounded.ReceiptLong, "green"),
     IconOption("chart", "理财收益", Icons.Rounded.BarChart, "purple"),
+    IconOption("fund", "基金收益", Icons.Rounded.BarChart, "cyan"),
+    IconOption("stock", "股票收益", Icons.Rounded.BarChart, "green"),
     IconOption("gift", "礼金", Icons.Rounded.CardGiftcard, "orange"),
+    IconOption("redpacket", "红包", Icons.Rounded.CardGiftcard, "red"),
     IconOption("coins", "兼职", Icons.Rounded.AccountBalanceWallet, "cyan"),
+    IconOption("refund", "退款", Icons.Rounded.AccountBalanceWallet, "green"),
+    IconOption("transfer", "转账收入", Icons.Rounded.AccountBalanceWallet, "indigo"),
+    IconOption("rental", "租金", Icons.Rounded.Home, "purple"),
+    IconOption("dividend", "分红", Icons.Rounded.BarChart, "pink"),
+    IconOption("interest", "利息", Icons.Rounded.AccountBalance, "yellow"),
     IconOption("more", "其他", Icons.Rounded.MoreHoriz, "gray"),
 )
 
 val accountIconOptions = listOf(
     IconOption("wallet", "现金", Icons.Rounded.AccountBalanceWallet, "green"),
-    IconOption("wallet", "支付宝", Icons.Rounded.AccountBalanceWallet, "blue"),
-    IconOption("wallet", "微信", Icons.Rounded.AccountBalanceWallet, "cyan"),
+    IconOption("alipay", "支付宝", Icons.Rounded.AccountBalanceWallet, "blue"),
+    IconOption("wechat", "微信", Icons.Rounded.AccountBalanceWallet, "cyan"),
     IconOption("bank", "银行卡", Icons.Rounded.AccountBalance, "indigo"),
-    IconOption("card", "信用卡", Icons.Rounded.CreditCard, "orange"),
-    IconOption("card", "花呗白条", Icons.Rounded.CreditCard, "yellow"),
-    IconOption("home", "公积金", Icons.Rounded.Home, "purple"),
-    IconOption("chart", "投资账户", Icons.Rounded.BarChart, "pink"),
-    IconOption("loan", "借款", Icons.Rounded.CreditCard, "red"),
+    IconOption("debit", "储蓄卡", Icons.Rounded.AccountBalance, "purple"),
+    IconOption("credit", "信用卡", Icons.Rounded.CreditCard, "orange"),
+    IconOption("huabei", "花呗/白条", Icons.Rounded.CreditCard, "yellow"),
+    IconOption("housing", "公积金", Icons.Rounded.Home, "purple"),
+    IconOption("investment", "投资账户", Icons.Rounded.BarChart, "pink"),
+    IconOption("fund", "基金", Icons.Rounded.BarChart, "cyan"),
+    IconOption("stock", "股票", Icons.Rounded.BarChart, "green"),
+    IconOption("insurance", "保险", Icons.Rounded.Favorite, "indigo"),
+    IconOption("loan", "贷款", Icons.Rounded.CreditCard, "red"),
+    IconOption("mortgage", "房贷", Icons.Rounded.Home, "orange"),
+    IconOption("car", "车贷", Icons.Rounded.DirectionsBus, "blue"),
+    IconOption("personal", "私人借款", Icons.Rounded.Person, "gray"),
+    IconOption("business", "对公账户", Icons.Rounded.Business, "indigo"),
     IconOption("more", "其他", Icons.Rounded.MoreHoriz, "gray"),
+)
+
+data class AccountTypeOption(
+    val type: String,
+    val iconKey: String,
+    val colorKey: String,
+)
+
+val accountTypeOptions = listOf(
+    AccountTypeOption("现金", "wallet", "green"),
+    AccountTypeOption("支付宝", "alipay", "blue"),
+    AccountTypeOption("微信", "wechat", "cyan"),
+    AccountTypeOption("银行卡", "bank", "indigo"),
+    AccountTypeOption("储蓄卡", "debit", "purple"),
+    AccountTypeOption("信用卡", "credit", "orange"),
+    AccountTypeOption("花呗/白条", "huabei", "yellow"),
+    AccountTypeOption("公积金", "housing", "purple"),
+    AccountTypeOption("投资账户", "investment", "pink"),
+    AccountTypeOption("基金", "fund", "cyan"),
+    AccountTypeOption("股票", "stock", "green"),
+    AccountTypeOption("保险", "insurance", "indigo"),
+    AccountTypeOption("贷款", "loan", "red"),
+    AccountTypeOption("房贷", "mortgage", "orange"),
+    AccountTypeOption("车贷", "car", "blue"),
+    AccountTypeOption("私人借款", "personal", "gray"),
+    AccountTypeOption("对公账户", "business", "indigo"),
+    AccountTypeOption("其他", "more", "gray"),
 )
 
 fun categoryOptions(direction: String): List<IconOption> =

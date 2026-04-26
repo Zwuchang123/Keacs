@@ -28,6 +28,7 @@ fun MineScreen(
     onAccountClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onBackupClick: () -> Unit,
+    onAboutClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -50,7 +51,7 @@ fun MineScreen(
         DividedMenuCard {
             MenuRow(Icons.Rounded.Settings, "设置", KeacsColors.TextSecondary, onClick = onSettingsClick)
             MenuDivider()
-            MenuRow(Icons.Rounded.Info, "关于", KeacsColors.Primary)
+            MenuRow(Icons.Rounded.Info, "关于", KeacsColors.Primary, onClick = onAboutClick)
         }
     }
 }

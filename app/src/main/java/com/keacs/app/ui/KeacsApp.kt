@@ -2,12 +2,6 @@ package com.keacs.app.ui
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +39,7 @@ import com.keacs.app.domain.usecase.ImportBackupUseCase
 import com.keacs.app.ui.backup.BackupScreen
 import com.keacs.app.ui.backup.BackupViewModel
 import com.keacs.app.ui.settings.SettingsScreen
+import com.keacs.app.ui.settings.AboutScreen
 
 class KeacsViewModelFactory(
     private val repository: LocalDataRepository,
@@ -79,6 +74,7 @@ fun KeacsApp(repository: LocalDataRepository) {
         currentRoute.startsWith(ROUTE_RECORD_EDIT) -> "编辑账目"
         currentRoute == ROUTE_SETTINGS -> "设置"
         currentRoute == ROUTE_BACKUP -> "数据备份"
+        currentRoute == ROUTE_ABOUT -> "关于"
         currentDestination == KeacsDestination.Add -> "新增记录"
         currentDestination != null -> stringResource(currentDestination.titleRes)
         else -> stringResource(destinationForRoute(currentRoute).titleRes)
@@ -119,15 +115,13 @@ fun KeacsApp(repository: LocalDataRepository) {
                     HomeScreen(
                         viewModel = homeViewModel,
                         onAddClick = { currentRoute = KeacsDestination.Add.route },
-                        onRecordsClick = { currentRoute = KeacsDestination.Records.route },
-                        onStatsClick = { currentRoute = KeacsDestination.Stats.route },
-                        onMineClick = { currentRoute = KeacsDestination.Mine.route },
                         onRecordClick = { currentRoute = recordDetailRoute(it) },
                     )
                 }
 
                 route == KeacsDestination.Records.route -> RecordScreen(
                     repository = repository,
+                    onViewRecord = { currentRoute = recordDetailRoute(it) },
                     onEditRecord = { currentRoute = recordEditRoute(it) },
                 )
 
@@ -142,7 +136,8 @@ fun KeacsApp(repository: LocalDataRepository) {
                     onCategoryClick = { currentRoute = ROUTE_CATEGORY_LIST },
                     onAccountClick = { currentRoute = ROUTE_ACCOUNT_LIST },
                     onSettingsClick = { currentRoute = ROUTE_SETTINGS },
-                    onBackupClick = { currentRoute = ROUTE_BACKUP }
+                    onBackupClick = { currentRoute = ROUTE_BACKUP },
+                    onAboutClick = { currentRoute = ROUTE_ABOUT },
                 )
 
                 route == ROUTE_SETTINGS -> SettingsScreen()
@@ -153,6 +148,8 @@ fun KeacsApp(repository: LocalDataRepository) {
                     )
                     BackupScreen(viewModel = backupViewModel)
                 }
+
+                route == ROUTE_ABOUT -> AboutScreen()
 
                 route == ROUTE_CATEGORY_LIST -> CategoryListScreen(
                     repository = repository,
@@ -202,6 +199,7 @@ private const val ROUTE_RECORD_DETAIL = "record-detail/"
 private const val ROUTE_RECORD_EDIT = "record-edit/"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_BACKUP = "backup"
+private const val ROUTE_ABOUT = "about"
 
 private fun categoryEditRoute(id: Long?): String = ROUTE_CATEGORY_EDIT + (id?.toString() ?: "new")
 private fun accountEditRoute(id: Long?): String = ROUTE_ACCOUNT_EDIT + (id?.toString() ?: "new")
@@ -223,42 +221,19 @@ private fun backRoute(route: String): String = when {
         val id = routeId(route, ROUTE_RECORD_EDIT)
         if (id != null) KeacsDestination.Records.route else KeacsDestination.Records.route
     }
-    route == ROUTE_CATEGORY_LIST || route == ROUTE_ACCOUNT_LIST || route == ROUTE_SETTINGS || route == ROUTE_BACKUP -> KeacsDestination.Mine.route
+    route == ROUTE_CATEGORY_LIST || route == ROUTE_ACCOUNT_LIST || route == ROUTE_SETTINGS || route == ROUTE_BACKUP || route == ROUTE_ABOUT -> KeacsDestination.Mine.route
     else -> KeacsDestination.Home.route
 }
 
 @Composable
 private fun TopActions(destination: KeacsDestination) {
     when (destination) {
-        KeacsDestination.Home -> {
-            IconButton(onClick = {}) {
-                Icon(
-                    imageVector = Icons.Rounded.CalendarToday,
-                    contentDescription = "打开日历",
-                    tint = KeacsColors.TextPrimary,
-                )
-            }
-        }
-
         KeacsDestination.Records -> {
-            IconButton(onClick = {}) {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = "搜索账单",
-                    tint = KeacsColors.TextPrimary,
-                )
-            }
-            IconButton(onClick = {}) {
-                Icon(
-                    imageVector = Icons.Rounded.MoreHoriz,
-                    contentDescription = "更多操作",
-                    tint = KeacsColors.TextPrimary,
-                )
-            }
         }
 
         KeacsDestination.Add,
         KeacsDestination.Stats,
-        KeacsDestination.Mine -> Unit
+        KeacsDestination.Mine,
+        KeacsDestination.Home -> Unit
     }
 }
