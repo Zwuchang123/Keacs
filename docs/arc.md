@@ -99,17 +99,6 @@ app/
 - `createdAt`
 - `updatedAt`
 
-### AccountAdjustment
-
-- `id`
-- `accountId`
-- `direction`
-- `amountCent`
-- `occurredAt`
-- `note`
-- `createdAt`
-- `updatedAt`
-
 ## 5. 数据库
 
 数据库名：
