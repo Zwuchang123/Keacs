@@ -1,21 +1,22 @@
 package com.keacs.app.ui.settings
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Info
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.keacs.app.ui.components.CategoryIcon
+import com.keacs.app.R
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
@@ -37,9 +38,10 @@ fun AboutScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                CategoryIcon(
-                    icon = Icons.Rounded.Info,
-                    backgroundColor = KeacsColors.Primary,
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher),
+                    contentDescription = "Keacs 图标",
+                    modifier = Modifier.size(64.dp),
                 )
                 Text(
                     text = "Keacs",
