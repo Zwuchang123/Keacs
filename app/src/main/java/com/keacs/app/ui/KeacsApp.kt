@@ -36,7 +36,6 @@ import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.data.backup.BackupService
 import com.keacs.app.domain.usecase.ExportBackupUseCase
 import com.keacs.app.domain.usecase.ImportBackupUseCase
-import com.keacs.app.ui.backup.BackupScreen
 import com.keacs.app.ui.backup.BackupViewModel
 import com.keacs.app.ui.settings.AboutScreen
 import com.keacs.app.ui.settings.SettingsScreen
@@ -73,7 +72,6 @@ fun KeacsApp(repository: LocalDataRepository) {
         currentRoute.startsWith(ROUTE_RECORD_DETAIL) -> "账目详情"
         currentRoute.startsWith(ROUTE_RECORD_EDIT) -> "编辑账目"
         currentRoute == ROUTE_SETTINGS -> "设置"
-        currentRoute == ROUTE_BACKUP -> "数据备份"
         currentRoute == ROUTE_ABOUT -> "关于"
         currentDestination == KeacsDestination.Add -> "新增记录"
         currentDestination != null -> stringResource(currentDestination.titleRes)
@@ -132,22 +130,20 @@ fun KeacsApp(repository: LocalDataRepository) {
 
                 route == KeacsDestination.Stats.route -> StatsScreen(repository)
 
-                route == KeacsDestination.Mine.route -> MineScreen(
-                    onCategoryClick = { currentRoute = ROUTE_CATEGORY_LIST },
-                    onAccountClick = { currentRoute = ROUTE_ACCOUNT_LIST },
-                    onSettingsClick = { currentRoute = ROUTE_SETTINGS },
-                    onBackupClick = { currentRoute = ROUTE_BACKUP },
-                    onAboutClick = { currentRoute = ROUTE_ABOUT },
-                )
-
-                route == ROUTE_SETTINGS -> SettingsScreen()
-
-                route == ROUTE_BACKUP -> {
+                route == KeacsDestination.Mine.route -> {
                     val backupViewModel: BackupViewModel = viewModel(
                         factory = KeacsViewModelFactory(repository)
                     )
-                    BackupScreen(viewModel = backupViewModel)
+                    MineScreen(
+                        backupViewModel = backupViewModel,
+                        onCategoryClick = { currentRoute = ROUTE_CATEGORY_LIST },
+                        onAccountClick = { currentRoute = ROUTE_ACCOUNT_LIST },
+                        onSettingsClick = { currentRoute = ROUTE_SETTINGS },
+                        onAboutClick = { currentRoute = ROUTE_ABOUT },
+                    )
                 }
+
+                route == ROUTE_SETTINGS -> SettingsScreen()
 
                 route == ROUTE_ABOUT -> AboutScreen()
 
@@ -199,7 +195,6 @@ private const val ROUTE_ACCOUNT_EDIT = "account-edit/"
 private const val ROUTE_RECORD_DETAIL = "record-detail/"
 private const val ROUTE_RECORD_EDIT = "record-edit/"
 private const val ROUTE_SETTINGS = "settings"
-private const val ROUTE_BACKUP = "backup"
 private const val ROUTE_ABOUT = "about"
 
 private fun categoryEditRoute(id: Long?): String = ROUTE_CATEGORY_EDIT + (id?.toString() ?: "new")
@@ -222,7 +217,7 @@ private fun backRoute(route: String): String = when {
         val id = routeId(route, ROUTE_RECORD_EDIT)
         if (id != null) KeacsDestination.Records.route else KeacsDestination.Records.route
     }
-    route == ROUTE_CATEGORY_LIST || route == ROUTE_ACCOUNT_LIST || route == ROUTE_SETTINGS || route == ROUTE_BACKUP || route == ROUTE_ABOUT -> KeacsDestination.Mine.route
+    route == ROUTE_CATEGORY_LIST || route == ROUTE_ACCOUNT_LIST || route == ROUTE_SETTINGS || route == ROUTE_ABOUT -> KeacsDestination.Mine.route
     else -> KeacsDestination.Home.route
 }
 
