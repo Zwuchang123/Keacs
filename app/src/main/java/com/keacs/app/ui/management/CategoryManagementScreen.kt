@@ -1,5 +1,8 @@
 package com.keacs.app.ui.management
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,7 +36,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.local.entity.CategoryEntity
@@ -230,18 +237,38 @@ private fun IconSelector(direction: String, selectedKey: String, onSelected: (Ic
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 items(categoryOptions(direction), key = { option -> option.key + option.label }) { option ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val selected = selectedKey == option.key
+                    Column(
+                        modifier = Modifier
+                            .height(58.dp)
+                            .shadow(
+                                elevation = if (selected) 10.dp else 0.dp,
+                                shape = MaterialTheme.shapes.medium,
+                                ambientColor = KeacsColors.Primary.copy(alpha = 0.22f),
+                                spotColor = KeacsColors.Primary.copy(alpha = 0.22f),
+                            )
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(if (selected) KeacsColors.PrimaryLight else Color.Transparent)
+                            .clickable { onSelected(option) },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
                         CategoryIcon(
                             icon = option.icon,
-                            backgroundColor = if (selectedKey == option.key) KeacsColors.Primary else colorFor(option.colorKey),
+                            backgroundColor = if (selected) KeacsColors.Primary else colorFor(option.colorKey),
                             modifier = Modifier
                                 .size(34.dp)
-                                .clickable { onSelected(option) },
+                                .border(
+                                    BorderStroke(if (selected) 1.5.dp else 0.dp, KeacsColors.Primary),
+                                    MaterialTheme.shapes.small,
+                                ),
                         )
                         Text(
                             text = option.label,
-                            color = if (selectedKey == option.key) KeacsColors.Primary else KeacsColors.TextSecondary,
+                            color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
                             style = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }

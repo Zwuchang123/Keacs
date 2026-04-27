@@ -33,7 +33,7 @@ fun NumberPad(
     )
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         rows.forEach { row ->
             Row(
@@ -62,11 +62,20 @@ private fun NumberKey(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
-    val background = if (enabled) KeacsColors.Surface else KeacsColors.SurfaceSubtle
-    val textColor = if (enabled) KeacsColors.TextPrimary else KeacsColors.TextTertiary
+    val isSaveKey = label == "保存"
+    val background = when {
+        isSaveKey && enabled -> KeacsColors.Primary
+        enabled -> KeacsColors.Surface
+        else -> KeacsColors.SurfaceSubtle
+    }
+    val textColor = when {
+        isSaveKey && enabled -> KeacsColors.Surface
+        enabled -> KeacsColors.TextPrimary
+        else -> KeacsColors.TextTertiary
+    }
     Box(
         modifier = modifier
-            .height(44.dp)
+            .height(40.dp)
             .clip(MaterialTheme.shapes.medium)
             .background(background)
             .clickable(enabled = enabled, onClick = onClick),

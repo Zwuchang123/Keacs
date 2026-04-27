@@ -14,6 +14,7 @@ import androidx.activity.compose.BackHandler
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.keacs.app.data.local.PreferencesManager
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.ui.components.KeacsBottomBar
 import com.keacs.app.ui.components.KeacsScaffold
@@ -60,7 +61,10 @@ class KeacsViewModelFactory(
 }
 
 @Composable
-fun KeacsApp(repository: LocalDataRepository) {
+fun KeacsApp(
+    repository: LocalDataRepository,
+    preferencesManager: PreferencesManager,
+) {
     var currentRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
     var accountDeleteRequest by rememberSaveable { mutableStateOf(0) }
     val currentDestination = bottomDestinations.firstOrNull { it.route == currentRoute }
@@ -113,7 +117,6 @@ fun KeacsApp(repository: LocalDataRepository) {
                     HomeScreen(
                         viewModel = homeViewModel,
                         onRecordsClick = { currentRoute = KeacsDestination.Records.route },
-                        onStatsClick = { currentRoute = KeacsDestination.Stats.route },
                         onRecordClick = { currentRoute = recordDetailRoute(it) },
                     )
                 }
@@ -125,6 +128,7 @@ fun KeacsApp(repository: LocalDataRepository) {
 
                 route == KeacsDestination.Add.route -> AddRecordScreen(
                     repository = repository,
+                    preferencesManager = preferencesManager,
                     onDone = { currentRoute = KeacsDestination.Records.route },
                 )
 
@@ -143,7 +147,10 @@ fun KeacsApp(repository: LocalDataRepository) {
                     )
                 }
 
-                route == ROUTE_SETTINGS -> SettingsScreen()
+                route == ROUTE_SETTINGS -> SettingsScreen(
+                    repository = repository,
+                    preferencesManager = preferencesManager,
+                )
 
                 route == ROUTE_ABOUT -> AboutScreen()
 
@@ -179,9 +186,9 @@ fun KeacsApp(repository: LocalDataRepository) {
 
                 route.startsWith(ROUTE_RECORD_EDIT) -> AddRecordScreen(
                     repository = repository,
+                    preferencesManager = preferencesManager,
                     recordId = routeId(route, ROUTE_RECORD_EDIT),
                     onDone = { routeId(route, ROUTE_RECORD_EDIT)?.let { currentRoute = recordDetailRoute(it) } },
-                    onDeleted = { currentRoute = KeacsDestination.Records.route },
                 )
             }
         }

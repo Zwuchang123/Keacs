@@ -111,7 +111,7 @@ class StatsViewModel(
         val totalLiability = liabilityAccounts.sumOf { balance -> balanceFor(balance, records) }
 
         val categoryStatsResult = buildCategoryStats(periodRecords, categoryMap, tab)
-        val dailyTrend = buildDailyTrend(periodRecords, period, periodStart)
+        val dailyTrend = buildDailyTrend(periodRecords, period, periodStart, tab)
         val netAssetTrend = buildNetAssetTrend(accounts, records, date)
         val accountBalances = buildAccountBalances(accounts, records)
 
@@ -220,8 +220,15 @@ class StatsViewModel(
         records: List<RecordEntity>,
         period: TimePeriod,
         periodStart: Long,
+        tab: StatsTab,
     ): List<DailyStats> {
-        if (period == TimePeriod.YEAR) return emptyList()
+        if (period == TimePeriod.YEAR || tab == StatsTab.ASSET) return emptyList()
+
+        val targetType = when (tab) {
+            StatsTab.INCOME -> RecordType.INCOME
+            StatsTab.EXPENSE -> RecordType.EXPENSE
+            StatsTab.ASSET -> return emptyList()
+        }
 
         val calendar = Calendar.getInstance(Locale.getDefault())
         calendar.timeInMillis = periodStart
@@ -243,10 +250,10 @@ class StatsViewModel(
             dayCalendar.add(Calendar.DAY_OF_MONTH, 1)
             val dayEnd = dayCalendar.timeInMillis
 
-            val dayRecords = records.filter { it.occurredAt in dayStart until dayEnd }
-            val income = dayRecords.filter { it.type == RecordType.INCOME }.sumOf { it.amountCent }
-            val expense = dayRecords.filter { it.type == RecordType.EXPENSE }.sumOf { it.amountCent }
-            DailyStats(day = day, amount = income - expense)
+            val amount = records
+                .filter { it.type == targetType && it.occurredAt in dayStart until dayEnd }
+                .sumOf { it.amountCent }
+            DailyStats(day = day, amount = amount)
         }
     }
 
@@ -299,7 +306,7 @@ class StatsViewModel(
         private val currencyFormat = DecimalFormat("#,##0.00")
 
         fun formatCent(value: Long): String =
-            "¥" + currencyFormat.format(value / 100.0)
+            currencyFormat.format(value / 100.0)
 
         fun formatPercentage(value: Float): String =
             DecimalFormat("#0.0").format(value) + "%"

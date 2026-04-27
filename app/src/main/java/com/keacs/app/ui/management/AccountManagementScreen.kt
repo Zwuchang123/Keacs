@@ -252,4 +252,4 @@ private fun natureText(nature: String): String =
     if (nature == PresetSeedData.ACCOUNT_LIABILITY) "负债" else "资产"
 
 private fun formatCent(value: Long): String =
-    "¥" + DecimalFormat("#,##0.00").format(value / 100.0)
+    DecimalFormat("#,##0.00").format(value / 100.0)

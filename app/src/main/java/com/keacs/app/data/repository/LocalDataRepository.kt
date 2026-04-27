@@ -178,17 +178,14 @@ class LocalDataRepository(
     suspend fun initializePresets() {
         database.withTransaction {
             val now = clock()
-            if (database.categoryDao().count() == 0) {
-                database.categoryDao().insertAll(PresetSeedData.categories(now))
-            }
-            if (database.accountDao().count() == 0) {
-                database.accountDao().insertAll(PresetSeedData.accounts(now))
-            }
+            // 预置项需要支持后续补齐，避免老用户升级后缺少新增的预置分类。
+            database.categoryDao().insertAll(PresetSeedData.categories(now))
+            database.accountDao().insertAll(PresetSeedData.accounts(now))
             // 记录初始化版本，后续迁移和排查可直接判断本地预置数据状态。
             database.appMetaDao().upsert(
                 AppMetaEntity(
                     key = META_PRESET_VERSION,
-                    value = "1",
+                    value = PRESET_VERSION,
                     updatedAt = now,
                 ),
             )
@@ -206,13 +203,18 @@ class LocalDataRepository(
     ) {
         database.withTransaction {
             val now = clock()
-            // Import categories (No deduplication per PRD)
-            val categoryIdMap = mutableMapOf<Long, Long>() // oldId -> newId
+            val categoryIdMap = mutableMapOf<Long, Long>()
+            val usedCategoryNames = database.categoryDao()
+                .getAll()
+                .map { it.direction to it.name }
+                .toMutableSet()
 
             for (cat in categories) {
+                val resolvedName = uniqueCategoryName(cat.name, cat.direction, usedCategoryNames)
                 val newId = database.categoryDao().insert(
                     cat.copy(
                         id = 0,
+                        name = resolvedName,
                         createdAt = now,
                         updatedAt = now,
                         sortOrder = (database.categoryDao().maxSortOrder(cat.direction) ?: -1) + 1
@@ -221,17 +223,25 @@ class LocalDataRepository(
                 categoryIdMap[cat.id] = newId
             }
 
-            // Import accounts (No deduplication per PRD)
             val accountIdMap = mutableMapOf<Long, Long>()
+            val usedAccountNames = database.accountDao()
+                .getAll()
+                .map { it.name }
+                .toMutableSet()
 
             for (acc in accounts) {
+                val resolvedName = uniqueAccountName(acc.name, usedAccountNames)
                 val newId = database.accountDao().insert(
-                    acc.copy(id = 0, createdAt = now, updatedAt = now)
+                    acc.copy(
+                        id = 0,
+                        name = resolvedName,
+                        createdAt = now,
+                        updatedAt = now,
+                    )
                 )
                 accountIdMap[acc.id] = newId
             }
 
-            // Import records
             for (rec in records) {
                 val newCategoryId = rec.categoryId?.let { categoryIdMap[it] }
                 val newFromAccountId = rec.fromAccountId?.let { accountIdMap[it] }
@@ -253,6 +263,34 @@ class LocalDataRepository(
 
     private companion object {
         const val META_PRESET_VERSION = "preset_version"
+        const val PRESET_VERSION = "2"
+    }
+
+    private fun uniqueCategoryName(
+        baseName: String,
+        direction: String,
+        usedNames: MutableSet<Pair<String, String>>,
+    ): String {
+        var candidate = baseName
+        var suffix = 2
+        while (!usedNames.add(direction to candidate)) {
+            candidate = "$baseName（导入$suffix）"
+            suffix += 1
+        }
+        return candidate
+    }
+
+    private fun uniqueAccountName(
+        baseName: String,
+        usedNames: MutableSet<String>,
+    ): String {
+        var candidate = baseName
+        var suffix = 2
+        while (!usedNames.add(candidate)) {
+            candidate = "$baseName（导入$suffix）"
+            suffix += 1
+        }
+        return candidate
     }
 
     private suspend fun validateRecord(

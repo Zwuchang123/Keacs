@@ -111,12 +111,11 @@ private fun AddDestinationItem(
     destination: KeacsDestination,
     onClick: () -> Unit,
 ) {
-    val label = stringResource(destination.titleRes)
     val description = stringResource(destination.contentDescriptionRes)
 
     Column(
         modifier = Modifier
-            .size(width = 64.dp, height = 74.dp)
+            .size(width = 64.dp, height = 62.dp)
             .clickable(role = Role.Tab, onClick = onClick)
             .semantics {
                 contentDescription = description
@@ -139,11 +138,5 @@ private fun AddDestinationItem(
                 modifier = Modifier.size(28.dp),
             )
         }
-        Text(
-            text = label,
-            color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-        )
     }
 }

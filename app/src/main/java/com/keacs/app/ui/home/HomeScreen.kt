@@ -17,6 +17,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.SouthWest
+import androidx.compose.material.icons.rounded.NorthEast
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -46,7 +50,6 @@ import com.keacs.app.ui.theme.KeacsSpacing
 fun HomeScreen(
     viewModel: HomeViewModel,
     onRecordsClick: () -> Unit,
-    onStatsClick: () -> Unit,
     onRecordClick: (Long) -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -62,9 +65,6 @@ fun HomeScreen(
         OverviewCard(
             totalIncome = uiState.totalIncome,
             totalExpense = uiState.totalExpense,
-            totalAsset = uiState.totalAsset,
-            totalLiability = uiState.totalLiability,
-            onClick = onStatsClick,
         )
         RecentRecords(
             records = uiState.recentRecords,
@@ -79,11 +79,8 @@ fun HomeScreen(
 private fun OverviewCard(
     totalIncome: Long,
     totalExpense: Long,
-    totalAsset: Long,
-    totalLiability: Long,
-    onClick: () -> Unit,
 ) {
-    val netBalance = totalAsset - totalLiability
+    val monthBalance = totalIncome - totalExpense
 
     Box(
         modifier = Modifier
@@ -94,69 +91,49 @@ private fun OverviewCard(
                     listOf(Color(0xFF65A2FF), KeacsColors.Primary),
                 ),
             )
-            .clickable(onClick = onClick)
             .padding(KeacsSpacing.CardPadding),
     ) {
-        Column {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "本月结余",
-                    color = KeacsColors.PrimaryLight,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = "净资产",
-                    color = KeacsColors.PrimaryLight,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = "本月结余",
+                        color = KeacsColors.PrimaryLight,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        text = HomeViewModel.formatCent(monthBalance),
+                        color = KeacsColors.Surface,
+                        style = MaterialTheme.typography.displaySmall,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
             }
-            Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text(
-                    text = HomeViewModel.formatCent(netBalance),
-                    color = KeacsColors.Surface,
-                    style = MaterialTheme.typography.displaySmall,
-                    fontFamily = FontFamily.Monospace,
-                )
-                Text(
-                    text = HomeViewModel.formatCent(totalAsset),
-                    color = KeacsColors.Surface.copy(alpha = 0.85f),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontFamily = FontFamily.Monospace,
-                )
-            }
-            Spacer(modifier = Modifier.height(14.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AmountSummary(
+                OverviewPill(
                     label = "收入",
                     amount = HomeViewModel.formatCent(totalIncome),
+                    icon = Icons.Rounded.NorthEast,
                     color = KeacsColors.Income,
                     modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.Start,
                 )
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(28.dp)
-                        .background(KeacsColors.PrimaryLight.copy(alpha = 0.45f)),
-                )
-                AmountSummary(
+                OverviewPill(
                     label = "支出",
                     amount = HomeViewModel.formatCent(totalExpense),
+                    icon = Icons.Rounded.SouthWest,
                     color = KeacsColors.Expense,
                     modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.End,
                 )
             }
         }
@@ -164,28 +141,49 @@ private fun OverviewCard(
 }
 
 @Composable
-private fun AmountSummary(
+private fun OverviewPill(
     label: String,
     amount: String,
+    icon: ImageVector,
     color: Color,
     modifier: Modifier = Modifier,
-    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
 ) {
-    Column(
+    Row(
         modifier = modifier,
-        horizontalAlignment = horizontalAlignment,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(
-            text = label,
-            color = KeacsColors.PrimaryLight,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Text(
-            text = amount,
-            color = color,
-            style = MaterialTheme.typography.titleMedium,
-            fontFamily = FontFamily.Monospace,
-        )
+        Box(
+            modifier = Modifier
+                .width(22.dp)
+                .height(22.dp)
+                .clip(MaterialTheme.shapes.small)
+                .background(color.copy(alpha = 0.16f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = color,
+                modifier = Modifier
+                    .width(13.dp)
+                    .height(13.dp),
+            )
+        }
+        Column {
+            Text(
+                text = label,
+                color = KeacsColors.PrimaryLight,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                text = amount,
+                color = KeacsColors.Surface,
+                style = MaterialTheme.typography.titleMedium,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
 

@@ -39,7 +39,7 @@ https://github.com/Zwuchang123/Keacs/releases
 4. 在 Gitee Release 创建同版本，上传同一个 APK。
 5. 在两个发布说明里互相放备用地址。
 6. 保留 APK 文件名中的版本号，例如 `keacs-v1.0.1.apk`。
-7. 确保用户更新不会造成设备数据丢失。
+7. 务必确保用户更新不会导致设备数据丢失。
 
 ## 更新内容模板
 

@@ -138,7 +138,6 @@ fun RecordScreen(
                     item(key = "header_$date") {
                         DateGroupHeader(
                             date = date,
-                            dayNetAmount = calculateDayNetAmount(records),
                         )
                     }
                     item(key = "card_$date") {
@@ -238,28 +237,17 @@ private fun SummaryAmount(label: String, amount: String, color: Color) {
 }
 
 @Composable
-private fun DateGroupHeader(date: String, dayNetAmount: Long) {
+private fun DateGroupHeader(date: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = date,
             color = KeacsColors.TextSecondary,
             style = MaterialTheme.typography.bodySmall,
-        )
-        Text(
-            text = formatCent(dayNetAmount),
-            color = when {
-                dayNetAmount > 0 -> KeacsColors.Income
-                dayNetAmount < 0 -> KeacsColors.Expense
-                else -> KeacsColors.TextTertiary
-            },
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
         )
     }
 }
@@ -342,19 +330,10 @@ private fun recordMatchesSearch(
     ).any { it.contains(keyword, ignoreCase = true) }
 }
 
-private fun calculateDayNetAmount(records: List<RecordEntity>): Long =
-    records.sumOf { record ->
-        when (record.type) {
-            RecordType.INCOME -> record.amountCent
-            RecordType.EXPENSE -> -record.amountCent
-            else -> 0L
-        }
-    }
-
 private fun formatCent(value: Long): String =
-    "¥" + DecimalFormat("#,##0.00").format(value / 100.0)
+    DecimalFormat("#,##0.00").format(value / 100.0)
 
-private val dateLabelFormat = SimpleDateFormat("MM月dd日 E", Locale.getDefault())
+private val dateLabelFormat = SimpleDateFormat("yyyy年MM月dd日 EEEE", Locale.CHINA)
 private val yearMonthFormat = SimpleDateFormat("yyyy年MM月", Locale.getDefault())
 
 private fun formatRecordDateLabel(timestamp: Long): String = dateLabelFormat.format(Date(timestamp))

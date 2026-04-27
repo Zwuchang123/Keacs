@@ -6,14 +6,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -21,7 +20,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.entity.CategoryEntity
 import com.keacs.app.ui.components.CategoryIcon
@@ -32,33 +34,62 @@ import com.keacs.app.ui.theme.KeacsColors
 
 @Composable
 fun CategoryGrid(categories: List<CategoryEntity>, selectedId: Long?, onSelected: (Long) -> Unit) {
-    KeacsCard(contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(5),
+    KeacsCard(contentPadding = PaddingValues(0.dp)) {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(190.dp)
+                .height(232.dp)
                 .padding(it),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
-            items(categories, key = { category -> category.id }) { category ->
-                CategoryChoice(category, selectedId == category.id) { onSelected(category.id) }
+            categories.take(15).chunked(5).forEach { rowCategories ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    rowCategories.forEach { category ->
+                        CategoryChoice(
+                            category = category,
+                            selected = selectedId == category.id,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            onSelected(category.id)
+                        }
+                    }
+                    repeat(5 - rowCategories.size) {
+                        Box(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun CategoryChoice(category: CategoryEntity, selected: Boolean, onClick: () -> Unit) {
-    androidx.compose.foundation.layout.Column(
-        modifier = Modifier.clickable(onClick = onClick),
+private fun CategoryChoice(
+    category: CategoryEntity,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .height(66.dp)
+            .shadow(
+                elevation = if (selected) 10.dp else 0.dp,
+                shape = MaterialTheme.shapes.medium,
+                ambientColor = KeacsColors.Primary.copy(alpha = 0.22f),
+                spotColor = KeacsColors.Primary.copy(alpha = 0.22f),
+            )
+            .clip(MaterialTheme.shapes.medium)
+            .background(if (selected) KeacsColors.PrimaryLight else Color.Transparent)
+            .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.Center,
     ) {
         Box(
             modifier = Modifier
-                .size(42.dp)
+                .size(38.dp)
                 .clip(CircleShape)
                 .background(if (selected) KeacsColors.PrimaryLight else KeacsColors.Surface)
                 .border(BorderStroke(if (selected) 1.5.dp else 0.dp, KeacsColors.Primary), CircleShape),
@@ -67,7 +98,7 @@ private fun CategoryChoice(category: CategoryEntity, selected: Boolean, onClick:
             CategoryIcon(
                 icon = iconFor(category.iconKey),
                 backgroundColor = if (selected) KeacsColors.Primary else colorFor(category.colorKey),
-                modifier = Modifier.size(34.dp),
+                modifier = Modifier.size(32.dp),
             )
         }
         Text(
@@ -75,6 +106,8 @@ private fun CategoryChoice(category: CategoryEntity, selected: Boolean, onClick:
             color = if (selected) KeacsColors.Primary else KeacsColors.TextPrimary,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

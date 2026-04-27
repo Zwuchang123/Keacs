@@ -3,6 +3,7 @@ package com.keacs.app.ui.stats
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -66,6 +68,26 @@ fun StatsScreen(
         modifier = Modifier
             .fillMaxSize()
             .testTag("screen-stats")
+            .pointerInput(uiState.selectedTab) {
+                var totalDrag = 0f
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { change, dragAmount ->
+                        totalDrag += dragAmount
+                        change.consume()
+                    },
+                    onDragEnd = {
+                        val nextTab = when {
+                            totalDrag <= -60f -> StatsTab.entries.getOrNull(uiState.selectedTab.ordinal + 1)
+                            totalDrag >= 60f -> StatsTab.entries.getOrNull(uiState.selectedTab.ordinal - 1)
+                            else -> null
+                        }
+                        if (nextTab != null) {
+                            viewModel.selectTab(nextTab)
+                        }
+                        totalDrag = 0f
+                    },
+                )
+            }
             .verticalScroll(rememberScrollState())
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
@@ -101,6 +123,7 @@ fun StatsScreen(
                 TrendChartCard(
                     dailyTrend = uiState.dailyTrend,
                     period = uiState.selectedPeriod,
+                    tab = uiState.selectedTab,
                 )
                 CategoryChartCard(
                     categoryStats = uiState.categoryStats,
@@ -324,6 +347,7 @@ private fun StatAmountItem(
 private fun TrendChartCard(
     dailyTrend: List<DailyStats>,
     period: TimePeriod,
+    tab: StatsTab,
 ) {
     KeacsCard {
         Column(
@@ -332,7 +356,7 @@ private fun TrendChartCard(
                 .padding(16.dp),
         ) {
             Text(
-                text = "收支趋势",
+                text = if (tab == StatsTab.INCOME) "收入趋势" else "支出趋势",
                 color = KeacsColors.TextPrimary,
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -662,13 +686,13 @@ private fun AssetStatItem(
 }
 
 private fun formatCent(value: Long): String =
-    "¥" + DecimalFormat("#,##0.00").format(value / 100.0)
+    DecimalFormat("#,##0.00").format(value / 100.0)
 
 private fun formatShort(value: Long): String {
     return when {
         value >= 1_000_000_00 -> String.format("%.1fW", value / 100_000_000.0)
         value >= 1_000_00 -> String.format("%.1fW", value / 10_000_000.0)
         value >= 1_000_00 -> String.format("%.0f", value / 100_0000.0)
-        else -> "¥${value / 100}"
+        else -> "${value / 100}"
     }
 }

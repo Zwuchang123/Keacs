@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -96,7 +98,15 @@ private fun WheelColumn(
     column: WheelPickerColumn,
     modifier: Modifier = Modifier,
 ) {
+    val selectedIndex = column.selectedIndex.coerceIn(column.items.indices)
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
+
+    LaunchedEffect(selectedIndex, column.items.size) {
+        listState.scrollToItem(selectedIndex)
+    }
+
     LazyColumn(
+        state = listState,
         modifier = modifier
             .height(180.dp)
             .clip(MaterialTheme.shapes.medium)
@@ -105,7 +115,7 @@ private fun WheelColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         itemsIndexed(column.items) { index, item ->
-            val selected = index == column.selectedIndex
+            val selected = index == selectedIndex
             Text(
                 text = item,
                 modifier = Modifier

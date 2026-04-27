@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.CalendarToday
@@ -58,22 +59,44 @@ fun TransferAccounts(
     val fromAccount = accounts.firstOrNull { it.id == fromId }
     val toAccount = accounts.firstOrNull { it.id == toId }
 
-    KeacsCard(contentPadding = PaddingValues(12.dp)) {
-        Column(Modifier.padding(it), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TransferAccountRow(
+    KeacsCard(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(it),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TransferAccountBox(
                 title = "转出账户",
                 value = fromAccount?.name ?: "选择账户",
                 iconTint = KeacsColors.Expense,
                 iconBackground = KeacsColors.Expense.copy(alpha = 0.12f),
                 icon = Icons.Rounded.SouthWest,
+                modifier = Modifier.weight(1f),
                 onClick = { showFromSelector = true },
             )
-            TransferAccountRow(
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(KeacsColors.PrimaryLight),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = "转入方向",
+                    tint = KeacsColors.Primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            TransferAccountBox(
                 title = "转入账户",
                 value = toAccount?.name ?: "选择账户",
                 iconTint = KeacsColors.Income,
                 iconBackground = KeacsColors.Income.copy(alpha = 0.12f),
                 icon = Icons.Rounded.NorthEast,
+                modifier = Modifier.weight(1f),
                 onClick = { showToSelector = true },
             )
         }
@@ -113,16 +136,16 @@ fun AmountKeyboardPanel(
 ) {
     KeacsCard(
         modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(it),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            AmountText(amount = if (amount.isBlank()) "¥0.00" else "¥$amount")
+            AmountText(amount = amount.ifBlank { "0.00" })
             Text(
                 text = message ?: if (parsedAmount == null) "金额大于0才可保存" else " ",
                 color = if (message == null) KeacsColors.TextTertiary else KeacsColors.Error,
@@ -165,8 +188,8 @@ fun FormArea(
     var showAccountSelector by remember { mutableStateOf(false) }
     var showDateSelector by remember { mutableStateOf(false) }
 
-    KeacsCard(contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
-        Column(Modifier.padding(it), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    KeacsCard(contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
+        Column(Modifier.padding(it), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (showAccount) {
                 FormFieldRow(
                     Icons.Rounded.AccountBalanceWallet,
@@ -210,37 +233,35 @@ fun FormArea(
 }
 
 @Composable
-private fun TransferAccountRow(
+private fun TransferAccountBox(
     title: String,
     value: String,
     iconTint: androidx.compose.ui.graphics.Color,
     iconBackground: androidx.compose.ui.graphics.Color,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
+    Column(
+        modifier = modifier
             .clip(MaterialTheme.shapes.medium)
             .background(KeacsColors.SurfaceSubtle)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(34.dp)
+                .size(36.dp)
                 .clip(CircleShape)
                 .background(iconBackground),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(19.dp))
         }
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-            Text(value, color = KeacsColors.TextPrimary, style = MaterialTheme.typography.bodyMedium)
-        }
+        Text(title, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+        Text(value, color = KeacsColors.TextPrimary, style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -250,7 +271,7 @@ private fun NoteField(note: String, onNoteChange: (String) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .height(40.dp)
+            .height(36.dp)
             .padding(horizontal = 12.dp),
     ) {
         Icon(Icons.AutoMirrored.Rounded.Notes, contentDescription = null, tint = KeacsColors.TextSecondary)

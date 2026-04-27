@@ -124,4 +124,4 @@ fun nextBalanceAmount(current: String, key: String): String {
 }
 
 private fun balanceDisplay(balance: String): String =
-    if (balance.startsWith("-")) "-¥${balance.removePrefix("-").ifBlank { "0.00" }}" else "¥${balance.ifBlank { "0.00" }}"
+    balance.ifBlank { "0.00" }

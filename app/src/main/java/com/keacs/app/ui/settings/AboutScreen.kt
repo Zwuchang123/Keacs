@@ -65,7 +65,13 @@ fun AboutScreen() {
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "版本 ${BuildConfig.VERSION_NAME}",
+                    text = "离线记账，本地保存。",
+                    color = KeacsColors.TextPrimary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    text = "无需账号，打开即用。",
                     color = KeacsColors.TextSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -94,26 +100,6 @@ fun AboutScreen() {
                     }
                 },
             )
-        }
-        KeacsCard {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(it),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text("本地记账", color = KeacsColors.TextPrimary, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = "数据只保存在本机，不需要账号，也不依赖网络。",
-                    color = KeacsColors.TextSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    text = "适合个人快速记录收入、支出和转账，页面保持简单轻量。",
-                    color = KeacsColors.TextSecondary,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
         }
     }
 

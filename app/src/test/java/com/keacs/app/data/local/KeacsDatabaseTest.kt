@@ -53,15 +53,16 @@ class KeacsDatabaseTest {
         val categories = repository.getCategories()
         val accounts = repository.getAccounts()
 
-        assertEquals(19, categories.size)
+        assertEquals(41, categories.size)
         assertEquals(13, accounts.size)
         assertEquals(7, categories.count { it.direction == PresetSeedData.CATEGORY_INCOME })
         assertEquals(12, categories.count { it.direction == PresetSeedData.CATEGORY_EXPENSE })
+        assertEquals(22, categories.count { it.direction == PresetSeedData.CATEGORY_ACCOUNT })
         assertEquals(7, accounts.count { it.nature == PresetSeedData.ACCOUNT_ASSET })
         assertEquals(6, accounts.count { it.nature == PresetSeedData.ACCOUNT_LIABILITY })
         assertTrue(categories.all { it.isPreset && it.isEnabled })
         assertTrue(accounts.all { it.isEnabled && it.initialBalanceCent == 0L })
-        assertEquals("1", repository.presetVersion())
+        assertEquals("2", repository.presetVersion())
     }
 
     @Test
@@ -69,7 +70,7 @@ class KeacsDatabaseTest {
         repository.initializePresets()
         repository.initializePresets()
 
-        assertEquals(19, database.categoryDao().count())
+        assertEquals(41, database.categoryDao().count())
         assertEquals(13, database.accountDao().count())
     }
 
@@ -82,6 +83,7 @@ class KeacsDatabaseTest {
 
         assertTrue("工资" in categoryNames)
         assertTrue("餐饮" in categoryNames)
+        assertTrue("支付宝" in categoryNames)
         assertTrue("支付宝" in accountNames)
         assertTrue("信用卡" in accountNames)
     }
@@ -233,5 +235,46 @@ class KeacsDatabaseTest {
         assertEquals("转出和转入账户不能相同", runCatching {
             repository.saveRecord(null, RecordType.TRANSFER, 100, 1_000, null, asset.id, asset.id, "")
         }.exceptionOrNull()?.message)
+    }
+
+    @Test
+    fun importBackupRenamesDuplicateNamesInsteadOfFailing() = runTest {
+        repository.initializePresets()
+        val duplicateCategory = CategoryEntity(
+            name = "餐饮",
+            direction = PresetSeedData.CATEGORY_EXPENSE,
+            iconKey = "food",
+            colorKey = "orange",
+            isPreset = false,
+            isEnabled = true,
+            sortOrder = 0,
+            createdAt = 1_000L,
+            updatedAt = 1_000L,
+        )
+        val duplicateAccount = com.keacs.app.data.local.entity.AccountEntity(
+            name = "现金",
+            nature = PresetSeedData.ACCOUNT_ASSET,
+            type = "现金",
+            iconKey = "wallet",
+            colorKey = "green",
+            initialBalanceCent = 0,
+            isEnabled = true,
+            createdAt = 1_000L,
+            updatedAt = 1_000L,
+        )
+
+        repository.importBackup(
+            categories = listOf(duplicateCategory),
+            accounts = listOf(duplicateAccount),
+            records = emptyList(),
+        )
+
+        val categories = repository.getCategories().filter { it.direction == PresetSeedData.CATEGORY_EXPENSE }
+        val accounts = repository.getAccounts()
+
+        assertTrue(categories.any { it.name == "餐饮" })
+        assertTrue(categories.any { it.name == "餐饮（导入2）" })
+        assertTrue(accounts.any { it.name == "现金" })
+        assertTrue(accounts.any { it.name == "现金（导入2）" })
     }
 }

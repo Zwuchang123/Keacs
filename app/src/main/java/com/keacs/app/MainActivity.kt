@@ -79,7 +79,10 @@ private fun AppContent(
         }
 
         localDataReady -> {
-            KeacsApp(repository)
+            KeacsApp(
+                repository = repository,
+                preferencesManager = preferencesManager,
+            )
         }
 
         else -> {

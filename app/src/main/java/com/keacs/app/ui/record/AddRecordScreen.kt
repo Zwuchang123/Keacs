@@ -1,14 +1,11 @@
 package com.keacs.app.ui.record
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -18,29 +15,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import com.keacs.app.data.local.PreferencesManager
 import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.model.RecordType
-import com.keacs.app.domain.usecase.DeleteRecordUseCase
 import com.keacs.app.ui.components.SegmentedTabs
-import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 import kotlinx.coroutines.launch
 
 @Composable
 fun AddRecordScreen(
     repository: LocalDataRepository,
+    preferencesManager: PreferencesManager,
     recordId: Long? = null,
     onDone: () -> Unit = {},
-    onDeleted: () -> Unit = onDone,
 ) {
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
     val accounts by repository.observeAccounts().collectAsState(initial = emptyList())
     val records by repository.observeRecords().collectAsState(initial = emptyList())
+    val defaultAccountId by preferencesManager.defaultRecordAccountId.collectAsState(initial = null)
+    val defaultRecordType by preferencesManager.defaultRecordType.collectAsState(initial = RecordType.EXPENSE)
     val editing = records.firstOrNull { it.id == recordId }
     val scope = rememberCoroutineScope()
 
@@ -53,8 +51,8 @@ fun AddRecordScreen(
     var note by rememberSaveable(recordId) { mutableStateOf("") }
     var occurredAt by rememberSaveable(recordId) { mutableLongStateOf(System.currentTimeMillis()) }
     var error by rememberSaveable(recordId) { mutableStateOf<String?>(null) }
-    var confirmDelete by rememberSaveable(recordId) { mutableStateOf(false) }
     var isSaving by rememberSaveable(recordId) { mutableStateOf(false) }
+    var initializedFromPreference by rememberSaveable(recordId) { mutableStateOf(false) }
 
     val enabledAccounts = accounts.filter { it.isEnabled }
     val direction = if (type == RecordType.INCOME) PresetSeedData.CATEGORY_INCOME else PresetSeedData.CATEGORY_EXPENSE
@@ -66,7 +64,7 @@ fun AddRecordScreen(
         categoryId != null
     }
 
-    LaunchedEffect(editing?.id) {
+    LaunchedEffect(editing?.id, defaultRecordType, defaultAccountId, enabledAccounts) {
         if (editing != null) {
             type = editing.type
             amount = centToInput(editing.amountCent)
@@ -76,12 +74,20 @@ fun AddRecordScreen(
             toAccountId = editing.toAccountId
             note = editing.note.orEmpty()
             occurredAt = editing.occurredAt
+            initializedFromPreference = true
+        } else if (!initializedFromPreference) {
+            type = defaultRecordType.toRecordType()
+            accountId = enabledAccounts.firstOrNull { it.id == defaultAccountId }?.id
+            initializedFromPreference = true
         }
     }
 
     LaunchedEffect(type, availableCategories, enabledAccounts) {
         if (type != RecordType.TRANSFER && availableCategories.none { it.id == categoryId }) {
             categoryId = availableCategories.firstOrNull()?.id
+        }
+        if (type != RecordType.TRANSFER && enabledAccounts.none { it.id == accountId }) {
+            accountId = null
         }
         if (type == RecordType.TRANSFER && enabledAccounts.isNotEmpty()) {
             if (enabledAccounts.none { it.id == fromAccountId }) fromAccountId = enabledAccounts.first().id
@@ -93,13 +99,33 @@ fun AddRecordScreen(
         modifier = Modifier
             .fillMaxSize()
             .testTag("screen-add")
+            .pointerInput(type) {
+                var totalDrag = 0f
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { change, dragAmount ->
+                        totalDrag += dragAmount
+                        change.consume()
+                    },
+                    onDragEnd = {
+                        val nextType = when {
+                            totalDrag <= -60f -> listOf(RecordType.EXPENSE, RecordType.INCOME, RecordType.TRANSFER)
+                                .getOrNull(typeIndex(type) + 1)
+                            totalDrag >= 60f -> listOf(RecordType.EXPENSE, RecordType.INCOME, RecordType.TRANSFER)
+                                .getOrNull(typeIndex(type) - 1)
+                            else -> null
+                        }
+                        if (nextType != null) {
+                            type = nextType
+                            error = null
+                        }
+                        totalDrag = 0f
+                    },
+                )
+            }
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
     ) {
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             SegmentedTabs(
                 items = listOf("支出", "收入", "转账"),
@@ -124,20 +150,10 @@ fun AddRecordScreen(
                 onDateSelected = { occurredAt = it },
                 onNoteChange = { note = it },
             )
-            if (recordId != null) {
-                Text(
-                    text = "删除账目",
-                    color = KeacsColors.Error,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .clickable { confirmDelete = true }
-                        .padding(12.dp),
-                )
-            }
         }
+        Spacer(modifier = Modifier.weight(1f))
         AmountKeyboardPanel(
-            modifier = Modifier.padding(top = KeacsSpacing.ItemGap),
+            modifier = Modifier.padding(top = 8.dp),
             amount = amount,
             parsedAmount = parsedAmount,
             message = validationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, error),
@@ -156,17 +172,9 @@ fun AddRecordScreen(
             },
         )
     }
+}
 
-    if (confirmDelete) {
-        DeleteDialog(
-            onDismiss = { confirmDelete = false },
-            onConfirm = {
-                confirmDelete = false
-                scope.launch {
-                    recordId?.let { DeleteRecordUseCase(repository)(it) }
-                    onDeleted()
-                }
-            },
-        )
-    }
+private fun String.toRecordType(): String = when (this) {
+    RecordType.INCOME, RecordType.TRANSFER -> this
+    else -> RecordType.EXPENSE
 }
