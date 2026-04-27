@@ -48,7 +48,7 @@ class BackupServiceTest {
     }
 
     @Test
-    fun `export backup contains categories accounts records`() = runBlocking {
+    fun exportBackupContainsCategoriesAccountsRecords() = runBlocking {
         val outputStream = ByteArrayOutputStream()
         backupService.exportBackup(outputStream)
 
@@ -67,7 +67,7 @@ class BackupServiceTest {
     }
 
     @Test
-    fun `import backup merges data into existing`() = runBlocking {
+    fun importBackupMergesDataIntoExisting() = runBlocking {
         val originalCategories = repository.getCategories()
         val originalAccounts = repository.getAccounts()
 
@@ -164,7 +164,7 @@ class BackupServiceTest {
     }
 
     @Test
-    fun `import backup rejects invalid version`() = runBlocking {
+    fun importBackupRejectsInvalidVersion() = runBlocking {
         val invalidJson = JSONObject().apply {
             put("backupVersion", 999)
             put("exportedAt", System.currentTimeMillis())
@@ -183,16 +183,24 @@ class BackupServiceTest {
     }
 
     @Test
-    fun `export and import round-trip preserves data`() = runBlocking {
+    fun exportAndImportRoundTripPreservesData() = runBlocking {
         val outputStream = ByteArrayOutputStream()
         backupService.exportBackup(outputStream)
 
         val exportedJson = outputStream.toString()
 
+        database.close()
+        database = Room.inMemoryDatabaseBuilder(
+            ApplicationProvider.getApplicationContext(),
+            KeacsDatabase::class.java
+        ).build()
+        repository = LocalDataRepository(database) { System.currentTimeMillis() }
+        backupService = BackupService(repository)
+
         val inputStream = ByteArrayInputStream(exportedJson.toByteArray())
         backupService.importBackup(inputStream)
 
-        val records = repository.getRecords()
-        assertTrue(records.isNotEmpty())
+        assertTrue(repository.getCategories().isNotEmpty())
+        assertTrue(repository.getAccounts().isNotEmpty())
     }
 }

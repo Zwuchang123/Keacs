@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,11 +40,13 @@ import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.model.RecordType
 import com.keacs.app.domain.rule.totalExpense
 import com.keacs.app.domain.rule.totalIncome
+import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.EmptyState
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.RecordListItem
 import com.keacs.app.ui.components.SearchBox
 import com.keacs.app.ui.components.WheelPickerBottomSheet
+import com.keacs.app.ui.components.WheelPickerColumn
 import com.keacs.app.ui.management.colorFor
 import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.theme.KeacsColors
@@ -56,12 +57,10 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecordScreen(
     repository: LocalDataRepository,
     onViewRecord: (Long) -> Unit,
-    onEditRecord: (Long) -> Unit,
 ) {
     val allRecords by repository.observeRecords().collectAsState(initial = emptyList())
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
@@ -69,13 +68,15 @@ fun RecordScreen(
 
     var selectedYearMonth by remember { mutableStateOf(getCurrentYearMonth()) }
     var showMonthPicker by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     val categoryMap = categories.associateBy { it.id }
     val accountMap = accounts.associateBy { it.id }
 
-    val monthRecords = allRecords.filter { record ->
-        isInYearMonth(record.occurredAt, selectedYearMonth)
-    }.sortedByDescending { it.occurredAt }
+    val monthRecords = allRecords
+        .filter { record -> isInYearMonth(record.occurredAt, selectedYearMonth) }
+        .filter { record -> recordMatchesSearch(record, categoryMap, accountMap, searchQuery) }
+        .sortedByDescending { it.occurredAt }
 
     val groupedRecords = monthRecords.groupBy { formatRecordDateLabel(it.occurredAt) }
 
@@ -93,7 +94,10 @@ fun RecordScreen(
                 vertical = KeacsSpacing.PageVertical,
             ),
         ) {
-            SearchBox(text = "搜索账单")
+            SearchBox(
+                text = searchQuery,
+                onTextChange = { searchQuery = it },
+            )
             Spacer(modifier = Modifier.height(KeacsSpacing.Section))
             MonthSummaryCard(
                 yearMonth = selectedYearMonth,
@@ -166,9 +170,8 @@ fun RecordScreen(
     }
 
     if (showMonthPicker) {
-        MonthPickerBottomSheet(
+        MonthPickerContent(
             currentYearMonth = selectedYearMonth,
-            allRecords = allRecords,
             onMonthSelected = { yearMonth ->
                 selectedYearMonth = yearMonth
                 showMonthPicker = false
@@ -261,34 +264,35 @@ private fun DateGroupHeader(date: String, dayNetAmount: Long) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MonthPickerBottomSheet(
+private fun MonthPickerContent(
     currentYearMonth: String,
-    allRecords: List<RecordEntity>,
     onMonthSelected: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val availableMonths = remember(allRecords) {
-        allRecords.asSequence()
-            .map { formatYearMonth(it.occurredAt) }
-            .distinct()
-            .sortedDescending()
-            .toList()
-            .ifEmpty { listOf(getCurrentYearMonth()) }
+    val current = Calendar.getInstance().apply {
+        time = yearMonthFormat.parse(currentYearMonth) ?: Date()
     }
-
-    val currentIndex = availableMonths.indexOf(currentYearMonth).coerceAtLeast(0)
+    val thisYear = Calendar.getInstance().get(Calendar.YEAR)
+    val years = remember { (thisYear - 10..thisYear + 2).map { "${it}年" } }
+    val months = remember { (1..12).map { "${it}月" } }
+    var yearIndex by remember(currentYearMonth) {
+        mutableIntStateOf((current.get(Calendar.YEAR) - (thisYear - 10)).coerceIn(years.indices))
+    }
+    var monthIndex by remember(currentYearMonth) {
+        mutableIntStateOf(current.get(Calendar.MONTH).coerceIn(months.indices))
+    }
 
     WheelPickerBottomSheet(
         title = "选择月份",
-        items = availableMonths,
-        selectedIndex = currentIndex,
-        itemToString = { it },
-        onItemSelected = { index ->
-            onMonthSelected(availableMonths[index])
-        },
+        columns = listOf(
+            WheelPickerColumn(years, yearIndex) { yearIndex = it },
+            WheelPickerColumn(months, monthIndex) { monthIndex = it },
+        ),
         onDismiss = onDismiss,
+        onConfirm = {
+            onMonthSelected("${thisYear - 10 + yearIndex}年${(monthIndex + 1).toString().padStart(2, '0')}月")
+        },
     )
 }
 
@@ -322,6 +326,21 @@ private fun recordColor(record: RecordEntity): Color =
         RecordType.EXPENSE -> KeacsColors.Expense
         else -> KeacsColors.TextPrimary
     }
+
+private fun recordMatchesSearch(
+    record: RecordEntity,
+    categoryMap: Map<Long, CategoryEntity>,
+    accountMap: Map<Long, AccountEntity>,
+    query: String,
+): Boolean {
+    val keyword = query.trim()
+    if (keyword.isBlank()) return true
+    return listOf(
+        record.note.orEmpty(),
+        recordTitle(record, categoryMap, accountMap),
+        recordAccount(record, accountMap),
+    ).any { it.contains(keyword, ignoreCase = true) }
+}
 
 private fun calculateDayNetAmount(records: List<RecordEntity>): Long =
     records.sumOf { record ->

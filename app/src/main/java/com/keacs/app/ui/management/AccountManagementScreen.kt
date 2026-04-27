@@ -1,33 +1,24 @@
 package com.keacs.app.ui.management
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,23 +28,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.rule.balanceFor
 import com.keacs.app.domain.usecase.AccountManagementUseCase
-import com.keacs.app.ui.components.AmountText
-import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.KeacsCard
-import com.keacs.app.ui.components.NumberPad
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 import kotlinx.coroutines.launch
@@ -74,39 +58,19 @@ fun AccountListScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .testTag("screen-account-list"),
+            .testTag("screen-account-list")
+            .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
+        verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
-        ) {
-            AccountSummary(totalAsset = totalAsset, totalLiability = totalLiability)
-        }
-
+        AccountSummary(totalAsset = totalAsset, totalLiability = totalLiability)
         LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = KeacsSpacing.PageHorizontal),
+            modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
         ) {
-            item {
-                AccountGroup("资产账户", assets, records, onEditAccount)
-            }
-            item {
-                AccountGroup("负债账户", liabilities, records, onEditAccount)
-            }
-            item {
-                Spacer(modifier = Modifier.height(KeacsSpacing.Section))
-            }
+            item { AccountGroup("资产账户", assets, records, onEditAccount) }
+            item { AccountGroup("负债账户", liabilities, records, onEditAccount) }
         }
-
-        Button(
-            onClick = { onEditAccount(null) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
-        ) {
+        Button(onClick = { onEditAccount(null) }, modifier = Modifier.fillMaxWidth()) {
             Text("＋ 新增账户")
         }
     }
@@ -120,7 +84,9 @@ fun AccountEditScreen(
     onDone: () -> Unit,
 ) {
     val accounts by repository.observeAccounts().collectAsState(initial = emptyList())
+    val categories by repository.observeCategories().collectAsState(initial = emptyList())
     val editing = accounts.firstOrNull { it.id == accountId }
+    val typeOptions = remember(categories) { accountTypeOptions(categories) }
     val useCase = remember(repository) { AccountManagementUseCase(repository) }
     val scope = rememberCoroutineScope()
 
@@ -169,14 +135,10 @@ fun AccountEditScreen(
         ) {
             ManagementTextField("账户名称", name, { name = it; error = null }, error = error)
             NatureSelector(nature) { nature = it }
-            KeacsCard {
-                Column(modifier = Modifier.padding(it)) {
-                    AccountTypeSelector(currentType = type) { newType, newIconKey, newColorKey ->
-                        type = newType
-                        iconKey = newIconKey
-                        colorKey = newColorKey
-                    }
-                }
+            AccountTypeSelector(typeOptions, type) { option ->
+                type = option.label
+                iconKey = option.key
+                colorKey = option.colorKey
             }
             SwitchCard(isEnabled, onCheckedChange = { isEnabled = it })
             ErrorText(error)
@@ -286,181 +248,8 @@ private fun AccountGroup(
     }
 }
 
-@Composable
-private fun NatureSelector(nature: String, onSelected: (String) -> Unit) {
-    KeacsCard {
-        Column(Modifier.padding(it)) {
-            Text("账户性质", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                OptionChip("资产", nature == PresetSeedData.ACCOUNT_ASSET, Modifier.weight(1f)) {
-                    onSelected(PresetSeedData.ACCOUNT_ASSET)
-                }
-                OptionChip("负债", nature == PresetSeedData.ACCOUNT_LIABILITY, Modifier.weight(1f)) {
-                    onSelected(PresetSeedData.ACCOUNT_LIABILITY)
-                }
-            }
-        }
-    }
-}
-
 private fun natureText(nature: String): String =
     if (nature == PresetSeedData.ACCOUNT_LIABILITY) "负债" else "资产"
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AccountTypeSelector(
-    currentType: String,
-    onTypeSelected: (String, String, String) -> Unit,
-) {
-    var showSelector by remember { mutableStateOf(false) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { showSelector = true }
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "账户类型",
-            color = KeacsColors.TextSecondary,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.weight(1f),
-        )
-        Text(
-            text = currentType,
-            color = KeacsColors.TextPrimary,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
-
-    if (showSelector) {
-        ModalBottomSheet(
-            onDismissRequest = { showSelector = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = KeacsColors.Surface,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = KeacsSpacing.PageHorizontal)
-                    .padding(bottom = 32.dp),
-            ) {
-                Text(
-                    text = "选择账户类型",
-                    color = KeacsColors.TextPrimary,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(bottom = 16.dp),
-                )
-
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    itemsIndexed(accountTypeOptions) { index, option ->
-                        val isSelected = option.type == currentType
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(MaterialTheme.shapes.medium)
-                                .background(
-                                    if (isSelected) KeacsColors.PrimaryLight else KeacsColors.SurfaceSubtle,
-                                )
-                                .clickable {
-                                    onTypeSelected(option.type, option.iconKey, option.colorKey)
-                                    showSelector = false
-                                }
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CategoryIcon(
-                                icon = iconFor(option.iconKey),
-                                backgroundColor = colorFor(option.colorKey),
-                            )
-                            Spacer(modifier = Modifier.padding(horizontal = 12.dp))
-                            Text(
-                                text = option.type,
-                                color = if (isSelected) KeacsColors.Primary else KeacsColors.TextPrimary,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f),
-                            )
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Check,
-                                    contentDescription = "已选",
-                                    tint = KeacsColors.Primary,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 private fun formatCent(value: Long): String =
     "¥" + DecimalFormat("#,##0.00").format(value / 100.0)
-
-@Composable
-private fun AccountBalanceKeyboardPanel(
-    balance: String,
-    error: String?,
-    saveEnabled: Boolean,
-    onKeyClick: (String) -> Unit,
-    onSaveClick: () -> Unit,
-) {
-    KeacsCard(contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(it),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text("当前余额", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-            AmountText(amount = balanceDisplay(balance))
-            Text(
-                text = error ?: " ",
-                color = KeacsColors.Error,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-            )
-            NumberPad(
-                saveEnabled = saveEnabled,
-                onKeyClick = onKeyClick,
-                onSaveClick = onSaveClick,
-            )
-        }
-    }
-}
-
-private fun centsToInput(value: Long): String =
-    DecimalFormat("0.00").format(value / 100.0)
-
-private fun parseCent(text: String): Long? =
-    runCatching {
-        val value = text.trim().toBigDecimalOrNull() ?: return null
-        if (value.scale() > 2) return null
-        value.movePointRight(2).toLong()
-    }.getOrNull()
-
-private fun balanceDisplay(balance: String): String =
-    if (balance.startsWith("-")) "-¥${balance.removePrefix("-").ifBlank { "0.00" }}" else "¥${balance.ifBlank { "0.00" }}"
-
-private fun balanceError(balance: String): String? =
-    if (parseCent(balance) == null) "余额格式不正确" else null
-
-private fun nextBalanceAmount(current: String, key: String): String {
-    if (key == "-") return if (current.startsWith("-")) current.removePrefix("-") else "-$current"
-    if (key == "+") return current.removePrefix("-")
-    if (key == "⌫") return current.dropLast(1).ifBlank { "0" }
-    if (key == "." && current.contains(".")) return current
-    val negative = current.startsWith("-")
-    val raw = current.removePrefix("-")
-    val base = if (raw == "0.00" || raw == "0") "" else raw
-    val next = if (key == "." && base.isBlank()) "0." else base + key
-    if (next.substringAfter('.', "").length > 2) return current
-    val normalized = if (next.startsWith("0.")) next else next.trimStart('0').ifBlank { "0" }
-    return if (negative) "-$normalized" else normalized
-}

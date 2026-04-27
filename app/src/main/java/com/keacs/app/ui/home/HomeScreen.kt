@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,14 +13,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -40,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.entity.CategoryEntity
 import com.keacs.app.data.local.entity.RecordEntity
 import com.keacs.app.domain.model.RecordType
-import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.EmptyState
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.RecordListItem
@@ -52,9 +45,9 @@ import com.keacs.app.ui.theme.KeacsSpacing
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
-    onAddClick: () -> Unit,
+    onRecordsClick: () -> Unit,
+    onStatsClick: () -> Unit,
     onRecordClick: (Long) -> Unit,
-    onRecordsClick: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -66,15 +59,12 @@ fun HomeScreen(
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
-        PrivacyBanner()
         OverviewCard(
             totalIncome = uiState.totalIncome,
             totalExpense = uiState.totalExpense,
             totalAsset = uiState.totalAsset,
             totalLiability = uiState.totalLiability,
-        )
-        QuickActionCard(
-            onAddClick = onAddClick,
+            onClick = onStatsClick,
         )
         RecentRecords(
             records = uiState.recentRecords,
@@ -86,41 +76,12 @@ fun HomeScreen(
 }
 
 @Composable
-private fun PrivacyBanner() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(KeacsColors.SurfaceSubtle)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Lock,
-                contentDescription = null,
-                tint = KeacsColors.TextSecondary,
-                modifier = Modifier.height(16.dp),
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = "数据仅保存在本设备 · 支持支出导入和导出",
-                color = KeacsColors.TextSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
-}
-
-@Composable
 private fun OverviewCard(
     totalIncome: Long,
     totalExpense: Long,
     totalAsset: Long,
     totalLiability: Long,
+    onClick: () -> Unit,
 ) {
     val netBalance = totalAsset - totalLiability
 
@@ -133,6 +94,7 @@ private fun OverviewCard(
                     listOf(Color(0xFF65A2FF), KeacsColors.Primary),
                 ),
             )
+            .clickable(onClick = onClick)
             .padding(KeacsSpacing.CardPadding),
     ) {
         Column {
@@ -223,51 +185,6 @@ private fun AmountSummary(
             color = color,
             style = MaterialTheme.typography.titleMedium,
             fontFamily = FontFamily.Monospace,
-        )
-    }
-}
-
-@Composable
-private fun QuickActionCard(
-    onAddClick: () -> Unit,
-) {
-    KeacsCard(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(it),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            QuickAction("记账", Icons.Rounded.Edit, KeacsColors.Primary, onAddClick)
-        }
-    }
-}
-
-@Composable
-private fun QuickAction(
-    text: String,
-    icon: ImageVector,
-    color: Color,
-    onClick: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .height(76.dp)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        CategoryIcon(
-            icon = icon,
-            backgroundColor = color.copy(alpha = 0.14f),
-            tint = color,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = text,
-            color = KeacsColors.TextPrimary,
-            style = MaterialTheme.typography.labelMedium,
         )
     }
 }

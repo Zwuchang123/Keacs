@@ -36,6 +36,7 @@ fun AddRecordScreen(
     repository: LocalDataRepository,
     recordId: Long? = null,
     onDone: () -> Unit = {},
+    onDeleted: () -> Unit = onDone,
 ) {
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
     val accounts by repository.observeAccounts().collectAsState(initial = emptyList())
@@ -163,7 +164,7 @@ fun AddRecordScreen(
                 confirmDelete = false
                 scope.launch {
                     recordId?.let { DeleteRecordUseCase(repository)(it) }
-                    onDone()
+                    onDeleted()
                 }
             },
         )

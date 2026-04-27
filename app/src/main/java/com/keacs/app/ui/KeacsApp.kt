@@ -38,8 +38,8 @@ import com.keacs.app.domain.usecase.ExportBackupUseCase
 import com.keacs.app.domain.usecase.ImportBackupUseCase
 import com.keacs.app.ui.backup.BackupScreen
 import com.keacs.app.ui.backup.BackupViewModel
-import com.keacs.app.ui.settings.SettingsScreen
 import com.keacs.app.ui.settings.AboutScreen
+import com.keacs.app.ui.settings.SettingsScreen
 
 class KeacsViewModelFactory(
     private val repository: LocalDataRepository,
@@ -114,7 +114,8 @@ fun KeacsApp(repository: LocalDataRepository) {
                     )
                     HomeScreen(
                         viewModel = homeViewModel,
-                        onAddClick = { currentRoute = KeacsDestination.Add.route },
+                        onRecordsClick = { currentRoute = KeacsDestination.Records.route },
+                        onStatsClick = { currentRoute = KeacsDestination.Stats.route },
                         onRecordClick = { currentRoute = recordDetailRoute(it) },
                     )
                 }
@@ -122,7 +123,6 @@ fun KeacsApp(repository: LocalDataRepository) {
                 route == KeacsDestination.Records.route -> RecordScreen(
                     repository = repository,
                     onViewRecord = { currentRoute = recordDetailRoute(it) },
-                    onEditRecord = { currentRoute = recordEditRoute(it) },
                 )
 
                 route == KeacsDestination.Add.route -> AddRecordScreen(
@@ -184,7 +184,8 @@ fun KeacsApp(repository: LocalDataRepository) {
                 route.startsWith(ROUTE_RECORD_EDIT) -> AddRecordScreen(
                     repository = repository,
                     recordId = routeId(route, ROUTE_RECORD_EDIT),
-                    onDone = { currentRoute = KeacsDestination.Records.route },
+                    onDone = { routeId(route, ROUTE_RECORD_EDIT)?.let { currentRoute = recordDetailRoute(it) } },
+                    onDeleted = { currentRoute = KeacsDestination.Records.route },
                 )
             }
         }
@@ -226,14 +227,4 @@ private fun backRoute(route: String): String = when {
 }
 
 @Composable
-private fun TopActions(destination: KeacsDestination) {
-    when (destination) {
-        KeacsDestination.Records -> {
-        }
-
-        KeacsDestination.Add,
-        KeacsDestination.Stats,
-        KeacsDestination.Mine,
-        KeacsDestination.Home -> Unit
-    }
-}
+private fun TopActions(destination: KeacsDestination) = Unit

@@ -13,21 +13,20 @@ import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.material.icons.rounded.Numbers
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import com.keacs.app.ui.components.ConfirmDialog
 import com.keacs.app.ui.components.DividedMenuCard
 import com.keacs.app.ui.components.KeacsSnackbar
 import com.keacs.app.ui.components.MenuDivider
-import com.keacs.app.ui.components.DisabledMenuRow
 import com.keacs.app.ui.components.MenuRow
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 
 @Composable
 fun SettingsScreen() {
@@ -44,13 +43,13 @@ fun SettingsScreen() {
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
         DividedMenuCard {
-            DisabledMenuRow(Icons.Rounded.AccountBalanceWallet, "默认记账账户", KeacsColors.Primary, value = "无")
+            MenuRow(Icons.Rounded.AccountBalanceWallet, "默认记账账户", KeacsColors.Primary, value = "无", enabled = false)
             MenuDivider()
-            DisabledMenuRow(Icons.Rounded.Category, "默认分类", KeacsColors.Primary, value = "无")
+            MenuRow(Icons.Rounded.Category, "默认分类", KeacsColors.Primary, value = "无", enabled = false)
             MenuDivider()
-            DisabledMenuRow(Icons.Rounded.AccessTime, "记账时间默认值", KeacsColors.Primary, value = "当前时间")
+            MenuRow(Icons.Rounded.AccessTime, "记账时间默认值", KeacsColors.Primary, value = "当前时间", enabled = false)
             MenuDivider()
-            DisabledMenuRow(Icons.Rounded.Numbers, "金额小数位", KeacsColors.Primary, value = "2位")
+            MenuRow(Icons.Rounded.Numbers, "金额小数位", KeacsColors.Primary, value = "2位", enabled = false)
         }
         DividedMenuCard {
             MenuRow(Icons.Rounded.DeleteOutline, "清除缓存", KeacsColors.Error, onClick = { showClearCacheConfirm = true })

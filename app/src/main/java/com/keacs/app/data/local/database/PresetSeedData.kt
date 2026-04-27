@@ -6,6 +6,7 @@ import com.keacs.app.data.local.entity.CategoryEntity
 object PresetSeedData {
     const val CATEGORY_INCOME = "INCOME"
     const val CATEGORY_EXPENSE = "EXPENSE"
+    const val CATEGORY_ACCOUNT = "ACCOUNT"
     const val ACCOUNT_ASSET = "ASSET"
     const val ACCOUNT_LIABILITY = "LIABILITY"
 

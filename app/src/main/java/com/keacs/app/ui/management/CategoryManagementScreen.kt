@@ -5,19 +5,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -54,17 +53,12 @@ fun CategoryListScreen(
 ) {
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
     var selectedIndex by rememberSaveable { mutableStateOf(0) }
-    val tabItems = listOf("支出分类", "收入分类", "账户分类")
     val direction = when (selectedIndex) {
-        0 -> PresetSeedData.CATEGORY_EXPENSE
         1 -> PresetSeedData.CATEGORY_INCOME
-        else -> null
+        2 -> PresetSeedData.CATEGORY_ACCOUNT
+        else -> PresetSeedData.CATEGORY_EXPENSE
     }
-    val visibleCategories = if (direction != null) {
-        categories.filter { it.direction == direction }
-    } else {
-        emptyList()
-    }
+    val visibleCategories = categories.filter { it.direction == direction }
 
     Column(
         modifier = Modifier
@@ -74,34 +68,23 @@ fun CategoryListScreen(
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
         SegmentedTabs(
-            items = tabItems,
+            items = listOf("支出分类", "收入分类", "账户分类"),
             selectedIndex = selectedIndex,
             onSelected = { selectedIndex = it },
         )
         KeacsCard(contentPadding = PaddingValues(0.dp), modifier = Modifier.weight(1f)) {
             LazyColumn(modifier = Modifier.padding(it)) {
-                if (direction != null) {
-                    itemsIndexed(visibleCategories, key = { _, item -> item.id }) { index, category ->
-                        ManagementListItem(
-                            title = category.name,
-                            subtitle = if (category.isEnabled) "新建记录可选" else "历史记录仍会显示",
-                            icon = iconFor(category.iconKey),
-                            color = colorFor(category.colorKey),
-                            enabled = category.isEnabled,
-                            onClick = { onEditCategory(category.id) },
-                        )
-                        if (index != visibleCategories.lastIndex) {
-                            ListDivider()
-                        }
-                    }
-                } else {
-                    item {
-                        Text(
-                            text = "账户分类用于对账户进行分组管理",
-                            color = KeacsColors.TextSecondary,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(16.dp),
-                        )
+                itemsIndexed(visibleCategories, key = { _, item -> item.id }) { index, category ->
+                    ManagementListItem(
+                        title = category.name,
+                        subtitle = if (category.isEnabled) "新建记录可选" else "历史记录仍会显示",
+                        icon = iconFor(category.iconKey),
+                        color = colorFor(category.colorKey),
+                        enabled = category.isEnabled,
+                        onClick = { onEditCategory(category.id) },
+                    )
+                    if (index != visibleCategories.lastIndex) {
+                        ListDivider()
                     }
                 }
             }
@@ -110,7 +93,7 @@ fun CategoryListScreen(
             onClick = { onEditCategory(null) },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("＋ 新增分类")
+            Text(if (direction == PresetSeedData.CATEGORY_ACCOUNT) "＋ 新增账户分类" else "＋ 新增分类")
         }
     }
 }
@@ -141,6 +124,16 @@ fun CategoryEditScreen(
             iconKey = it.iconKey
             colorKey = it.colorKey
             isEnabled = it.isEnabled
+        }
+    }
+
+    LaunchedEffect(direction) {
+        val options = categoryOptions(direction)
+        if (options.none { it.key == iconKey }) {
+            options.firstOrNull()?.let {
+                iconKey = it.key
+                colorKey = it.colorKey
+            }
         }
     }
 
@@ -214,6 +207,9 @@ private fun DirectionSelector(
                 OptionChip("收入", direction == PresetSeedData.CATEGORY_INCOME, Modifier.weight(1f)) {
                     onSelected(PresetSeedData.CATEGORY_INCOME)
                 }
+                OptionChip("账户", direction == PresetSeedData.CATEGORY_ACCOUNT, Modifier.weight(1f)) {
+                    onSelected(PresetSeedData.CATEGORY_ACCOUNT)
+                }
             }
         }
     }
@@ -224,28 +220,28 @@ private fun IconSelector(direction: String, selectedKey: String, onSelected: (Ic
     KeacsCard {
         Column(Modifier.padding(it)) {
             Text("选择图标", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-            Spacer(modifier = Modifier.height(10.dp))
             LazyVerticalGrid(
                 columns = GridCells.Fixed(5),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.height(200.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .padding(top = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                items(categoryOptions(direction)) { option ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clickable { onSelected(option) },
-                    ) {
+                items(categoryOptions(direction), key = { option -> option.key + option.label }) { option ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CategoryIcon(
                             icon = option.icon,
                             backgroundColor = if (selectedKey == option.key) KeacsColors.Primary else colorFor(option.colorKey),
-                            modifier = Modifier.size(36.dp),
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clickable { onSelected(option) },
                         )
                         Text(
                             text = option.label,
                             color = if (selectedKey == option.key) KeacsColors.Primary else KeacsColors.TextSecondary,
                             style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
                         )
                     }
                 }

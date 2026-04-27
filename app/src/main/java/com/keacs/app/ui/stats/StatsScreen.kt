@@ -25,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,6 +34,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -43,14 +44,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.SegmentedTabs
-import com.keacs.app.ui.components.YearMonthWheelPicker
 import com.keacs.app.ui.management.colorFor
 import com.keacs.app.ui.management.iconFor
+import com.keacs.app.ui.record.DatePickerMode
+import com.keacs.app.ui.record.DateWheelPickerBottomSheet
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -81,11 +82,19 @@ fun StatsScreen(
             onDateSelected = viewModel::selectDate,
         )
 
-        IncomeExpenseSummaryCard(
-            totalAsset = uiState.totalAsset,
-            totalLiability = uiState.totalLiability,
-            netAsset = uiState.netAsset,
-        )
+        if (uiState.selectedTab == StatsTab.ASSET) {
+            AssetLiabilityCard(
+                totalAsset = uiState.totalAsset,
+                totalLiability = uiState.totalLiability,
+                netAsset = uiState.netAsset,
+            )
+        } else {
+            IncomeExpenseSummaryCard(
+                income = uiState.income,
+                expense = uiState.expense,
+                netBalance = uiState.netBalance,
+            )
+        }
 
         when (uiState.selectedTab) {
             StatsTab.EXPENSE, StatsTab.INCOME -> {
@@ -99,16 +108,8 @@ fun StatsScreen(
                 )
             }
             StatsTab.ASSET -> {
-                AssetLiabilityCard(
-                    totalAsset = uiState.totalAsset,
-                    totalLiability = uiState.totalLiability,
-                    netAsset = uiState.netAsset,
-                )
                 NetAssetTrendCard(
-                    monthlyTrend = uiState.monthlyNetAssetTrend,
-                )
-                AccountBalanceListCard(
-                    accountBalances = uiState.accountBalances,
+                    monthlyTrend = uiState.netAssetTrend,
                 )
             }
         }
@@ -135,11 +136,6 @@ private fun PeriodSelector(
     onDateSelected: (Long) -> Unit,
 ) {
     var showPicker by remember { mutableStateOf(false) }
-    val calendar = remember(selectedDate) {
-        Calendar.getInstance().apply { timeInMillis = selectedDate }
-    }
-    val currentYear = calendar.get(Calendar.YEAR)
-    val currentMonth = calendar.get(Calendar.MONTH) + 1
 
     val dateFormat = when (selectedPeriod) {
         TimePeriod.DAY -> SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
@@ -152,7 +148,7 @@ private fun PeriodSelector(
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.medium)
             .background(KeacsColors.Surface)
-            .clickable { showPicker = true }
+            .clickable { showPicker = !showPicker }
             .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -182,20 +178,57 @@ private fun PeriodSelector(
     }
 
     if (showPicker) {
-        YearMonthWheelPicker(
-            currentYear = currentYear,
-            currentMonth = currentMonth,
-            onDateSelected = { year, month ->
-                val cal = Calendar.getInstance(Locale.getDefault())
-                cal.set(year, month - 1, 1, 0, 0, 0)
-                cal.set(Calendar.MILLISECOND, 0)
-                if (selectedPeriod == TimePeriod.DAY) {
-                    cal.set(Calendar.DAY_OF_MONTH, calendar.get(Calendar.DAY_OF_MONTH))
-                }
-                onDateSelected(cal.timeInMillis)
+        DateWheelPickerBottomSheet(
+            title = "选择时间",
+            selectedDate = selectedDate,
+            mode = when (selectedPeriod) {
+                TimePeriod.DAY -> DatePickerMode.DAY
+                TimePeriod.MONTH -> DatePickerMode.MONTH
+                TimePeriod.YEAR -> DatePickerMode.YEAR
+            },
+            onSelected = {
+                onDateSelected(it)
+                showPicker = false
             },
             onDismiss = { showPicker = false },
         )
+    }
+}
+
+@Composable
+private fun NetAssetTrendCard(
+    monthlyTrend: List<DailyStats>,
+) {
+    KeacsCard {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+        ) {
+            Text(
+                text = "净资产趋势",
+                color = KeacsColors.TextPrimary,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            if (monthlyTrend.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(128.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("暂无数据", color = KeacsColors.TextTertiary, style = MaterialTheme.typography.bodySmall)
+                }
+            } else {
+                TrendLineChart(
+                    dailyTrend = monthlyTrend,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(128.dp),
+                )
+            }
+        }
     }
 }
 
@@ -234,9 +267,9 @@ private fun PeriodTabs(
 
 @Composable
 private fun IncomeExpenseSummaryCard(
-    totalAsset: Long,
-    totalLiability: Long,
-    netAsset: Long,
+    income: Long,
+    expense: Long,
+    netBalance: Long,
 ) {
     KeacsCard {
         Row(
@@ -246,19 +279,19 @@ private fun IncomeExpenseSummaryCard(
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             StatAmountItem(
-                label = "总资产",
-                amount = totalAsset,
+                label = "收入",
+                amount = income,
                 color = KeacsColors.Income,
             )
             StatAmountItem(
-                label = "总负债",
-                amount = totalLiability,
+                label = "支出",
+                amount = expense,
                 color = KeacsColors.Expense,
             )
             StatAmountItem(
-                label = "净资产",
-                amount = netAsset,
-                color = if (netAsset >= 0) KeacsColors.Primary else KeacsColors.Expense,
+                label = "结余",
+                amount = netBalance,
+                color = if (netBalance >= 0) KeacsColors.Primary else KeacsColors.Expense,
             )
         }
     }
@@ -625,242 +658,6 @@ private fun AssetStatItem(
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.SemiBold,
         )
-    }
-}
-
-@Composable
-private fun AccountBalanceListCard(
-    accountBalances: List<AccountBalanceStats>,
-) {
-    KeacsCard {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-        ) {
-            Text(
-                text = "账户余额",
-                color = KeacsColors.TextPrimary,
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (accountBalances.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "暂无账户",
-                        color = KeacsColors.TextTertiary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            } else {
-                accountBalances.forEachIndexed { index, account ->
-                    AccountBalanceRow(account = account)
-                    if (index < accountBalances.size - 1) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AccountBalanceRow(account: AccountBalanceStats) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(colorFor(account.colorKey).copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = iconFor(account.iconKey),
-                contentDescription = null,
-                tint = colorFor(account.colorKey),
-                modifier = Modifier.size(18.dp),
-            )
-        }
-
-        Spacer(modifier = Modifier.width(10.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = account.accountName,
-                color = KeacsColors.TextPrimary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                text = if (account.isAsset) "资产" else "负债",
-                color = KeacsColors.TextTertiary,
-                style = MaterialTheme.typography.labelSmall,
-            )
-        }
-
-        Text(
-            text = formatCent(account.balance),
-            color = if (account.isAsset) KeacsColors.TextPrimary else KeacsColors.Expense,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Medium,
-        )
-    }
-}
-
-@Composable
-private fun NetAssetTrendCard(
-    monthlyTrend: List<MonthlyNetAssetStats>,
-) {
-    KeacsCard {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-        ) {
-            Text(
-                text = "净资产变化趋势",
-                color = KeacsColors.TextPrimary,
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (monthlyTrend.isEmpty() || monthlyTrend.all { it.netAsset == 0L }) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(128.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "暂无数据",
-                        color = KeacsColors.TextTertiary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            } else {
-                NetAssetTrendChart(
-                    monthlyTrend = monthlyTrend,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(128.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun NetAssetTrendChart(
-    monthlyTrend: List<MonthlyNetAssetStats>,
-    modifier: Modifier = Modifier,
-) {
-    val gridColor = KeacsColors.Border.copy(alpha = 0.75f)
-    val maxAmount = monthlyTrend.maxOfOrNull { kotlin.math.abs(it.netAsset) } ?: 1L
-    val minAmount = monthlyTrend.minOfOrNull { it.netAsset } ?: 0L
-    val range = (maxAmount - minAmount).coerceAtLeast(1L)
-
-    Column(modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.width(32.dp),
-                verticalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = formatShort(maxAmount),
-                    color = KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Text(
-                    text = formatShort((maxAmount + minAmount) / 2),
-                    color = KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Text(
-                    text = formatShort(minAmount),
-                    color = KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
-            Canvas(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(128.dp),
-            ) {
-                val chartHeight = size.height - 24.dp.toPx()
-                val chartTop = 0f
-
-                listOf(0f, 0.5f, 1f).forEach { ratio ->
-                    val y = chartTop + chartHeight * ratio
-                    drawLine(
-                        color = gridColor,
-                        start = Offset(0f, y),
-                        end = Offset(size.width, y),
-                        strokeWidth = 1f,
-                    )
-                }
-
-                if (monthlyTrend.isNotEmpty()) {
-                    val points = monthlyTrend.mapIndexed { index, stat ->
-                        val x = size.width * index / (monthlyTrend.size - 1).coerceAtLeast(1)
-                        val normalizedY = (stat.netAsset - minAmount).toFloat() / range.toFloat()
-                        val y = chartTop + chartHeight * (1 - normalizedY)
-                        Offset(x, y)
-                    }
-
-                    val pathPoints = points.map { Offset(it.x, it.y) }
-                    pathPoints.zipWithNext().forEach { (start, end) ->
-                        drawLine(
-                            color = KeacsColors.Primary,
-                            start = start,
-                            end = end,
-                            strokeWidth = 2.5f,
-                        )
-                    }
-
-                    points.forEach { point ->
-                        drawCircle(
-                            color = KeacsColors.Primary,
-                            radius = 4f,
-                            center = point,
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 32.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            val labelCount = minOf(6, monthlyTrend.size)
-            val step = (monthlyTrend.size - 1) / (labelCount - 1).coerceAtLeast(1)
-            repeat(labelCount) { i ->
-                val index = (i * step).coerceIn(0, monthlyTrend.size - 1)
-                Text(
-                    text = "${monthlyTrend.getOrNull(index)?.month ?: ""}",
-                    color = KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
     }
 }
 

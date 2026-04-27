@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Search
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
@@ -87,7 +89,7 @@ fun CategoryIcon(
 ) {
     Box(
         modifier = modifier
-            .size(KeacsSize.CategoryIcon)
+            .size(36.dp)
             .clip(CircleShape)
             .background(backgroundColor),
         contentAlignment = Alignment.Center,
@@ -96,7 +98,7 @@ fun CategoryIcon(
             imageVector = icon,
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(21.dp),
+            modifier = Modifier.size(19.dp),
         )
     }
 }
@@ -104,7 +106,9 @@ fun CategoryIcon(
 @Composable
 fun SearchBox(
     text: String,
+    onTextChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    placeholder: String = "搜索账单",
 ) {
     Row(
         modifier = modifier
@@ -122,10 +126,23 @@ fun SearchBox(
             modifier = Modifier.size(20.dp),
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = text,
-            color = KeacsColors.TextTertiary,
-            style = MaterialTheme.typography.bodyMedium,
+        BasicTextField(
+            value = text,
+            onValueChange = onTextChange,
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(color = KeacsColors.TextPrimary),
+            cursorBrush = SolidColor(KeacsColors.Primary),
+            modifier = Modifier.weight(1f),
+            decorationBox = { inner ->
+                if (text.isBlank()) {
+                    Text(
+                        text = placeholder,
+                        color = KeacsColors.TextTertiary,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                inner()
+            },
         )
     }
 }
@@ -181,13 +198,14 @@ fun MenuRow(
     iconColor: Color,
     modifier: Modifier = Modifier,
     value: String? = null,
+    enabled: Boolean = true,
     onClick: () -> Unit = {},
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(58.dp)
-            .clickable(onClick = onClick)
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -214,7 +232,7 @@ fun MenuRow(
         Icon(
             imageVector = Icons.Rounded.ChevronRight,
             contentDescription = null,
-            tint = KeacsColors.TextTertiary,
+            tint = if (enabled) KeacsColors.TextTertiary else Color.Transparent,
             modifier = Modifier.size(20.dp),
         )
     }
@@ -253,42 +271,4 @@ fun MenuDivider() {
         thickness = 0.5.dp,
         color = KeacsColors.Border,
     )
-}
-
-@Composable
-fun DisabledMenuRow(
-    icon: ImageVector,
-    title: String,
-    iconColor: Color,
-    modifier: Modifier = Modifier,
-    value: String? = null,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(58.dp)
-            .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        CategoryIcon(
-            icon = icon,
-            backgroundColor = iconColor.copy(alpha = 0.14f),
-            tint = iconColor.copy(alpha = 0.5f),
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = title,
-            color = KeacsColors.TextSecondary.copy(alpha = 0.6f),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
-        if (value != null) {
-            Text(
-                text = value,
-                color = KeacsColors.TextSecondary.copy(alpha = 0.6f),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(end = 4.dp),
-            )
-        }
-    }
 }
