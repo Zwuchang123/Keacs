@@ -30,6 +30,7 @@ Data Layer
   Room DAO
   Entity
   Backup Reader/Writer
+  DataStore Preferences
 ```
 
 ## 3. 目录结构
@@ -37,6 +38,7 @@ Data Layer
 ```text
 app/
   ui/
+    welcome/
     home/
     record/
     account/
@@ -53,6 +55,7 @@ app/
       dao/
       entity/
       database/
+      PreferencesManager
     repository/
     backup/
   common/
@@ -114,6 +117,10 @@ keacs.db
 - `records`
 - `app_meta`
 
+偏好存储：
+
+- `has_welcomed`：记录本设备是否已经点击过进入页的“开始记账”，只保存在本机。
+
 索引：
 
 - `records.occurredAt`
@@ -161,6 +168,11 @@ keacs.db
 - 导入 JSON 备份
 - 备份版本校验
 - 导入事务处理
+
+### PreferencesManager
+
+- 读取本设备首次进入状态
+- 用户点击“开始记账”后写入本地标记
 
 ## 7. 业务规则入口
 

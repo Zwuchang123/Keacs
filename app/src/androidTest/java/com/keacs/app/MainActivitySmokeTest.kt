@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -19,6 +20,8 @@ class MainActivitySmokeTest {
 
     @Test
     fun bottomNavigationSwitchesAcrossMainPages() {
+        enterMainIfWelcomeShown()
+
         composeRule.onNodeWithTag("screen-home").assertIsDisplayed()
 
         composeRule.onNodeWithContentDescription("切换到账单").performClick()
@@ -36,5 +39,20 @@ class MainActivitySmokeTest {
 
         composeRule.onNodeWithContentDescription("切换到我的").performClick()
         composeRule.onNodeWithTag("screen-mine").assertIsDisplayed()
+    }
+
+    private fun enterMainIfWelcomeShown() {
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag("screen-home").fetchSemanticsNodes().isNotEmpty() ||
+                composeRule.onAllNodesWithTag("welcome-start").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        if (composeRule.onAllNodesWithTag("welcome-start").fetchSemanticsNodes().isNotEmpty()) {
+            composeRule.onNodeWithTag("welcome-start").performClick()
+        }
+
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag("screen-home").fetchSemanticsNodes().isNotEmpty()
+        }
     }
 }
