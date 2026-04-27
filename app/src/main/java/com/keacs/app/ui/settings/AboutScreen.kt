@@ -1,5 +1,6 @@
 package com.keacs.app.ui.settings
 
+import android.content.ActivityNotFoundException
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,20 +10,34 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.keacs.app.BuildConfig
 import com.keacs.app.R
+import com.keacs.app.ui.components.DividedMenuCard
 import com.keacs.app.ui.components.KeacsCard
+import com.keacs.app.ui.components.KeacsSnackbar
+import com.keacs.app.ui.components.MenuDivider
+import com.keacs.app.ui.components.MenuRow
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 
 @Composable
 fun AboutScreen() {
+    val uriHandler = LocalUriHandler.current
+    val errorMessage = remember { mutableStateOf<String?>(null) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -50,11 +65,35 @@ fun AboutScreen() {
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "版本 1.0",
+                    text = "版本 ${BuildConfig.VERSION_NAME}",
                     color = KeacsColors.TextSecondary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
+        }
+        DividedMenuCard {
+            MenuRow(
+                Icons.Rounded.Info,
+                "当前版本",
+                KeacsColors.TextSecondary,
+                value = BuildConfig.VERSION_NAME,
+                enabled = false,
+            )
+            MenuDivider()
+            MenuRow(
+                Icons.Rounded.FileDownload,
+                "获取更新",
+                KeacsColors.Primary,
+                onClick = {
+                    try {
+                        uriHandler.openUri(BuildConfig.UPDATE_URL)
+                    } catch (_: ActivityNotFoundException) {
+                        errorMessage.value = "无法打开更新页面"
+                    } catch (_: IllegalArgumentException) {
+                        errorMessage.value = "无法打开更新页面"
+                    }
+                },
+            )
         }
         KeacsCard {
             Column(
@@ -76,5 +115,13 @@ fun AboutScreen() {
                 )
             }
         }
+    }
+
+    errorMessage.value?.let { message ->
+        KeacsSnackbar(
+            message = message,
+            isError = true,
+            onDismiss = { errorMessage.value = null },
+        )
     }
 }

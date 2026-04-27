@@ -19,6 +19,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField(
+            "String",
+            "UPDATE_URL",
+            "\"https://gitee.com/Zwuchang123/Keacs/releases\"",
+        )
     }
 
     buildTypes {
@@ -42,6 +47,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     lint {

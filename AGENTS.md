@@ -51,6 +51,8 @@
 - 前端设计需尽可能还原的页面`docs\UI-refercence.png`。
 - 每轮迭代的设计图及页面功能截图目录：`docs\screenshots`
 - git提交记录：`docs\auto-commit-log.md`。
+- 测试问题登记：`docs\test-issue-tracking.md`。
+- 版本更新发布方案`docs/release-update.md`。
 
 ### 开发要求
 
@@ -97,6 +99,11 @@
 - 单文件不要超过300行，除非显著有利于开发实现（必须主动说明理由），任何情况下都严禁超过800行
 - 每一处改动都必须能说明其与当前任务的直接关系。
 - 跟随现有风格，即使你个人会用另一种写法；
+
+### 测试问题修复
+
+- 修复测试问题时，禁止改动无关代码，保证页面布局正常；逐条验证通过后再提交，并更新 `docs\test-issue-tracking.md`
+- 用户在对话中提出的修复问题，需主动登记到 `docs\test-issue-tracking.md`
 
 ### 测试要求
 
