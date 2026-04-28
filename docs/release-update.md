@@ -36,12 +36,13 @@ https://github.com/Zwuchang123/Keacs/releases
 ## 每次发布需要做什么
 
 1. 配置发布签名后，执行 `.\gradlew.bat :app:packageReleaseForPublish` 构建正式 APK。
-2. 在 GitHub Releases 创建版本，例如 `v1.0.1`。
+2. 在 GitHub Releases 创建版本，例如 `v1.0.0`。
 3. 上传 APK，并在发布说明里写清楚更新内容。
 4. 在 Gitee Release 创建同版本，上传同一个 APK。
 5. 在两个发布说明里互相放备用地址。
-6. 保留 APK 文件名中的版本号，例如 `keacs-v1.0.1.apk`。
-7. 务必确保用户更新不会导致设备数据丢失。
+6. 保留 APK 文件名中的版本号，例如 `keacs-v1.0.0.apk`。
+7. 若使用自动发布工作流，可在 `docs/releases/<tag>.md` 预先写好对应版本说明，GitHub 和 Gitee 会共用同一份文案。
+8. 务必确保用户更新不会导致设备数据丢失。
 
 ## 自动发布链路
 
@@ -50,9 +51,9 @@ https://github.com/Zwuchang123/Keacs/releases
 触发方式：
 
 1. 本地确认版本号已更新。
-2. 创建并推送版本标签，例如 `v1.0.1`。
+2. 创建并推送版本标签，例如 `v1.0.0`。
 3. GitHub Actions 自动构建已签名 release APK。
-4. 自动在 GitHub Releases 创建同名版本并上传 `keacs-v1.0.1.apk`。
+4. 自动在 GitHub Releases 创建同名版本并上传 `keacs-v1.0.0.apk`。
 5. 如果已配置 `GITEE_TOKEN`，则自动在 Gitee Releases 创建同名版本并上传同一个 APK。
 
 需要配置的 GitHub Secrets：
@@ -79,14 +80,14 @@ $env:KEACS_RELEASE_KEY_PASSWORD="别名密码"
 
 ```bash
 .\gradlew.bat :app:packageReleaseForPublish
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 如果也需要把标签同步到 Gitee，可再执行：
 
 ```bash
-git push gitee v1.0.1
+git push gitee v1.0.0
 ```
 
 注意：
@@ -98,12 +99,11 @@ git push gitee v1.0.1
 ## 更新内容模板
 
 ```text
-版本：v1.0.1
+版本：v1.0.0
 发布日期：2026-04-28
 
 更新内容：
-- 修复……
-- 优化……
+- 首次上线，感谢codex！
 
 安装说明：
 - 下载 APK 后按系统提示安装。

@@ -101,24 +101,39 @@ jobs:
           TAG="${{ steps.resolve_tag.outputs.tag }}"
           RELEASE_DATE="$(date -u +%F)"
           NOTES_FILE="$(mktemp)"
-          cat > "${NOTES_FILE}" <<EOF
-          版本：${TAG}
-          发布日期：${RELEASE_DATE}
+          TAG_NOTES="docs/releases/${TAG}.md"
+          if [ -f "${TAG_NOTES}" ]; then
+            cp "${TAG_NOTES}" "${NOTES_FILE}"
+          else
+            cat > "${NOTES_FILE}" <<EOF
+            版本：${TAG}
+            发布日期：${RELEASE_DATE}
 
-          更新内容：
-          - 请补充本次版本说明。
+            更新内容：
+            - 请补充本次版本说明。
 
-          安装说明：
-          - 下载 APK 后按系统提示安装。
-          - 更新前建议先在“我的 -> 导出备份”保存一份备份文件。
+            安装说明：
+            - 下载 APK 后按系统提示安装。
+            - 更新前建议先在“我的 -> 导出备份”保存一份备份文件。
 
-          备用下载：
-          - GitHub：https://github.com/${GITHUB_REPO}/releases
-          - Gitee：https://gitee.com/${GITEE_OWNER}/${GITEE_REPO}/releases
-          EOF
+            备用下载：
+            - GitHub：https://github.com/${GITHUB_REPO}/releases
+            - Gitee：https://gitee.com/${GITEE_OWNER}/${GITEE_REPO}/releases
+            EOF
+          fi
           {
             echo "file=${NOTES_FILE}"
             echo "date=${RELEASE_DATE}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Prepare Gitee release notes
+        id: gitee_notes
+        shell: bash
+        run: |
+          {
+            echo 'content<<EOF'
+            cat "${{ steps.notes.outputs.file }}"
+            echo 'EOF'
           } >> "${GITHUB_OUTPUT}"
 
       - name: Create GitHub release
@@ -138,20 +153,7 @@ jobs:
           gitee_token: ${{ secrets.GITEE_TOKEN }}
           gitee_tag_name: ${{ steps.resolve_tag.outputs.tag }}
           gitee_release_name: ${{ steps.resolve_tag.outputs.tag }}
-          gitee_release_body: |
-            版本：${{ steps.resolve_tag.outputs.tag }}
-            发布日期：${{ steps.notes.outputs.date }}
-
-            更新内容：
-            - 请补充本次版本说明。
-
-            安装说明：
-            - 下载 APK 后按系统提示安装。
-            - 更新前建议先在“我的 -> 导出备份”保存一份备份文件。
-
-            备用下载：
-            - GitHub：https://github.com/${{ env.GITHUB_REPO }}/releases
-            - Gitee：https://gitee.com/${{ env.GITEE_OWNER }}/${{ env.GITEE_REPO }}/releases
+          gitee_release_body: ${{ steps.gitee_notes.outputs.content }}
           gitee_target_commitish: ${{ github.sha }}
           gitee_upload_retry_times: 3
           gitee_file_path: ${{ steps.apk.outputs.path }}
