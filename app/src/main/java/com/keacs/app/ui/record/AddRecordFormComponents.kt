@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -55,16 +56,21 @@ fun TransferAccounts(
     toId: Long?,
     onFrom: (Long) -> Unit,
     onTo: (Long) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var showFromSelector by remember { mutableStateOf(false) }
     var showToSelector by remember { mutableStateOf(false) }
     val fromAccount = accounts.firstOrNull { it.id == fromId }
     val toAccount = accounts.firstOrNull { it.id == toId }
 
-    KeacsCard(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
+    KeacsCard(
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight()
                 .padding(it),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),

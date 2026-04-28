@@ -3,7 +3,6 @@ package com.keacs.app.ui.record
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -130,17 +129,20 @@ fun AddRecordScreen(
             }
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
     ) {
+        SegmentedTabs(
+            items = listOf("支出", "收入", "转账"),
+            selectedIndex = typeIndex(type),
+            onSelected = {
+                type = listOf(RecordType.EXPENSE, RecordType.INCOME, RecordType.TRANSFER)[it]
+                error = null
+            },
+        )
         Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(top = 10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            SegmentedTabs(
-                items = listOf("支出", "收入", "转账"),
-                selectedIndex = typeIndex(type),
-                onSelected = {
-                    type = listOf(RecordType.EXPENSE, RecordType.INCOME, RecordType.TRANSFER)[it]
-                    error = null
-                },
-            )
             if (type == RecordType.TRANSFER) {
                 TransferAccounts(
                     accounts = enabledAccounts,
@@ -149,9 +151,15 @@ fun AddRecordScreen(
                     toId = toAccountId,
                     onFrom = { fromAccountId = it },
                     onTo = { toAccountId = it },
+                    modifier = Modifier.weight(1f),
                 )
             } else {
-                CategoryGrid(availableCategories, categoryId) { categoryId = it }
+                CategoryGrid(
+                    categories = availableCategories,
+                    selectedId = categoryId,
+                    modifier = Modifier.weight(1f),
+                    onSelected = { categoryId = it },
+                )
             }
             FormArea(
                 accounts = enabledAccounts,
@@ -165,7 +173,6 @@ fun AddRecordScreen(
                 onNoteChange = { note = it },
             )
         }
-        Spacer(modifier = Modifier.weight(1f))
         AmountKeyboardPanel(
             modifier = Modifier.padding(top = 8.dp),
             amount = amount,
