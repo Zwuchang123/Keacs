@@ -13,17 +13,22 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.LineHeightStyle
 
 object KeacsColors {
     val Primary = Color(0xFF3F82F6)
     val PrimaryLight = Color(0xFFEAF2FF)
-    val Background = Color(0xFFF6F8FC)
-    val Surface = Color(0xFFFCFDFF)
-    val SurfaceSubtle = Color(0xFFF1F4F8)
-    val TextPrimary = Color(0xFF1F2937)
-    val TextSecondary = Color(0xFF6B7280)
-    val TextTertiary = Color(0xFFA0A7B3)
-    val Border = Color(0xFFE6EBF2)
+    
+    // Tinted neutrals toward Primary (#3F82F6) for visual cohesion
+    val Background = Color(0xFFF4F7FB)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceSubtle = Color(0xFFEEF2F7)
+    
+    val TextPrimary = Color(0xFF1B2433)
+    val TextSecondary = Color(0xFF677080)
+    val TextTertiary = Color(0xFF9CA4B3)
+    val Border = Color(0xFFE3E8F0)
+    
     val Income = Color(0xFF35C785)
     val Expense = Color(0xFFFF5A5F)
     val Warning = Color(0xFFFFB020)
@@ -115,16 +120,16 @@ private val KeacsTypography = Typography(
         lineHeight = 14.sp,
     ),
     displaySmall = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = FontFamily.Monospace,
         fontSize = 30.sp,
         fontWeight = FontWeight.Bold,
-        lineHeight = 38.sp,
+        lineHeight = 38.sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = FontFamily.Monospace,
         fontSize = 24.sp,
         fontWeight = FontWeight.Bold,
-        lineHeight = 32.sp,
+        lineHeight = 32.sp
     ),
 )
 

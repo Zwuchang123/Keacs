@@ -1,5 +1,10 @@
 package com.keacs.app.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,6 +43,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSize
 
@@ -47,35 +56,64 @@ fun SegmentedTabs(
     modifier: Modifier = Modifier,
     onSelected: (Int) -> Unit = {},
 ) {
-    Row(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .clip(MaterialTheme.shapes.extraLarge)
             .background(KeacsColors.SurfaceSubtle)
             .padding(4.dp)
             .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        items.forEachIndexed { index, item ->
-            val selected = index == selectedIndex
-            Text(
-                text = item,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(34.dp)
-                    .clip(MaterialTheme.shapes.extraLarge)
-                    .background(if (selected) KeacsColors.Primary else Color.Transparent)
-                    .selectable(
-                        selected = selected,
-                        role = Role.Tab,
-                        onClick = { onSelected(index) },
-                    )
-                    .padding(vertical = 8.dp),
-                color = if (selected) KeacsColors.Surface else KeacsColors.TextSecondary,
-                style = MaterialTheme.typography.labelMedium,
-                textAlign = TextAlign.Center,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-            )
+        val tabWidth = maxWidth / items.size
+        
+        val indicatorOffset by animateDpAsState(
+            targetValue = tabWidth * selectedIndex,
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy),
+            label = "indicatorOffset"
+        )
+        
+        Box(
+            modifier = Modifier
+                .offset(x = indicatorOffset)
+                .width(tabWidth)
+                .height(34.dp)
+                .clip(MaterialTheme.shapes.extraLarge)
+                .background(KeacsColors.Primary)
+                .zIndex(0f)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            items.forEachIndexed { index, item ->
+                val selected = index == selectedIndex
+                
+                val animatedColor by animateColorAsState(
+                    targetValue = if (selected) KeacsColors.Surface else KeacsColors.TextSecondary,
+                    animationSpec = tween(durationMillis = 160),
+                    label = "textColor"
+                )
+                
+                Text(
+                    text = item,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(34.dp)
+                        .clip(MaterialTheme.shapes.extraLarge)
+                        .selectable(
+                            selected = selected,
+                            role = Role.Tab,
+                            onClick = { onSelected(index) },
+                        )
+                        .padding(vertical = 8.dp)
+                        .zIndex(1f),
+                    color = animatedColor,
+                    style = MaterialTheme.typography.labelMedium,
+                    textAlign = TextAlign.Center,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                )
+            }
         }
     }
 }

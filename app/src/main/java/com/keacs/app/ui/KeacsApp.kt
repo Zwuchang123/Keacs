@@ -1,6 +1,14 @@
 package com.keacs.app.ui
 
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -112,9 +120,33 @@ fun KeacsApp(
             }
         },
     ) { contentPadding ->
-        Crossfade(
+        AnimatedContent(
             targetState = currentRoute,
             modifier = Modifier.padding(contentPadding),
+            transitionSpec = {
+                val duration = 220
+                if (targetState == KeacsDestination.Add.route || initialState == KeacsDestination.Add.route) {
+                    (fadeIn(animationSpec = tween(duration)) + slideInVertically(
+                        animationSpec = tween(duration),
+                        initialOffsetY = { fullHeight -> fullHeight / 10 }
+                    )).togetherWith(
+                        fadeOut(animationSpec = tween(duration)) + slideOutVertically(
+                            animationSpec = tween(duration),
+                            targetOffsetY = { fullHeight -> fullHeight / 10 }
+                        )
+                    )
+                } else {
+                    (fadeIn(animationSpec = tween(duration)) + slideInHorizontally(
+                        animationSpec = tween(duration),
+                        initialOffsetX = { fullWidth -> fullWidth / 10 }
+                    )).togetherWith(
+                        fadeOut(animationSpec = tween(duration)) + slideOutHorizontally(
+                            animationSpec = tween(duration),
+                            targetOffsetX = { fullWidth -> -fullWidth / 10 }
+                        )
+                    )
+                }
+            },
             label = "main-navigation",
         ) { route ->
             when {

@@ -1,5 +1,7 @@
 package com.keacs.app.ui.home
 
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,7 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -34,6 +37,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.entity.CategoryEntity
 import com.keacs.app.data.local.entity.RecordEntity
@@ -82,6 +87,22 @@ private fun OverviewCard(
 ) {
     val monthBalance = totalIncome - totalExpense
 
+    val animatedBalance by animateIntAsState(
+        targetValue = monthBalance.toInt(),
+        animationSpec = tween(durationMillis = 800),
+        label = "animatedBalance"
+    )
+    val animatedIncome by animateIntAsState(
+        targetValue = totalIncome.toInt(),
+        animationSpec = tween(durationMillis = 800),
+        label = "animatedIncome"
+    )
+    val animatedExpense by animateIntAsState(
+        targetValue = totalExpense.toInt(),
+        animationSpec = tween(durationMillis = 800),
+        label = "animatedExpense"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -109,7 +130,7 @@ private fun OverviewCard(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Text(
-                        text = HomeViewModel.formatCent(monthBalance),
+                        text = HomeViewModel.formatCent(animatedBalance.toLong()),
                         color = KeacsColors.Surface,
                         style = MaterialTheme.typography.displaySmall,
                         fontFamily = FontFamily.Monospace,
@@ -123,14 +144,14 @@ private fun OverviewCard(
             ) {
                 OverviewPill(
                     label = "收入",
-                    amount = HomeViewModel.formatCent(totalIncome),
+                    amount = HomeViewModel.formatCent(animatedIncome.toLong()),
                     icon = Icons.Rounded.NorthEast,
                     color = KeacsColors.Income,
                     modifier = Modifier.weight(1f),
                 )
                 OverviewPill(
                     label = "支出",
-                    amount = HomeViewModel.formatCent(totalExpense),
+                    amount = HomeViewModel.formatCent(animatedExpense.toLong()),
                     icon = Icons.Rounded.SouthWest,
                     color = KeacsColors.Expense,
                     modifier = Modifier.weight(1f),
@@ -229,10 +250,11 @@ private fun RecentRecords(
                         .height(180.dp),
                 )
             } else {
-                Column(
+                LazyColumn(
+                    modifier = Modifier.height((records.size * 64).dp.coerceAtMost(320.dp)),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    records.forEach { record ->
+                    items(records, key = { it.id }) { record ->
                         RecordListItem(
                             icon = if (record.type == RecordType.TRANSFER) Icons.Rounded.AccountBalanceWallet
                                    else iconFor(categories[record.categoryId]?.iconKey ?: "more"),
@@ -243,7 +265,9 @@ private fun RecentRecords(
                             account = recordAccount(record),
                             amount = recordAmount(record),
                             amountColor = recordColor(record),
-                            modifier = Modifier.clickable { onRecordClick(record.id) },
+                            modifier = Modifier
+                                .clickable { onRecordClick(record.id) }
+                                .animateItem(),
                         )
                     }
                 }

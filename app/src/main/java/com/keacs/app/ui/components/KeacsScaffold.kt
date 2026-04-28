@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import com.keacs.app.ui.theme.KeacsColors
 
@@ -31,12 +32,14 @@ fun KeacsScaffold(
     snackbarHost: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
-        modifier = modifier,
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = KeacsColors.Background,
         snackbarHost = snackbarHost,
         topBar = {
             CenterAlignedTopAppBar(
+                scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     if (showBack) {
                         IconButton(onClick = onBackClick) {
@@ -68,6 +71,7 @@ fun KeacsScaffold(
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = KeacsColors.Background,
+                    scrolledContainerColor = KeacsColors.Background,
                     titleContentColor = KeacsColors.TextPrimary,
                     navigationIconContentColor = KeacsColors.TextPrimary,
                     actionIconContentColor = KeacsColors.TextPrimary,

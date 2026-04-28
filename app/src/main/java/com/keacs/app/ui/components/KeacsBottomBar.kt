@@ -1,5 +1,8 @@
 package com.keacs.app.ui.components
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,9 +19,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -78,6 +84,15 @@ private fun BottomDestinationItem(
     val description = stringResource(destination.contentDescriptionRes)
     val tint = if (selected) KeacsColors.Primary else KeacsColors.TextTertiary
 
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.05f else 1.0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "itemScale"
+    )
+
     Column(
         modifier = Modifier
             .size(width = 58.dp, height = 62.dp)
@@ -86,7 +101,8 @@ private fun BottomDestinationItem(
             .semantics {
                 contentDescription = description
                 this.selected = selected
-            },
+            }
+            .scale(scale),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -113,6 +129,15 @@ private fun AddDestinationItem(
 ) {
     val description = stringResource(destination.contentDescriptionRes)
 
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 0.95f else 1.0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "addButtonScale"
+    )
+
     Column(
         modifier = Modifier
             .size(width = 64.dp, height = 62.dp)
@@ -120,13 +145,20 @@ private fun AddDestinationItem(
             .semantics {
                 contentDescription = description
                 this.selected = selected
-            },
+            }
+            .scale(scale),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Box(
             modifier = Modifier
                 .size(KeacsSize.AddButton)
+                .shadow(
+                    elevation = 12.dp,
+                    shape = CircleShape,
+                    spotColor = KeacsColors.Primary.copy(alpha = 0.4f),
+                    ambientColor = KeacsColors.Primary.copy(alpha = 0.4f)
+                )
                 .clip(CircleShape)
                 .background(KeacsColors.Primary),
             contentAlignment = Alignment.Center,
