@@ -190,6 +190,8 @@ fun OptionChip(
             color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

@@ -16,6 +16,7 @@ import com.keacs.app.domain.rule.totalIncome
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -116,6 +117,9 @@ class KeacsDatabaseTest {
         assertEquals(false, updated.isEnabled)
         assertEquals("已有同名分类，请换一个名称", runCatching {
             repository.saveCategory(null, "餐饮", PresetSeedData.CATEGORY_EXPENSE, "food", "orange", true)
+        }.exceptionOrNull()?.message)
+        assertEquals("名称不能超过4个字", runCatching {
+            repository.saveCategory(null, "超长分类名", PresetSeedData.CATEGORY_EXPENSE, "food", "orange", true)
         }.exceptionOrNull()?.message)
     }
 
@@ -238,9 +242,11 @@ class KeacsDatabaseTest {
     }
 
     @Test
-    fun importBackupRenamesDuplicateNamesInsteadOfFailing() = runTest {
+    fun importBackupMergesDuplicateCategoriesAndRenamesDuplicateAccounts() = runTest {
         repository.initializePresets()
+        val originalCategoryCount = repository.getCategories().size
         val duplicateCategory = CategoryEntity(
+            id = 900,
             name = "餐饮",
             direction = PresetSeedData.CATEGORY_EXPENSE,
             iconKey = "food",
@@ -252,6 +258,7 @@ class KeacsDatabaseTest {
             updatedAt = 1_000L,
         )
         val duplicateAccount = com.keacs.app.data.local.entity.AccountEntity(
+            id = 900,
             name = "现金",
             nature = PresetSeedData.ACCOUNT_ASSET,
             type = "现金",
@@ -262,18 +269,33 @@ class KeacsDatabaseTest {
             createdAt = 1_000L,
             updatedAt = 1_000L,
         )
+        val duplicateRecord = RecordEntity(
+            type = RecordType.EXPENSE,
+            amountCent = 100,
+            occurredAt = 1_000L,
+            categoryId = duplicateCategory.id,
+            fromAccountId = null,
+            toAccountId = null,
+            note = null,
+            createdAt = 1_000L,
+            updatedAt = 1_000L,
+        )
 
         repository.importBackup(
             categories = listOf(duplicateCategory),
             accounts = listOf(duplicateAccount),
-            records = emptyList(),
+            records = listOf(duplicateRecord),
         )
 
         val categories = repository.getCategories().filter { it.direction == PresetSeedData.CATEGORY_EXPENSE }
         val accounts = repository.getAccounts()
+        val records = repository.getRecords()
+        val existingCategory = categories.first { it.name == "餐饮" }
 
+        assertEquals(originalCategoryCount, repository.getCategories().size)
         assertTrue(categories.any { it.name == "餐饮" })
-        assertTrue(categories.any { it.name == "餐饮（导入2）" })
+        assertFalse(categories.any { it.name.contains("导入") })
+        assertEquals(existingCategory.id, records.single().categoryId)
         assertTrue(accounts.any { it.name == "现金" })
         assertTrue(accounts.any { it.name == "现金（导入2）" })
     }

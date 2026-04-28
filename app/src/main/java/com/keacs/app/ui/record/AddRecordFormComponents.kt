@@ -20,8 +20,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.CalendarToday
-import androidx.compose.material.icons.rounded.SouthWest
-import androidx.compose.material.icons.rounded.NorthEast
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,14 +34,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.entity.AccountEntity
 import com.keacs.app.ui.components.AmountText
+import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.FormFieldRow
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.NumberPad
+import com.keacs.app.ui.management.colorFor
+import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.theme.KeacsColors
 
 @Composable
@@ -69,10 +70,7 @@ fun TransferAccounts(
         ) {
             TransferAccountBox(
                 title = "转出账户",
-                value = fromAccount?.name ?: "选择账户",
-                iconTint = KeacsColors.Expense,
-                iconBackground = KeacsColors.Expense.copy(alpha = 0.12f),
-                icon = Icons.Rounded.SouthWest,
+                account = fromAccount,
                 modifier = Modifier.weight(1f),
                 onClick = { showFromSelector = true },
             )
@@ -92,10 +90,7 @@ fun TransferAccounts(
             }
             TransferAccountBox(
                 title = "转入账户",
-                value = toAccount?.name ?: "选择账户",
-                iconTint = KeacsColors.Income,
-                iconBackground = KeacsColors.Income.copy(alpha = 0.12f),
-                icon = Icons.Rounded.NorthEast,
+                account = toAccount,
                 modifier = Modifier.weight(1f),
                 onClick = { showToSelector = true },
             )
@@ -235,10 +230,7 @@ fun FormArea(
 @Composable
 private fun TransferAccountBox(
     title: String,
-    value: String,
-    iconTint: androidx.compose.ui.graphics.Color,
-    iconBackground: androidx.compose.ui.graphics.Color,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    account: AccountEntity?,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -251,17 +243,18 @@ private fun TransferAccountBox(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(iconBackground),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(19.dp))
-        }
+        CategoryIcon(
+            icon = iconFor(account?.iconKey ?: "more"),
+            backgroundColor = colorFor(account?.colorKey ?: "gray"),
+        )
         Text(title, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-        Text(value, color = KeacsColors.TextPrimary, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = account?.name ?: "选择账户",
+            color = KeacsColors.TextPrimary,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

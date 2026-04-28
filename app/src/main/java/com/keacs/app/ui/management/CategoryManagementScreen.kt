@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +43,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.local.entity.CategoryEntity
@@ -157,7 +160,10 @@ fun CategoryEditScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
         ) {
-            ManagementTextField("分类名称", name, { name = it; error = null }, error = error)
+            ManagementTextField("分类名称", name, {
+                name = it.take(MAX_CATEGORY_NAME_LENGTH)
+                error = null
+            }, error = error)
             DirectionSelector(direction) { direction = it }
             IconSelector(direction, iconKey) {
                 iconKey = it.key
@@ -231,16 +237,17 @@ private fun IconSelector(direction: String, selectedKey: String, onSelected: (Ic
                 columns = GridCells.Fixed(5),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp)
+                    .height(252.dp)
                     .padding(top = 10.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(categoryOptions(direction), key = { option -> option.key + option.label }) { option ->
                     val selected = selectedKey == option.key
                     Column(
                         modifier = Modifier
-                            .height(58.dp)
+                            .height(68.dp)
                             .shadow(
                                 elevation = if (selected) 10.dp else 0.dp,
                                 shape = MaterialTheme.shapes.medium,
@@ -253,21 +260,30 @@ private fun IconSelector(direction: String, selectedKey: String, onSelected: (Ic
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        CategoryIcon(
-                            icon = option.icon,
-                            backgroundColor = if (selected) KeacsColors.Primary else colorFor(option.colorKey),
+                        Box(
                             modifier = Modifier
-                                .size(34.dp)
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(if (selected) KeacsColors.PrimaryLight else KeacsColors.Surface)
                                 .border(
                                     BorderStroke(if (selected) 1.5.dp else 0.dp, KeacsColors.Primary),
-                                    MaterialTheme.shapes.small,
+                                    CircleShape,
                                 ),
-                        )
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CategoryIcon(
+                                icon = option.icon,
+                                backgroundColor = if (selected) KeacsColors.Primary else colorFor(option.colorKey),
+                                modifier = Modifier.size(32.dp),
+                            )
+                        }
                         Text(
                             text = option.label,
                             color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
                             style = MaterialTheme.typography.labelSmall,
                             textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -292,3 +308,5 @@ private fun DeleteDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
     )
 }
+
+private const val MAX_CATEGORY_NAME_LENGTH = 4

@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.entity.CategoryEntity
 import com.keacs.app.ui.components.CategoryIcon
@@ -38,9 +39,10 @@ fun CategoryGrid(categories: List<CategoryEntity>, selectedId: Long?, onSelected
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(232.dp)
-                .padding(it),
-            verticalArrangement = Arrangement.spacedBy(7.dp),
+                .height(252.dp)
+                .padding(it)
+                .padding(horizontal = 4.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             categories.take(15).chunked(5).forEach { rowCategories ->
                 Row(
@@ -74,7 +76,7 @@ private fun CategoryChoice(
 ) {
     Column(
         modifier = modifier
-            .height(66.dp)
+            .height(68.dp)
             .shadow(
                 elevation = if (selected) 10.dp else 0.dp,
                 shape = MaterialTheme.shapes.medium,
@@ -107,6 +109,8 @@ private fun CategoryChoice(
             style = MaterialTheme.typography.labelSmall,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.fillMaxWidth(),
         )
     }

@@ -38,6 +38,7 @@ class LocalDataRepository(
     ) {
         val trimmedName = name.trim()
         require(trimmedName.isNotEmpty()) { "名称不能为空" }
+        require(trimmedName.length <= MAX_CATEGORY_NAME_LENGTH) { "名称不能超过4个字" }
         require(database.categoryDao().countByName(trimmedName, direction, id ?: 0L) == 0) {
             "已有同名分类，请换一个名称"
         }
@@ -192,40 +193,37 @@ class LocalDataRepository(
         }
     }
 
-    suspend fun presetVersion(): String? {
-        return database.appMetaDao().get(META_PRESET_VERSION)?.value
-    }
+    suspend fun presetVersion(): String? = database.appMetaDao().get(META_PRESET_VERSION)?.value
 
-    suspend fun importBackup(
-        categories: List<CategoryEntity>,
-        accounts: List<AccountEntity>,
-        records: List<RecordEntity>
-    ) {
+    suspend fun importBackup(categories: List<CategoryEntity>, accounts: List<AccountEntity>, records: List<RecordEntity>) {
         database.withTransaction {
             val now = clock()
             val categoryIdMap = mutableMapOf<Long, Long>()
-            val usedCategoryNames = database.categoryDao()
-                .getAll()
-                .map { it.direction to it.name }
-                .toMutableSet()
+            val categoryByName = database.categoryDao().getAll()
+                .associateBy { it.direction to it.name }
+                .toMutableMap()
 
             for (cat in categories) {
-                val resolvedName = uniqueCategoryName(cat.name, cat.direction, usedCategoryNames)
+                val key = cat.direction to cat.name
+                val existing = categoryByName[key]
+                if (existing != null) {
+                    categoryIdMap[cat.id] = existing.id
+                    continue
+                }
                 val newId = database.categoryDao().insert(
                     cat.copy(
                         id = 0,
-                        name = resolvedName,
                         createdAt = now,
                         updatedAt = now,
                         sortOrder = (database.categoryDao().maxSortOrder(cat.direction) ?: -1) + 1
                     )
                 )
                 categoryIdMap[cat.id] = newId
+                categoryByName[key] = cat.copy(id = newId)
             }
 
             val accountIdMap = mutableMapOf<Long, Long>()
-            val usedAccountNames = database.accountDao()
-                .getAll()
+            val usedAccountNames = database.accountDao().getAll()
                 .map { it.name }
                 .toMutableSet()
 
@@ -264,26 +262,10 @@ class LocalDataRepository(
     private companion object {
         const val META_PRESET_VERSION = "preset_version"
         const val PRESET_VERSION = "2"
+        const val MAX_CATEGORY_NAME_LENGTH = 4
     }
 
-    private fun uniqueCategoryName(
-        baseName: String,
-        direction: String,
-        usedNames: MutableSet<Pair<String, String>>,
-    ): String {
-        var candidate = baseName
-        var suffix = 2
-        while (!usedNames.add(direction to candidate)) {
-            candidate = "$baseName（导入$suffix）"
-            suffix += 1
-        }
-        return candidate
-    }
-
-    private fun uniqueAccountName(
-        baseName: String,
-        usedNames: MutableSet<String>,
-    ): String {
+    private fun uniqueAccountName(baseName: String, usedNames: MutableSet<String>): String {
         var candidate = baseName
         var suffix = 2
         while (!usedNames.add(candidate)) {

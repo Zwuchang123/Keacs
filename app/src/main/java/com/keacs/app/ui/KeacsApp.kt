@@ -66,6 +66,7 @@ fun KeacsApp(
     preferencesManager: PreferencesManager,
 ) {
     var currentRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
+    var addSourceRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
     var accountDeleteRequest by rememberSaveable { mutableStateOf(0) }
     val currentDestination = bottomDestinations.firstOrNull { it.route == currentRoute }
     val screenTitle = when {
@@ -83,7 +84,7 @@ fun KeacsApp(
     }
 
     BackHandler(enabled = currentRoute != KeacsDestination.Home.route) {
-        currentRoute = backRoute(currentRoute)
+        currentRoute = if (currentRoute == KeacsDestination.Add.route) addSourceRoute else backRoute(currentRoute)
     }
 
     KeacsScaffold(
@@ -91,7 +92,9 @@ fun KeacsApp(
         showBack = currentDestination == null || currentDestination == KeacsDestination.Add,
         actionText = if (isExistingAccountEditRoute(currentRoute)) "删除" else null,
         onActionClick = { accountDeleteRequest += 1 },
-        onBackClick = { currentRoute = backRoute(currentRoute) },
+        onBackClick = {
+            currentRoute = if (currentRoute == KeacsDestination.Add.route) addSourceRoute else backRoute(currentRoute)
+        },
         actions = {
             currentDestination?.let { TopActions(destination = it) }
         },
@@ -99,7 +102,12 @@ fun KeacsApp(
             if (currentDestination != null && currentDestination != KeacsDestination.Add) {
                 KeacsBottomBar(
                     currentDestination = currentDestination,
-                    onDestinationSelected = { currentRoute = it.route },
+                    onDestinationSelected = {
+                        if (it == KeacsDestination.Add) {
+                            addSourceRoute = currentRoute
+                        }
+                        currentRoute = it.route
+                    },
                 )
             }
         },
@@ -129,7 +137,7 @@ fun KeacsApp(
                 route == KeacsDestination.Add.route -> AddRecordScreen(
                     repository = repository,
                     preferencesManager = preferencesManager,
-                    onDone = { currentRoute = KeacsDestination.Records.route },
+                    onDone = { currentRoute = addSourceRoute },
                 )
 
                 route == KeacsDestination.Stats.route -> StatsScreen(repository)

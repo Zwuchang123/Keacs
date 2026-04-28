@@ -32,7 +32,7 @@ class MainActivitySmokeTest {
         composeRule.onAllNodesWithContentDescription("切换到统计").assertCountEquals(0)
 
         composeRule.onNodeWithContentDescription("返回").performClick()
-        composeRule.onNodeWithTag("screen-home").assertIsDisplayed()
+        composeRule.onNodeWithTag("screen-records").assertIsDisplayed()
 
         composeRule.onNodeWithContentDescription("切换到统计").performClick()
         composeRule.onNodeWithTag("screen-stats").assertIsDisplayed()
