@@ -105,21 +105,18 @@ jobs:
           if [ -f "${TAG_NOTES}" ]; then
             cp "${TAG_NOTES}" "${NOTES_FILE}"
           else
-            cat > "${NOTES_FILE}" <<EOF
-            版本：${TAG}
-            发布日期：${RELEASE_DATE}
-
-            更新内容：
-            - 请补充本次版本说明。
-
-            安装说明：
-            - 下载 APK 后按系统提示安装。
-            - 更新前建议先在“我的 -> 导出备份”保存一份备份文件。
-
-            备用下载：
-            - GitHub：https://github.com/${GITHUB_REPO}/releases
-            - Gitee：https://gitee.com/${GITEE_OWNER}/${GITEE_REPO}/releases
-            EOF
+            {
+              printf '版本：%s\n' "${TAG}"
+              printf '发布日期：%s\n\n' "${RELEASE_DATE}"
+              printf '更新内容：\n'
+              printf -- '- 请补充本次版本说明。\n\n'
+              printf '安装说明：\n'
+              printf -- '- 下载 APK 后按系统提示安装。\n'
+              printf -- '- 更新前建议先在“我的 -> 导出备份”保存一份备份文件。\n\n'
+              printf '备用下载：\n'
+              printf -- '- GitHub：https://github.com/%s/releases\n' "${GITHUB_REPO}"
+              printf -- '- Gitee：https://gitee.com/%s/%s/releases\n' "${GITEE_OWNER}" "${GITEE_REPO}"
+            } > "${NOTES_FILE}"
           fi
           {
             echo "file=${NOTES_FILE}"
