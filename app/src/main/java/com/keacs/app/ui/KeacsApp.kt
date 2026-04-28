@@ -12,6 +12,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -75,8 +76,10 @@ fun KeacsApp(
 ) {
     var currentRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
     var addSourceRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
+    var addEntryKey by rememberSaveable { mutableIntStateOf(0) }
     var recordDetailSourceRoute by rememberSaveable { mutableStateOf(KeacsDestination.Records.route) }
     var accountDeleteRequest by rememberSaveable { mutableStateOf(0) }
+    var navigationDirection by rememberSaveable { mutableIntStateOf(1) }
     val currentDestination = bottomDestinations.firstOrNull { it.route == currentRoute }
     val screenTitle = when {
         currentRoute == ROUTE_CATEGORY_LIST -> "分类管理"
@@ -93,6 +96,7 @@ fun KeacsApp(
     }
 
     fun navigateBack() {
+        navigationDirection = -1
         currentRoute = when {
             currentRoute == KeacsDestination.Add.route -> addSourceRoute
             currentRoute.startsWith(ROUTE_RECORD_DETAIL) -> recordDetailSourceRoute
@@ -101,8 +105,24 @@ fun KeacsApp(
     }
 
     fun navigateRecordDetail(id: Long, sourceRoute: String) {
+        navigationDirection = 1
         recordDetailSourceRoute = sourceRoute
         currentRoute = recordDetailRoute(id)
+    }
+
+    fun navigateTo(route: String) {
+        navigationDirection = if (navigationAnimationIndex(route) >= navigationAnimationIndex(currentRoute)) 1 else -1
+        currentRoute = route
+    }
+
+    fun navigateForward(route: String) {
+        navigationDirection = 1
+        currentRoute = route
+    }
+
+    fun navigateBackTo(route: String) {
+        navigationDirection = -1
+        currentRoute = route
     }
 
     BackHandler(enabled = currentRoute != KeacsDestination.Home.route) {
@@ -127,8 +147,12 @@ fun KeacsApp(
                     onDestinationSelected = {
                         if (it == KeacsDestination.Add) {
                             addSourceRoute = currentRoute
+                            addEntryKey += 1
+                            navigationDirection = 1
+                            currentRoute = it.route
+                        } else {
+                            navigateTo(it.route)
                         }
-                        currentRoute = it.route
                     },
                 )
             }
@@ -150,13 +174,14 @@ fun KeacsApp(
                         )
                     )
                 } else {
+                    val direction = navigationDirection
                     (fadeIn(animationSpec = tween(duration)) + slideInHorizontally(
                         animationSpec = tween(duration),
-                        initialOffsetX = { fullWidth -> fullWidth / 10 }
+                        initialOffsetX = { fullWidth -> direction * fullWidth / 10 }
                     )).togetherWith(
                         fadeOut(animationSpec = tween(duration)) + slideOutHorizontally(
                             animationSpec = tween(duration),
-                            targetOffsetX = { fullWidth -> -fullWidth / 10 }
+                            targetOffsetX = { fullWidth -> -direction * fullWidth / 10 }
                         )
                     )
                 }
@@ -170,7 +195,7 @@ fun KeacsApp(
                     )
                     HomeScreen(
                         viewModel = homeViewModel,
-                        onRecordsClick = { currentRoute = KeacsDestination.Records.route },
+                        onRecordsClick = { navigateTo(KeacsDestination.Records.route) },
                         onRecordClick = { navigateRecordDetail(it, KeacsDestination.Home.route) },
                     )
                 }
@@ -183,10 +208,15 @@ fun KeacsApp(
                 route == KeacsDestination.Add.route -> AddRecordScreen(
                     repository = repository,
                     preferencesManager = preferencesManager,
-                    onDone = { currentRoute = addSourceRoute },
+                    entryKey = addEntryKey,
+                    onDone = { navigateBackTo(addSourceRoute) },
                 )
 
-                route == KeacsDestination.Stats.route -> StatsScreen(repository)
+                route == KeacsDestination.Stats.route -> StatsScreen(
+                    repository = repository,
+                    onSwipeBeyondStart = { navigateTo(KeacsDestination.Records.route) },
+                    onSwipeBeyondEnd = { navigateTo(KeacsDestination.Mine.route) },
+                )
 
                 route == KeacsDestination.Mine.route -> {
                     val backupViewModel: BackupViewModel = viewModel(
@@ -194,10 +224,10 @@ fun KeacsApp(
                     )
                     MineScreen(
                         backupViewModel = backupViewModel,
-                        onCategoryClick = { currentRoute = ROUTE_CATEGORY_LIST },
-                        onAccountClick = { currentRoute = ROUTE_ACCOUNT_LIST },
-                        onSettingsClick = { currentRoute = ROUTE_SETTINGS },
-                        onAboutClick = { currentRoute = ROUTE_ABOUT },
+                        onCategoryClick = { navigateForward(ROUTE_CATEGORY_LIST) },
+                        onAccountClick = { navigateForward(ROUTE_ACCOUNT_LIST) },
+                        onSettingsClick = { navigateForward(ROUTE_SETTINGS) },
+                        onAboutClick = { navigateForward(ROUTE_ABOUT) },
                     )
                 }
 
@@ -210,39 +240,39 @@ fun KeacsApp(
 
                 route == ROUTE_CATEGORY_LIST -> CategoryListScreen(
                     repository = repository,
-                    onEditCategory = { currentRoute = categoryEditRoute(it) },
+                    onEditCategory = { navigateForward(categoryEditRoute(it)) },
                 )
 
                 route.startsWith(ROUTE_CATEGORY_EDIT) -> CategoryEditScreen(
                     repository = repository,
                     categoryId = routeId(route, ROUTE_CATEGORY_EDIT),
-                    onDone = { currentRoute = ROUTE_CATEGORY_LIST },
+                    onDone = { navigateBackTo(ROUTE_CATEGORY_LIST) },
                 )
 
                 route == ROUTE_ACCOUNT_LIST -> AccountListScreen(
                     repository = repository,
-                    onEditAccount = { currentRoute = accountEditRoute(it) },
+                    onEditAccount = { navigateForward(accountEditRoute(it)) },
                 )
 
                 route.startsWith(ROUTE_ACCOUNT_EDIT) -> AccountEditScreen(
                     repository = repository,
                     accountId = routeId(route, ROUTE_ACCOUNT_EDIT),
                     deleteRequest = accountDeleteRequest,
-                    onDone = { currentRoute = ROUTE_ACCOUNT_LIST },
+                    onDone = { navigateBackTo(ROUTE_ACCOUNT_LIST) },
                 )
 
                 route.startsWith(ROUTE_RECORD_DETAIL) -> RecordDetailScreen(
                     recordId = routeId(route, ROUTE_RECORD_DETAIL) ?: 0L,
                     repository = repository,
-                    onBack = { currentRoute = recordDetailSourceRoute },
-                    onEdit = { currentRoute = recordEditRoute(it) },
+                    onBack = { navigateBackTo(recordDetailSourceRoute) },
+                    onEdit = { navigateForward(recordEditRoute(it)) },
                 )
 
                 route.startsWith(ROUTE_RECORD_EDIT) -> AddRecordScreen(
                     repository = repository,
                     preferencesManager = preferencesManager,
                     recordId = routeId(route, ROUTE_RECORD_EDIT),
-                    onDone = { routeId(route, ROUTE_RECORD_EDIT)?.let { currentRoute = recordDetailRoute(it) } },
+                    onDone = { routeId(route, ROUTE_RECORD_EDIT)?.let { navigateBackTo(recordDetailRoute(it)) } },
                 )
             }
         }
@@ -268,6 +298,15 @@ private fun routeId(route: String, prefix: String): Long? =
 
 private fun isExistingAccountEditRoute(route: String): Boolean =
     route.startsWith(ROUTE_ACCOUNT_EDIT) && routeId(route, ROUTE_ACCOUNT_EDIT) != null
+
+private fun navigationAnimationIndex(route: String): Int = when (route) {
+    KeacsDestination.Home.route -> 0
+    KeacsDestination.Records.route -> 1
+    KeacsDestination.Add.route -> 2
+    KeacsDestination.Stats.route -> 3
+    KeacsDestination.Mine.route -> 4
+    else -> 5
+}
 
 private fun backRoute(route: String): String = when {
     route == KeacsDestination.Add.route -> KeacsDestination.Home.route

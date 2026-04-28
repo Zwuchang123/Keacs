@@ -129,7 +129,7 @@ fun AccountBalanceKeyboardPanel(
     onKeyClick: (String) -> Unit,
     onSaveClick: () -> Unit,
 ) {
-    KeacsCard(contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)) {
+    KeacsCard(contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

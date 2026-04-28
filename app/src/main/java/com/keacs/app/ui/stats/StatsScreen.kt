@@ -63,6 +63,8 @@ import java.util.Locale
 fun StatsScreen(
     repository: LocalDataRepository,
     viewModel: StatsViewModel = viewModel { StatsViewModel(repository) },
+    onSwipeBeyondStart: () -> Unit = {},
+    onSwipeBeyondEnd: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -79,12 +81,14 @@ fun StatsScreen(
                     },
                     onDragEnd = {
                         val nextTab = when {
-                            totalDrag <= -60f -> StatsTab.entries.getOrNull(uiState.selectedTab.ordinal + 1)
-                            totalDrag >= 60f -> StatsTab.entries.getOrNull(uiState.selectedTab.ordinal - 1)
+                            totalDrag <= -60f -> StatsTab.entries.getOrNull(uiState.selectedTab.ordinal - 1)
+                            totalDrag >= 60f -> StatsTab.entries.getOrNull(uiState.selectedTab.ordinal + 1)
                             else -> null
                         }
-                        if (nextTab != null) {
-                            viewModel.selectTab(nextTab)
+                        when {
+                            nextTab != null -> viewModel.selectTab(nextTab)
+                            totalDrag <= -60f && uiState.selectedTab == StatsTab.EXPENSE -> onSwipeBeyondStart()
+                            totalDrag >= 60f && uiState.selectedTab == StatsTab.ASSET -> onSwipeBeyondEnd()
                         }
                         totalDrag = 0f
                     },

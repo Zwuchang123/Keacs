@@ -263,9 +263,7 @@ private fun RecentRecords(
                                    else iconFor(categories[record.categoryId]?.iconKey ?: "more"),
                             iconColor = if (record.type == RecordType.TRANSFER) KeacsColors.Primary
                                         else colorFor(categories[record.categoryId]?.colorKey ?: "gray"),
-                            title = recordTitle(record, categories),
-                            note = record.note ?: "无备注",
-                            account = recordAccount(record, accounts),
+                            title = recordTitle(record, categories, accounts),
                             amount = recordAmount(record),
                             amountColor = recordColor(record),
                             modifier = Modifier
@@ -278,20 +276,16 @@ private fun RecentRecords(
     }
 }
 
-private fun recordTitle(record: RecordEntity, categories: Map<Long, CategoryEntity>): String {
+private fun recordTitle(
+    record: RecordEntity,
+    categories: Map<Long, CategoryEntity>,
+    accounts: Map<Long, AccountEntity>,
+): String {
     val category = categories[record.categoryId]
     return when (record.type) {
         RecordType.INCOME -> category?.name ?: "收入"
-        RecordType.TRANSFER -> "转账"
+        RecordType.TRANSFER -> "${accounts[record.fromAccountId]?.name ?: "账户"} → ${accounts[record.toAccountId]?.name ?: "账户"}"
         else -> category?.name ?: "支出"
-    }
-}
-
-private fun recordAccount(record: RecordEntity, accounts: Map<Long, AccountEntity>): String {
-    return when (record.type) {
-        RecordType.INCOME -> record.toAccountId?.let { accounts[it]?.name } ?: "未选择"
-        RecordType.EXPENSE -> record.fromAccountId?.let { accounts[it]?.name } ?: "未选择"
-        else -> "转账"
     }
 }
 

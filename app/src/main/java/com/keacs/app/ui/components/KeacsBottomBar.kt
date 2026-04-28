@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -37,12 +40,23 @@ import com.keacs.app.ui.navigation.bottomDestinations
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSize
 import com.keacs.app.ui.theme.icon
+import kotlin.math.abs
 
 @Composable
 fun KeacsBottomBar(
     currentDestination: KeacsDestination,
     onDestinationSelected: (KeacsDestination) -> Unit,
 ) {
+    val swipeThreshold = with(LocalDensity.current) { 48.dp.toPx() }
+
+    fun selectBySwipe(toNext: Boolean) {
+        val currentIndex = bottomSwipeDestinations.indexOf(currentDestination)
+        if (currentIndex == -1) return
+        val nextIndex = currentIndex + if (toNext) 1 else -1
+        val nextDestination = bottomSwipeDestinations.getOrNull(nextIndex) ?: return
+        onDestinationSelected(nextDestination)
+    }
+
     Surface(
         color = KeacsColors.Surface,
         shadowElevation = 3.dp,
@@ -51,7 +65,26 @@ fun KeacsBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(KeacsSize.BottomBarHeight),
+                .height(KeacsSize.BottomBarHeight)
+                .pointerInput(currentDestination, swipeThreshold) {
+                    var totalDrag = 0f
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, dragAmount ->
+                            totalDrag += dragAmount
+                            if (abs(totalDrag) > swipeThreshold / 3f) {
+                                change.consume()
+                            }
+                        },
+                        onDragEnd = {
+                            when {
+                                totalDrag <= -swipeThreshold -> selectBySwipe(toNext = true)
+                                totalDrag >= swipeThreshold -> selectBySwipe(toNext = false)
+                            }
+                            totalDrag = 0f
+                        },
+                        onDragCancel = { totalDrag = 0f },
+                    )
+                },
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -73,6 +106,13 @@ fun KeacsBottomBar(
         }
     }
 }
+
+private val bottomSwipeDestinations = listOf(
+    KeacsDestination.Home,
+    KeacsDestination.Records,
+    KeacsDestination.Stats,
+    KeacsDestination.Mine,
+)
 
 @Composable
 private fun BottomDestinationItem(

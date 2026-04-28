@@ -150,8 +150,6 @@ fun RecordScreen(
                                         iconColor = if (record.type == RecordType.TRANSFER) KeacsColors.Primary
                                                     else colorFor(categoryMap[record.categoryId]?.colorKey ?: "gray"),
                                         title = recordTitle(record, categoryMap, accountMap),
-                                        note = record.note ?: "无备注",
-                                        account = recordAccount(record, accountMap),
                                         amount = recordAmount(record),
                                         amountColor = recordColor(record),
                                         modifier = Modifier.clickable { onViewRecord(record.id) },

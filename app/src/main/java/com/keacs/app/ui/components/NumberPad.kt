@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keacs.app.ui.theme.KeacsColors
+import com.keacs.app.ui.theme.KeacsSize
 
 @Composable
 fun NumberPad(
@@ -42,7 +43,7 @@ fun NumberPad(
     )
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         rows.forEach { row ->
             Row(
@@ -95,7 +96,7 @@ private fun NumberKey(
     Box(
         modifier = modifier
             .scale(scale)
-            .height(40.dp)
+            .height(KeacsSize.MinTouch)
             .clip(MaterialTheme.shapes.medium)
             .background(background)
             .clickable(

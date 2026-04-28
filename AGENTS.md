@@ -52,7 +52,8 @@
 - 每轮迭代的设计图及页面功能截图目录：`docs\screenshots`
 - git提交记录：`docs\auto-commit-log.md`。
 - 测试问题登记：`docs\test-issue-tracking.md`。
-- 版本更新发布方案`docs/release-update.md`。
+- 版本更新发布方案`docs\release-update.md`。
+
 
 ### 开发要求
 

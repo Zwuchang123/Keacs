@@ -39,10 +39,10 @@ fun CategoryGrid(categories: List<CategoryEntity>, selectedId: Long?, onSelected
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(252.dp)
+                .height(220.dp)
                 .padding(it)
-                .padding(horizontal = 4.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             categories.take(15).chunked(5).forEach { rowCategories ->
                 Row(
@@ -76,7 +76,7 @@ private fun CategoryChoice(
 ) {
     Column(
         modifier = modifier
-            .height(68.dp)
+            .height(62.dp)
             .shadow(
                 elevation = if (selected) 10.dp else 0.dp,
                 shape = MaterialTheme.shapes.medium,
@@ -91,7 +91,7 @@ private fun CategoryChoice(
     ) {
         Box(
             modifier = Modifier
-                .size(38.dp)
+                .size(34.dp)
                 .clip(CircleShape)
                 .background(if (selected) KeacsColors.PrimaryLight else KeacsColors.Surface)
                 .border(BorderStroke(if (selected) 1.5.dp else 0.dp, KeacsColors.Primary), CircleShape),
@@ -100,7 +100,7 @@ private fun CategoryChoice(
             CategoryIcon(
                 icon = iconFor(category.iconKey),
                 backgroundColor = if (selected) KeacsColors.Primary else colorFor(category.colorKey),
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(30.dp),
             )
         }
         Text(

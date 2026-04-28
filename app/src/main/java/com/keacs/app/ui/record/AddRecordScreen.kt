@@ -33,28 +33,29 @@ fun AddRecordScreen(
     repository: LocalDataRepository,
     preferencesManager: PreferencesManager,
     recordId: Long? = null,
+    entryKey: Int = 0,
     onDone: () -> Unit = {},
 ) {
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
     val accounts by repository.observeAccounts().collectAsState(initial = emptyList())
     val records by repository.observeRecords().collectAsState(initial = emptyList())
     val defaultAccountId by preferencesManager.defaultRecordAccountId.collectAsState(initial = null)
-    val defaultRecordType by preferencesManager.defaultRecordType.collectAsState(initial = RecordType.EXPENSE)
+    val defaultRecordType by preferencesManager.defaultRecordType.collectAsState(initial = null)
     val editing = records.firstOrNull { it.id == recordId }
     val scope = rememberCoroutineScope()
 
-    var type by rememberSaveable(recordId) { mutableStateOf(RecordType.EXPENSE) }
-    var amount by rememberSaveable(recordId) { mutableStateOf("") }
-    var categoryId by rememberSaveable(recordId) { mutableStateOf<Long?>(null) }
-    var accountId by rememberSaveable(recordId) { mutableStateOf<Long?>(null) }
-    var fromAccountId by rememberSaveable(recordId) { mutableStateOf<Long?>(null) }
-    var toAccountId by rememberSaveable(recordId) { mutableStateOf<Long?>(null) }
-    var note by rememberSaveable(recordId) { mutableStateOf("") }
-    var occurredAt by rememberSaveable(recordId) { mutableLongStateOf(System.currentTimeMillis()) }
-    var error by rememberSaveable(recordId) { mutableStateOf<String?>(null) }
-    var isSaving by rememberSaveable(recordId) { mutableStateOf(false) }
-    var initializedFromPreference by rememberSaveable(recordId) { mutableStateOf(false) }
-    var amountLimitMessage by rememberSaveable(recordId) { mutableStateOf<String?>(null) }
+    var type by rememberSaveable(recordId, entryKey) { mutableStateOf(RecordType.EXPENSE) }
+    var amount by rememberSaveable(recordId, entryKey) { mutableStateOf("") }
+    var categoryId by rememberSaveable(recordId, entryKey) { mutableStateOf<Long?>(null) }
+    var accountId by rememberSaveable(recordId, entryKey) { mutableStateOf<Long?>(null) }
+    var fromAccountId by rememberSaveable(recordId, entryKey) { mutableStateOf<Long?>(null) }
+    var toAccountId by rememberSaveable(recordId, entryKey) { mutableStateOf<Long?>(null) }
+    var note by rememberSaveable(recordId, entryKey) { mutableStateOf("") }
+    var occurredAt by rememberSaveable(recordId, entryKey) { mutableLongStateOf(System.currentTimeMillis()) }
+    var error by rememberSaveable(recordId, entryKey) { mutableStateOf<String?>(null) }
+    var isSaving by rememberSaveable(recordId, entryKey) { mutableStateOf(false) }
+    var initializedFromPreference by rememberSaveable(recordId, entryKey) { mutableStateOf(false) }
+    var amountLimitMessage by rememberSaveable(recordId, entryKey) { mutableStateOf<String?>(null) }
 
     val enabledAccounts = accounts.filter { it.isEnabled }
     val direction = if (type == RecordType.INCOME) PresetSeedData.CATEGORY_INCOME else PresetSeedData.CATEGORY_EXPENSE
@@ -78,9 +79,12 @@ fun AddRecordScreen(
             occurredAt = editing.occurredAt
             initializedFromPreference = true
         } else if (!initializedFromPreference) {
-            type = defaultRecordType.toRecordType()
+            val preferredType = defaultRecordType?.toRecordType() ?: return@LaunchedEffect
+            type = preferredType
             accountId = enabledAccounts.firstOrNull { it.id == defaultAccountId }?.id
             initializedFromPreference = true
+        } else if (accountId == null) {
+            accountId = enabledAccounts.firstOrNull { it.id == defaultAccountId }?.id
         }
     }
 
