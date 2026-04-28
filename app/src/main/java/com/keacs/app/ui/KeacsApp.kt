@@ -197,12 +197,15 @@ fun KeacsApp(
                         viewModel = homeViewModel,
                         onRecordsClick = { navigateTo(KeacsDestination.Records.route) },
                         onRecordClick = { navigateRecordDetail(it, KeacsDestination.Home.route) },
+                        onSwipeLeft = { navigateTo(KeacsDestination.Records.route) },
                     )
                 }
 
                 route == KeacsDestination.Records.route -> RecordScreen(
                     repository = repository,
                     onViewRecord = { navigateRecordDetail(it, KeacsDestination.Records.route) },
+                    onSwipeLeft = { navigateTo(KeacsDestination.Stats.route) },
+                    onSwipeRight = { navigateTo(KeacsDestination.Home.route) },
                 )
 
                 route == KeacsDestination.Add.route -> AddRecordScreen(
@@ -228,6 +231,7 @@ fun KeacsApp(
                         onAccountClick = { navigateForward(ROUTE_ACCOUNT_LIST) },
                         onSettingsClick = { navigateForward(ROUTE_SETTINGS) },
                         onAboutClick = { navigateForward(ROUTE_ABOUT) },
+                        onSwipeRight = { navigateTo(KeacsDestination.Stats.route) },
                     )
                 }
 

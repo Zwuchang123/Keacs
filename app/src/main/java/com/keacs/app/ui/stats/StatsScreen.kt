@@ -81,14 +81,14 @@ fun StatsScreen(
                     },
                     onDragEnd = {
                         val nextTab = when {
-                            totalDrag <= -60f -> StatsTab.entries.getOrNull(uiState.selectedTab.ordinal - 1)
-                            totalDrag >= 60f -> StatsTab.entries.getOrNull(uiState.selectedTab.ordinal + 1)
+                            totalDrag <= -60f -> StatsTab.entries.getOrNull(uiState.selectedTab.ordinal + 1)
+                            totalDrag >= 60f -> StatsTab.entries.getOrNull(uiState.selectedTab.ordinal - 1)
                             else -> null
                         }
                         when {
                             nextTab != null -> viewModel.selectTab(nextTab)
-                            totalDrag <= -60f && uiState.selectedTab == StatsTab.EXPENSE -> onSwipeBeyondStart()
-                            totalDrag >= 60f && uiState.selectedTab == StatsTab.ASSET -> onSwipeBeyondEnd()
+                            totalDrag <= -60f && uiState.selectedTab == StatsTab.ASSET -> onSwipeBeyondEnd()
+                            totalDrag >= 60f && uiState.selectedTab == StatsTab.EXPENSE -> onSwipeBeyondStart()
                         }
                         totalDrag = 0f
                     },

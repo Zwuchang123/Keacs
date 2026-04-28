@@ -25,6 +25,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import com.keacs.app.ui.backup.BackupViewModel
 import com.keacs.app.ui.components.ConfirmDialog
 import com.keacs.app.ui.components.DividedMenuCard
@@ -42,6 +44,7 @@ fun MineScreen(
     onAccountClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
+    onSwipeRight: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -69,6 +72,21 @@ fun MineScreen(
         modifier = Modifier
             .fillMaxSize()
             .testTag("screen-mine")
+            .pointerInput(Unit) {
+                var totalDrag = 0f
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { change, dragAmount ->
+                        totalDrag += dragAmount
+                        change.consume()
+                    },
+                    onDragEnd = {
+                        if (totalDrag >= 60f) {
+                            onSwipeRight()
+                        }
+                        totalDrag = 0f
+                    }
+                )
+            }
             .verticalScroll(rememberScrollState())
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),

@@ -29,6 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -61,6 +63,8 @@ import java.util.Locale
 fun RecordScreen(
     repository: LocalDataRepository,
     onViewRecord: (Long) -> Unit,
+    onSwipeLeft: () -> Unit = {},
+    onSwipeRight: () -> Unit = {},
 ) {
     val allRecords by repository.observeRecords().collectAsState(initial = emptyList())
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
@@ -86,7 +90,24 @@ fun RecordScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .testTag("screen-records"),
+            .testTag("screen-records")
+            .pointerInput(Unit) {
+                var totalDrag = 0f
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { change, dragAmount ->
+                        totalDrag += dragAmount
+                        change.consume()
+                    },
+                    onDragEnd = {
+                        if (totalDrag <= -60f) {
+                            onSwipeLeft()
+                        } else if (totalDrag >= 60f) {
+                            onSwipeRight()
+                        }
+                        totalDrag = 0f
+                    }
+                )
+            },
     ) {
         Column(
             modifier = Modifier.padding(

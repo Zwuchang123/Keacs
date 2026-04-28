@@ -4,6 +4,7 @@ import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +57,7 @@ fun HomeScreen(
     viewModel: HomeViewModel,
     onRecordsClick: () -> Unit,
     onRecordClick: (Long) -> Unit,
+    onSwipeLeft: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -62,6 +65,21 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .testTag("screen-home")
+            .pointerInput(Unit) {
+                var totalDrag = 0f
+                detectHorizontalDragGestures(
+                    onHorizontalDrag = { change, dragAmount ->
+                        totalDrag += dragAmount
+                        change.consume()
+                    },
+                    onDragEnd = {
+                        if (totalDrag <= -60f) {
+                            onSwipeLeft()
+                        }
+                        totalDrag = 0f
+                    }
+                )
+            }
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
