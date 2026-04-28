@@ -1,7 +1,9 @@
 package com.keacs.app.ui.record
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AddRecordLogicTest {
@@ -19,5 +21,11 @@ class AddRecordLogicTest {
     fun amountRejectsIncompleteCalculation() {
         assertNull(amountToCent("10+"))
         assertNull(amountToCent("10-10"))
+    }
+
+    @Test
+    fun amountRejectsTextThatWouldWrap() {
+        assertFalse(amountInputWouldOverflow("12345678901"))
+        assertTrue(amountInputWouldOverflow("123456789012"))
     }
 }

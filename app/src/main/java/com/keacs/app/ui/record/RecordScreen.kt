@@ -296,8 +296,8 @@ private fun recordTitle(
 
 private fun recordAccount(record: RecordEntity, accountMap: Map<Long, AccountEntity>): String =
     when (record.type) {
-        RecordType.INCOME -> record.toAccountId?.let { accountMap[it]?.name } ?: "未选账户"
-        RecordType.EXPENSE -> record.fromAccountId?.let { accountMap[it]?.name } ?: "未选账户"
+        RecordType.INCOME -> record.toAccountId?.let { accountMap[it]?.name } ?: "未选择"
+        RecordType.EXPENSE -> record.fromAccountId?.let { accountMap[it]?.name } ?: "未选择"
         else -> "转账"
     }
 

@@ -125,6 +125,7 @@ fun MineScreen(
         KeacsSnackbar(
             message = message,
             isError = backupViewModel.isError,
+            atTop = backupViewModel.isError,
             onDismiss = { backupViewModel.clearMessage() }
         )
     }

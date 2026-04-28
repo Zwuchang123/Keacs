@@ -113,6 +113,7 @@ fun BackupScreen(
         KeacsSnackbar(
             message = message,
             isError = viewModel.isError,
+            atTop = viewModel.isError,
             onDismiss = { viewModel.clearMessage() }
         )
     }

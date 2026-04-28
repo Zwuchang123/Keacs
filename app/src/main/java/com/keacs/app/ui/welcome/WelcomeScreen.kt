@@ -1,5 +1,6 @@
 package com.keacs.app.ui.welcome
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,40 +17,52 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material.icons.rounded.VerifiedUser
-import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.keacs.app.R
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 
 @Composable
 fun SplashScreen() {
-    WelcomePage(
-        showStartButton = false,
-        onStartClick = {},
-    )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(KeacsColors.Background)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 28.dp, vertical = 28.dp)
+            .testTag("screen-splash"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_launcher),
+            contentDescription = "Keacs 图标",
+            modifier = Modifier.size(82.dp),
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(
+            text = "Keacs",
+            color = KeacsColors.TextPrimary,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+    }
 }
 
 @Composable
@@ -71,12 +84,11 @@ private fun WelcomePage(
             .background(KeacsColors.Background)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = 28.dp, vertical = 28.dp)
             .testTag("screen-welcome"),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = "轻记账",
             color = KeacsColors.TextPrimary,
@@ -97,11 +109,7 @@ private fun WelcomePage(
                 .widthIn(max = 340.dp)
                 .height(230.dp),
         )
-        Spacer(modifier = Modifier.height(24.dp))
-        FeatureCard(
-            modifier = Modifier.widthIn(max = 430.dp),
-        )
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         ActionArea(
             showStartButton = showStartButton,
             onStartClick = onStartClick,
@@ -110,90 +118,6 @@ private fun WelcomePage(
         Spacer(modifier = Modifier.height(20.dp))
         PrivacyNote(modifier = Modifier.widthIn(max = 430.dp))
     }
-}
-
-@Composable
-private fun FeatureCard(modifier: Modifier = Modifier) {
-    ElevatedCard(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.elevatedCardColors(containerColor = KeacsColors.Surface),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.dp),
-        shape = MaterialTheme.shapes.large,
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-            FeatureRow(
-                icon = Icons.Rounded.VerifiedUser,
-                title = "无需登录",
-                subtitle = "打开即用，不用注册登录",
-            )
-            FeatureDivider()
-            FeatureRow(
-                icon = Icons.Rounded.Lock,
-                title = "本地保存",
-                subtitle = "数据仅保存在本机",
-            )
-            FeatureDivider()
-            FeatureRow(
-                icon = Icons.Rounded.WifiOff,
-                title = "离线可用",
-                subtitle = "无需网络，随时随地记账",
-            )
-        }
-    }
-}
-
-@Composable
-private fun FeatureRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(74.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .background(KeacsColors.SurfaceSubtle, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = KeacsColors.TextPrimary,
-                modifier = Modifier.size(26.dp),
-            )
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = title,
-                color = KeacsColors.TextPrimary,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = subtitle,
-                color = KeacsColors.TextSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
-}
-
-@Composable
-private fun FeatureDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 64.dp),
-        color = KeacsColors.Border,
-        thickness = 0.5.dp,
-    )
 }
 
 @Composable

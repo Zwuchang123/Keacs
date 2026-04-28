@@ -23,6 +23,7 @@ import com.keacs.app.data.local.PreferencesManager
 import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.model.RecordType
+import com.keacs.app.ui.components.KeacsSnackbar
 import com.keacs.app.ui.components.SegmentedTabs
 import com.keacs.app.ui.theme.KeacsSpacing
 import kotlinx.coroutines.launch
@@ -53,6 +54,7 @@ fun AddRecordScreen(
     var error by rememberSaveable(recordId) { mutableStateOf<String?>(null) }
     var isSaving by rememberSaveable(recordId) { mutableStateOf(false) }
     var initializedFromPreference by rememberSaveable(recordId) { mutableStateOf(false) }
+    var amountLimitMessage by rememberSaveable(recordId) { mutableStateOf<String?>(null) }
 
     val enabledAccounts = accounts.filter { it.isEnabled }
     val direction = if (type == RecordType.INCOME) PresetSeedData.CATEGORY_INCOME else PresetSeedData.CATEGORY_EXPENSE
@@ -158,7 +160,15 @@ fun AddRecordScreen(
             parsedAmount = parsedAmount,
             message = validationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, error),
             saveEnabled = canSave && !isSaving,
-            onKeyClick = { key -> amount = nextAmount(amount, key); error = null },
+            onKeyClick = { key ->
+                val next = nextAmount(amount, key)
+                if (next != amount && amountInputWouldOverflow(next)) {
+                    amountLimitMessage = "不能再加啦~"
+                } else {
+                    amount = next
+                    error = null
+                }
+            },
             onSaveClick = {
                 val cents = parsedAmount ?: return@AmountKeyboardPanel
                 scope.launch {
@@ -170,6 +180,14 @@ fun AddRecordScreen(
                     isSaving = false
                 }
             },
+        )
+    }
+
+    amountLimitMessage?.let { message ->
+        KeacsSnackbar(
+            message = message,
+            atTop = true,
+            onDismiss = { amountLimitMessage = null },
         )
     }
 }

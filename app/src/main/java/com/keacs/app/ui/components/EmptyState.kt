@@ -59,21 +59,21 @@ fun EmptyState(
         Box(
             modifier = Modifier
                 .graphicsLayer { this.translationY = translationY }
-                .size(68.dp)
-                .background(KeacsColors.PrimaryLight, CircleShape),
+                .size(60.dp)
+                .background(KeacsColors.SurfaceSubtle, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = KeacsColors.Primary,
-                modifier = Modifier.size(32.dp),
+                tint = KeacsColors.TextTertiary.copy(alpha = 0.72f),
+                modifier = Modifier.size(28.dp),
             )
         }
         Spacer(modifier = Modifier.height(12.dp))
         Text(
             text = title,
-            color = KeacsColors.TextPrimary,
+            color = KeacsColors.TextSecondary,
             style = MaterialTheme.typography.titleMedium,
         )
         if (description != null) {

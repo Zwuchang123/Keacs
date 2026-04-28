@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -288,6 +289,9 @@ fun AmountText(
         color = color,
         style = MaterialTheme.typography.displaySmall,
         fontFamily = FontFamily.Monospace,
+        maxLines = 1,
+        overflow = TextOverflow.Clip,
+        softWrap = false,
     )
 }
 

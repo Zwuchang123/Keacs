@@ -56,7 +56,7 @@ fun AboutScreen() {
                 Image(
                     painter = painterResource(id = R.drawable.ic_launcher),
                     contentDescription = "Keacs 图标",
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(72.dp),
                 )
                 Text(
                     text = "Keacs",
@@ -66,9 +66,8 @@ fun AboutScreen() {
                 )
                 Text(
                     text = "离线记账，本地保存。",
-                    color = KeacsColors.TextPrimary,
+                    color = KeacsColors.TextSecondary,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
                 )
                 Text(
                     text = "无需账号，打开即用。",
@@ -107,6 +106,7 @@ fun AboutScreen() {
         KeacsSnackbar(
             message = message,
             isError = true,
+            atTop = true,
             onDismiss = { errorMessage.value = null },
         )
     }

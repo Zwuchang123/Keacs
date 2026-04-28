@@ -3,6 +3,7 @@ package com.keacs.app.ui.components
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -18,7 +19,8 @@ import kotlinx.coroutines.delay
 fun KeacsSnackbar(
     message: String,
     isError: Boolean = false,
-    durationMillis: Long = 3000L,
+    durationMillis: Long = 2000L,
+    atTop: Boolean = false,
     onDismiss: () -> Unit
 ) {
     LaunchedEffect(message) {
@@ -28,10 +30,12 @@ fun KeacsSnackbar(
 
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomCenter
+        contentAlignment = if (atTop) Alignment.TopCenter else Alignment.BottomCenter
     ) {
         Snackbar(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .then(if (atTop) Modifier.statusBarsPadding() else Modifier)
+                .padding(16.dp),
             containerColor = if (isError) KeacsColors.Error else KeacsColors.Surface,
             contentColor = if (isError) KeacsColors.Surface else KeacsColors.TextPrimary,
             action = {

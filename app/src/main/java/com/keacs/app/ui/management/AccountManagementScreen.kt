@@ -38,6 +38,7 @@ import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.rule.balanceFor
 import com.keacs.app.domain.usecase.AccountManagementUseCase
 import com.keacs.app.ui.components.KeacsCard
+import com.keacs.app.ui.components.KeacsSnackbar
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 import kotlinx.coroutines.launch
@@ -98,6 +99,7 @@ fun AccountEditScreen(
     var colorKey by rememberSaveable(accountId) { mutableStateOf("green") }
     var isEnabled by rememberSaveable(accountId) { mutableStateOf(true) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
+    var amountLimitMessage by rememberSaveable(accountId) { mutableStateOf<String?>(null) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var handledDeleteRequest by rememberSaveable(accountId) { mutableStateOf(deleteRequest) }
 
@@ -148,8 +150,13 @@ fun AccountEditScreen(
             error = balanceError(balance),
             saveEnabled = name.isNotBlank() && parseCent(balance) != null,
             onKeyClick = {
-                balance = nextBalanceAmount(balance, it)
-                error = null
+                val next = nextBalanceAmount(balance, it)
+                if (next != balance && balanceInputWouldOverflow(next)) {
+                    amountLimitMessage = "不能再加啦~"
+                } else {
+                    balance = next
+                    error = null
+                }
             },
             onSaveClick = {
                 scope.launch {
@@ -164,6 +171,14 @@ fun AccountEditScreen(
                         .onFailure { error = it.message ?: "保存失败，请稍后重试" }
                 }
             },
+        )
+    }
+
+    amountLimitMessage?.let { message ->
+        KeacsSnackbar(
+            message = message,
+            atTop = true,
+            onDismiss = { amountLimitMessage = null },
         )
     }
 

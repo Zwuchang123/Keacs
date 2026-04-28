@@ -71,6 +71,9 @@ fun nextAmount(current: String, key: String): String {
     return prefix + normalized
 }
 
+fun amountInputWouldOverflow(next: String): Boolean =
+    next.length > MAX_AMOUNT_INPUT_LENGTH
+
 fun amountToCent(text: String): Long? =
     runCatching {
         val value = evaluateAmountExpression(text) ?: return null
@@ -132,3 +135,4 @@ fun dateLabel(time: Long): String = SimpleDateFormat("M月d日", Locale.CHINA).f
 fun isSameDay(left: Long, right: Long): Boolean = dateLabel(left) == dateLabel(right)
 
 const val ONE_DAY = 24 * 60 * 60 * 1000L
+const val MAX_AMOUNT_INPUT_LENGTH = 11

@@ -189,7 +189,7 @@ fun FormArea(
                 FormFieldRow(
                     Icons.Rounded.AccountBalanceWallet,
                     "账户",
-                    accounts.firstOrNull { it.id == accountId }?.name ?: "不选账户",
+                    accounts.firstOrNull { it.id == accountId }?.name ?: "未选择",
                     modifier = Modifier.clickable { showAccountSelector = true },
                 )
             }
@@ -208,7 +208,7 @@ fun FormArea(
             accounts = accounts,
             selectedId = accountId,
             title = "选择账户",
-            includeNone = true,
+            includeNone = false,
             onSelected = onAccountSelected,
             onDismiss = { showAccountSelector = false },
         )

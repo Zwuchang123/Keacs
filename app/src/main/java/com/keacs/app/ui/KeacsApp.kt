@@ -75,6 +75,7 @@ fun KeacsApp(
 ) {
     var currentRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
     var addSourceRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
+    var recordDetailSourceRoute by rememberSaveable { mutableStateOf(KeacsDestination.Records.route) }
     var accountDeleteRequest by rememberSaveable { mutableStateOf(0) }
     val currentDestination = bottomDestinations.firstOrNull { it.route == currentRoute }
     val screenTitle = when {
@@ -91,8 +92,21 @@ fun KeacsApp(
         else -> stringResource(destinationForRoute(currentRoute).titleRes)
     }
 
+    fun navigateBack() {
+        currentRoute = when {
+            currentRoute == KeacsDestination.Add.route -> addSourceRoute
+            currentRoute.startsWith(ROUTE_RECORD_DETAIL) -> recordDetailSourceRoute
+            else -> backRoute(currentRoute)
+        }
+    }
+
+    fun navigateRecordDetail(id: Long, sourceRoute: String) {
+        recordDetailSourceRoute = sourceRoute
+        currentRoute = recordDetailRoute(id)
+    }
+
     BackHandler(enabled = currentRoute != KeacsDestination.Home.route) {
-        currentRoute = if (currentRoute == KeacsDestination.Add.route) addSourceRoute else backRoute(currentRoute)
+        navigateBack()
     }
 
     KeacsScaffold(
@@ -101,7 +115,7 @@ fun KeacsApp(
         actionText = if (isExistingAccountEditRoute(currentRoute)) "删除" else null,
         onActionClick = { accountDeleteRequest += 1 },
         onBackClick = {
-            currentRoute = if (currentRoute == KeacsDestination.Add.route) addSourceRoute else backRoute(currentRoute)
+            navigateBack()
         },
         actions = {
             currentDestination?.let { TopActions(destination = it) }
@@ -157,13 +171,13 @@ fun KeacsApp(
                     HomeScreen(
                         viewModel = homeViewModel,
                         onRecordsClick = { currentRoute = KeacsDestination.Records.route },
-                        onRecordClick = { currentRoute = recordDetailRoute(it) },
+                        onRecordClick = { navigateRecordDetail(it, KeacsDestination.Home.route) },
                     )
                 }
 
                 route == KeacsDestination.Records.route -> RecordScreen(
                     repository = repository,
-                    onViewRecord = { currentRoute = recordDetailRoute(it) },
+                    onViewRecord = { navigateRecordDetail(it, KeacsDestination.Records.route) },
                 )
 
                 route == KeacsDestination.Add.route -> AddRecordScreen(
@@ -220,7 +234,7 @@ fun KeacsApp(
                 route.startsWith(ROUTE_RECORD_DETAIL) -> RecordDetailScreen(
                     recordId = routeId(route, ROUTE_RECORD_DETAIL) ?: 0L,
                     repository = repository,
-                    onBack = { currentRoute = KeacsDestination.Records.route },
+                    onBack = { currentRoute = recordDetailSourceRoute },
                     onEdit = { currentRoute = recordEditRoute(it) },
                 )
 

@@ -69,7 +69,10 @@ class HomeViewModel(
         val totalAsset = assetAccounts.sumOf { balanceFor(it, records) }
         val totalLiability = liabilityAccounts.sumOf { balanceFor(it, records) }
 
-        val recentRecords = records.sortedByDescending { it.occurredAt }.take(8)
+        val (recentStart, recentEnd) = recentSevenDayRange()
+        val recentRecords = records
+            .filter { it.occurredAt in recentStart until recentEnd }
+            .sortedByDescending { it.occurredAt }
 
         HomeUiState(
             totalIncome = totalIncome(monthRecords),
@@ -93,4 +96,16 @@ class HomeViewModel(
         fun formatCent(value: Long): String =
             currencyFormat.format(value / 100.0)
     }
+}
+
+private fun recentSevenDayRange(): Pair<Long, Long> {
+    val calendar = Calendar.getInstance(Locale.getDefault())
+    calendar.set(Calendar.HOUR_OF_DAY, 0)
+    calendar.set(Calendar.MINUTE, 0)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+    calendar.add(Calendar.DAY_OF_MONTH, -6)
+    val start = calendar.timeInMillis
+    calendar.add(Calendar.DAY_OF_MONTH, 7)
+    return start to calendar.timeInMillis
 }

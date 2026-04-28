@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.entity.CategoryEntity
+import com.keacs.app.data.local.entity.AccountEntity
 import com.keacs.app.data.local.entity.RecordEntity
 import com.keacs.app.domain.model.RecordType
 import com.keacs.app.ui.components.EmptyState
@@ -61,7 +62,6 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .testTag("screen-home")
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
@@ -72,8 +72,10 @@ fun HomeScreen(
         RecentRecords(
             records = uiState.recentRecords,
             categories = uiState.categories,
+            accounts = uiState.accounts,
             onRecordClick = onRecordClick,
             onViewMoreClick = onRecordsClick,
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -210,13 +212,16 @@ private fun OverviewPill(
 private fun RecentRecords(
     records: List<RecordEntity>,
     categories: Map<Long, CategoryEntity>,
+    accounts: Map<Long, AccountEntity>,
     onRecordClick: (Long) -> Unit,
     onViewMoreClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    KeacsCard {
+    KeacsCard(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxSize()
                 .padding(it),
         ) {
             Row(
@@ -248,10 +253,11 @@ private fun RecentRecords(
                         .height(180.dp),
                 )
             } else {
-                Column(
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    records.forEach { record ->
+                    items(records, key = { record -> record.id }) { record ->
                         RecordListItem(
                             icon = if (record.type == RecordType.TRANSFER) Icons.Rounded.AccountBalanceWallet
                                    else iconFor(categories[record.categoryId]?.iconKey ?: "more"),
@@ -259,7 +265,7 @@ private fun RecentRecords(
                                         else colorFor(categories[record.categoryId]?.colorKey ?: "gray"),
                             title = recordTitle(record, categories),
                             note = record.note ?: "无备注",
-                            account = recordAccount(record),
+                            account = recordAccount(record, accounts),
                             amount = recordAmount(record),
                             amountColor = recordColor(record),
                             modifier = Modifier
@@ -281,10 +287,10 @@ private fun recordTitle(record: RecordEntity, categories: Map<Long, CategoryEnti
     }
 }
 
-private fun recordAccount(record: RecordEntity): String {
+private fun recordAccount(record: RecordEntity, accounts: Map<Long, AccountEntity>): String {
     return when (record.type) {
-        RecordType.INCOME -> "收入"
-        RecordType.EXPENSE -> "支出"
+        RecordType.INCOME -> record.toAccountId?.let { accounts[it]?.name } ?: "未选择"
+        RecordType.EXPENSE -> record.fromAccountId?.let { accounts[it]?.name } ?: "未选择"
         else -> "转账"
     }
 }
