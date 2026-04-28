@@ -1,0 +1,158 @@
+name: Release APK
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example v1.0.1"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GITEE_OWNER: zwuc
+      GITEE_REPO: keacs
+      GITHUB_REPO: Zwuchang123/Keacs
+      HAS_GITEE_TOKEN: ${{ secrets.GITEE_TOKEN != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag
+        id: resolve_tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout release ref
+        shell: bash
+        run: |
+          git fetch --force --tags
+          git checkout "${{ steps.resolve_tag.outputs.tag }}"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Prepare release signing
+        id: signing
+        shell: bash
+        env:
+          KEACS_RELEASE_STORE_BASE64: ${{ secrets.KEACS_RELEASE_STORE_BASE64 }}
+          KEACS_RELEASE_STORE_PASSWORD: ${{ secrets.KEACS_RELEASE_STORE_PASSWORD }}
+          KEACS_RELEASE_KEY_ALIAS: ${{ secrets.KEACS_RELEASE_KEY_ALIAS }}
+          KEACS_RELEASE_KEY_PASSWORD: ${{ secrets.KEACS_RELEASE_KEY_PASSWORD }}
+        run: |
+          for name in KEACS_RELEASE_STORE_BASE64 KEACS_RELEASE_STORE_PASSWORD KEACS_RELEASE_KEY_ALIAS KEACS_RELEASE_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required secret: ${name}" >&2
+              exit 1
+            fi
+          done
+
+          STORE_FILE="${RUNNER_TEMP}/keacs-release.jks"
+          printf '%s' "${KEACS_RELEASE_STORE_BASE64}" | base64 --decode > "${STORE_FILE}"
+          echo "store_file=${STORE_FILE}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build release APK
+        env:
+          KEACS_RELEASE_STORE_FILE: ${{ steps.signing.outputs.store_file }}
+          KEACS_RELEASE_STORE_PASSWORD: ${{ secrets.KEACS_RELEASE_STORE_PASSWORD }}
+          KEACS_RELEASE_KEY_ALIAS: ${{ secrets.KEACS_RELEASE_KEY_ALIAS }}
+          KEACS_RELEASE_KEY_PASSWORD: ${{ secrets.KEACS_RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :app:packageReleaseForPublish
+
+      - name: Resolve APK metadata
+        id: apk
+        shell: bash
+        run: |
+          APK_PATH="$(find app/build/outputs/publish/release -name 'keacs-v*.apk' | head -n 1)"
+          if [ -z "${APK_PATH}" ]; then
+            echo "Release APK not found" >&2
+            exit 1
+          fi
+          APK_NAME="$(basename "${APK_PATH}")"
+          {
+            echo "path=${APK_PATH}"
+            echo "name=${APK_NAME}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Build release notes
+        id: notes
+        shell: bash
+        run: |
+          TAG="${{ steps.resolve_tag.outputs.tag }}"
+          RELEASE_DATE="$(date -u +%F)"
+          NOTES_FILE="$(mktemp)"
+          cat > "${NOTES_FILE}" <<EOF
+          版本：${TAG}
+          发布日期：${RELEASE_DATE}
+
+          更新内容：
+          - 请补充本次版本说明。
+
+          安装说明：
+          - 下载 APK 后按系统提示安装。
+          - 更新前建议先在“我的 -> 导出备份”保存一份备份文件。
+
+          备用下载：
+          - GitHub：https://github.com/${GITHUB_REPO}/releases
+          - Gitee：https://gitee.com/${GITEE_OWNER}/${GITEE_REPO}/releases
+          EOF
+          {
+            echo "file=${NOTES_FILE}"
+            echo "date=${RELEASE_DATE}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.resolve_tag.outputs.tag }}
+          body_path: ${{ steps.notes.outputs.file }}
+          files: ${{ steps.apk.outputs.path }}
+
+      - name: Create Gitee release
+        if: ${{ env.HAS_GITEE_TOKEN == 'true' }}
+        uses: nicennnnnnnlee/action-gitee-release@master
+        with:
+          gitee_action: create_release
+          gitee_owner: ${{ env.GITEE_OWNER }}
+          gitee_repo: ${{ env.GITEE_REPO }}
+          gitee_token: ${{ secrets.GITEE_TOKEN }}
+          gitee_tag_name: ${{ steps.resolve_tag.outputs.tag }}
+          gitee_release_name: ${{ steps.resolve_tag.outputs.tag }}
+          gitee_release_body: |
+            版本：${{ steps.resolve_tag.outputs.tag }}
+            发布日期：${{ steps.notes.outputs.date }}
+
+            更新内容：
+            - 请补充本次版本说明。
+
+            安装说明：
+            - 下载 APK 后按系统提示安装。
+            - 更新前建议先在“我的 -> 导出备份”保存一份备份文件。
+
+            备用下载：
+            - GitHub：https://github.com/${{ env.GITHUB_REPO }}/releases
+            - Gitee：https://gitee.com/${{ env.GITEE_OWNER }}/${{ env.GITEE_REPO }}/releases
+          gitee_target_commitish: ${{ github.sha }}
+          gitee_upload_retry_times: 3
+          gitee_file_path: ${{ steps.apk.outputs.path }}
+          gitee_file_name: ${{ steps.apk.outputs.name }}

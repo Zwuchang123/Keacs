@@ -115,6 +115,7 @@ keacs.db
 - `categories`
 - `accounts`
 - `records`
+- `account_adjustments`：历史兼容表，当前功能不再新增账户变动记录。
 - `app_meta`
 
 偏好存储：
@@ -237,4 +238,7 @@ netAsset = totalAsset - totalLiability
 - 结构变更必须提供 Migration。
 - 备份文件版本独立于数据库版本。
 
-##
+## 11. 兼容说明
+
+- 当前账户余额以 `accounts.initialBalanceCent` 加账目影响计算。
+- `account_adjustments` 仅用于兼容旧数据库结构，不进入新增、编辑、统计和备份主流程。

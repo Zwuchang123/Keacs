@@ -22,23 +22,23 @@ class MainActivitySmokeTest {
     fun bottomNavigationSwitchesAcrossMainPages() {
         enterMainIfWelcomeShown()
 
-        composeRule.onNodeWithTag("screen-home").assertIsDisplayed()
+        assertScreenDisplayed("screen-home")
 
         composeRule.onNodeWithContentDescription("切换到账单").performClick()
-        composeRule.onNodeWithTag("screen-records").assertIsDisplayed()
+        assertScreenDisplayed("screen-records")
 
         composeRule.onNodeWithContentDescription("切换到新增").performClick()
-        composeRule.onNodeWithTag("screen-add").assertIsDisplayed()
+        assertScreenDisplayed("screen-add")
         composeRule.onAllNodesWithContentDescription("切换到统计").assertCountEquals(0)
 
         composeRule.onNodeWithContentDescription("返回").performClick()
-        composeRule.onNodeWithTag("screen-records").assertIsDisplayed()
+        assertScreenDisplayed("screen-records")
 
         composeRule.onNodeWithContentDescription("切换到统计").performClick()
-        composeRule.onNodeWithTag("screen-stats").assertIsDisplayed()
+        assertScreenDisplayed("screen-stats")
 
         composeRule.onNodeWithContentDescription("切换到我的").performClick()
-        composeRule.onNodeWithTag("screen-mine").assertIsDisplayed()
+        assertScreenDisplayed("screen-mine")
     }
 
     private fun enterMainIfWelcomeShown() {
@@ -54,5 +54,12 @@ class MainActivitySmokeTest {
         composeRule.waitUntil(timeoutMillis = 5_000) {
             composeRule.onAllNodesWithTag("screen-home").fetchSemanticsNodes().isNotEmpty()
         }
+    }
+
+    private fun assertScreenDisplayed(tag: String) {
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithTag(tag).assertIsDisplayed()
     }
 }

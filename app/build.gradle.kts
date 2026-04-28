@@ -11,6 +11,25 @@ android {
     namespace = "com.keacs.app"
     compileSdk = 35
 
+    val releaseStoreFilePath = providers.environmentVariable("KEACS_RELEASE_STORE_FILE")
+        .orElse(providers.gradleProperty("keacs.release.storeFile"))
+        .orNull
+    val releaseStorePassword = providers.environmentVariable("KEACS_RELEASE_STORE_PASSWORD")
+        .orElse(providers.gradleProperty("keacs.release.storePassword"))
+        .orNull
+    val releaseKeyAlias = providers.environmentVariable("KEACS_RELEASE_KEY_ALIAS")
+        .orElse(providers.gradleProperty("keacs.release.keyAlias"))
+        .orNull
+    val releaseKeyPassword = providers.environmentVariable("KEACS_RELEASE_KEY_PASSWORD")
+        .orElse(providers.gradleProperty("keacs.release.keyPassword"))
+        .orNull
+    val hasReleaseSigning = listOf(
+        releaseStoreFilePath,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    ).all { !it.isNullOrBlank() }
+
     defaultConfig {
         applicationId = "com.keacs.app"
         minSdk = 26
@@ -22,12 +41,26 @@ android {
         buildConfigField(
             "String",
             "UPDATE_URL",
-            "\"https://gitee.com/Zwuchang123/Keacs/releases\"",
+            "\"https://gitee.com/zwuc/keacs/releases\"",
         )
+    }
+
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigning) {
+                storeFile = file(releaseStoreFilePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
         release {
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -61,6 +94,52 @@ ksp {
 
 tasks.withType<Test>().configureEach {
     maxHeapSize = "128m"
+}
+
+val releaseVersionName = android.defaultConfig.versionName ?: "0.0.0"
+
+tasks.register("packageReleaseForPublish") {
+    group = "distribution"
+    description = "构建 release APK 并生成带版本号的发布文件名"
+    dependsOn("assembleRelease")
+
+    doLast {
+        val hasReleaseSigning = listOf(
+            providers.environmentVariable("KEACS_RELEASE_STORE_FILE")
+                .orElse(providers.gradleProperty("keacs.release.storeFile"))
+                .orNull,
+            providers.environmentVariable("KEACS_RELEASE_STORE_PASSWORD")
+                .orElse(providers.gradleProperty("keacs.release.storePassword"))
+                .orNull,
+            providers.environmentVariable("KEACS_RELEASE_KEY_ALIAS")
+                .orElse(providers.gradleProperty("keacs.release.keyAlias"))
+                .orNull,
+            providers.environmentVariable("KEACS_RELEASE_KEY_PASSWORD")
+                .orElse(providers.gradleProperty("keacs.release.keyPassword"))
+                .orNull,
+        ).all { !it.isNullOrBlank() }
+
+        check(hasReleaseSigning) {
+            "未配置发布签名，不能生成正式发布 APK。请配置 KEACS_RELEASE_STORE_FILE、KEACS_RELEASE_STORE_PASSWORD、KEACS_RELEASE_KEY_ALIAS、KEACS_RELEASE_KEY_PASSWORD。"
+        }
+        val releaseDir = layout.buildDirectory.dir("outputs/apk/release").get().asFile
+        val sourceApk = releaseDir
+            .listFiles()
+            ?.firstOrNull {
+                it.isFile &&
+                    it.extension == "apk" &&
+                    !it.name.contains("unsigned", ignoreCase = true)
+            }
+            ?: error("未找到已签名 release APK，请检查发布签名配置。")
+        val publishDir = layout.buildDirectory.dir("outputs/publish/release").get().asFile
+        if (!publishDir.exists()) {
+            publishDir.mkdirs()
+        }
+        val targetApk = publishDir.resolve("keacs-v$releaseVersionName.apk")
+        // 发布文件单独复制一份，避免不同构建环境下默认 APK 命名不一致。
+        sourceApk.copyTo(targetApk, overwrite = true)
+        println("Published APK: ${targetApk.absolutePath}")
+    }
 }
 
 dependencies {
