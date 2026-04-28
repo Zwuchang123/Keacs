@@ -27,12 +27,16 @@ import androidx.compose.material.icons.rounded.LocalPizza
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.PriceCheck
+import androidx.compose.material.icons.rounded.QrCode2
 import androidx.compose.material.icons.rounded.Redeem
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.RequestQuote
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.ShowChart
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.ShoppingCart
 import androidx.compose.material.icons.rounded.SportsEsports
@@ -108,25 +112,25 @@ val incomeIconOptions = listOf(
 
 val accountIconOptions = listOf(
     IconOption("wallet", "现金", Icons.Rounded.AccountBalanceWallet, "green"),
-    IconOption("alipay", "支付宝", Icons.Rounded.AccountBalanceWallet, "blue"),
-    IconOption("wechat", "微信", Icons.Rounded.AccountBalanceWallet, "cyan"),
+    IconOption("alipay", "支付宝", Icons.Rounded.QrCode2, "blue"),
+    IconOption("wechat", "微信", Icons.Rounded.PhoneAndroid, "cyan"),
     IconOption("bank", "银行卡", Icons.Rounded.AccountBalance, "indigo"),
     IconOption("card", "信用卡", Icons.Rounded.CreditCard, "orange"),
-    IconOption("credit_line", "花呗白条", Icons.Rounded.CreditCard, "yellow"),
+    IconOption("credit_line", "花呗白条", Icons.Rounded.Payments, "yellow"),
     IconOption("home", "公积金", Icons.Rounded.Home, "purple"),
     IconOption("chart", "投资账户", Icons.Rounded.BarChart, "pink"),
-    IconOption("loan", "借款", Icons.Rounded.CreditCard, "red"),
+    IconOption("loan", "借款", Icons.AutoMirrored.Rounded.ReceiptLong, "red"),
     IconOption("savings", "储蓄账户", Icons.Rounded.Savings, "green"),
     IconOption("cash_card", "储值卡", Icons.Rounded.CardMembership, "cyan"),
     IconOption("fund", "基金", Icons.Rounded.TrendingUp, "purple"),
-    IconOption("stock", "股票", Icons.Rounded.BarChart, "green"),
+    IconOption("stock", "股票", Icons.Rounded.ShowChart, "green"),
     IconOption("atm", "现金卡", Icons.Rounded.LocalAtm, "indigo"),
     IconOption("house_asset", "房产", Icons.Rounded.Apartment, "blue"),
     IconOption("car_asset", "车辆", Icons.Rounded.DirectionsCar, "orange"),
     IconOption("business_account", "经营账户", Icons.Rounded.Storefront, "yellow"),
     IconOption("office_account", "公司账户", Icons.Rounded.BusinessCenter, "indigo"),
     IconOption("request_account", "应收款", Icons.Rounded.RequestQuote, "green"),
-    IconOption("paid_account", "付款账户", Icons.Rounded.Paid, "cyan"),
+    IconOption("paid_account", "付款账户", Icons.Rounded.PriceCheck, "cyan"),
     IconOption("gift_account", "礼金账户", Icons.Rounded.Redeem, "pink"),
     IconOption("more", "其他", Icons.Rounded.MoreHoriz, "gray"),
 )

@@ -282,22 +282,20 @@ private fun RecordInfoCard(
 
             InfoRow(
                 icon = Icons.Rounded.CalendarToday,
-                label = "记录时间",
-                value = formatDateTime(record.occurredAt),
+                label = "账目日期",
+                value = formatDate(record.occurredAt),
             )
 
-            if (!record.note.isNullOrBlank()) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    thickness = 0.5.dp,
-                    color = KeacsColors.Border,
-                )
-                InfoRow(
-                    icon = Icons.Rounded.Notes,
-                    label = "备注",
-                    value = record.note,
-                )
-            }
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                thickness = 0.5.dp,
+                color = KeacsColors.Border,
+            )
+            InfoRow(
+                icon = Icons.Rounded.Notes,
+                label = "备注",
+                value = record.note?.takeIf { it.isNotBlank() } ?: "未填写",
+            )
         }
     }
 }
@@ -333,11 +331,11 @@ private fun InfoRow(
     }
 }
 
-private val dateTimeFormat = SimpleDateFormat("yyyy年MM月dd日 HH:mm", Locale.getDefault())
+private val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
 private val currencyFormat = DecimalFormat("#,##0.00")
 
 private fun formatCent(value: Long): String =
     currencyFormat.format(value / 100.0)
 
-private fun formatDateTime(timestamp: Long): String =
-    dateTimeFormat.format(Date(timestamp))
+private fun formatDate(timestamp: Long): String =
+    dateFormat.format(Date(timestamp))

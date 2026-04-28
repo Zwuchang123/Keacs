@@ -57,6 +57,7 @@ fun WheelPickerBottomSheet(
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(horizontal = KeacsSpacing.PageHorizontal)
+                .padding(top = 16.dp)
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {

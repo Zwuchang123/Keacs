@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -36,9 +37,10 @@ import androidx.compose.ui.unit.dp
 import com.keacs.app.R
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
+import kotlinx.coroutines.launch
 
 @Composable
-fun SplashScreen() {
+fun LoadingScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -46,30 +48,29 @@ fun SplashScreen() {
             .statusBarsPadding()
             .navigationBarsPadding()
             .padding(horizontal = 28.dp, vertical = 28.dp)
-            .testTag("screen-splash"),
+            .testTag("screen-loading"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_launcher),
-            contentDescription = "Keacs 图标",
-            modifier = Modifier.size(82.dp),
-        )
-        Spacer(modifier = Modifier.height(14.dp))
-        Text(
-            text = "Keacs",
-            color = KeacsColors.TextPrimary,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+        CircularProgressIndicator(
+            modifier = Modifier.size(22.dp),
+            strokeWidth = 2.dp,
+            color = KeacsColors.Primary,
+            trackColor = KeacsColors.PrimaryLight,
         )
     }
 }
 
 @Composable
-fun WelcomeScreen(onStartClick: () -> Unit) {
+fun WelcomeScreen(
+    onStartClick: suspend () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
     WelcomePage(
         showStartButton = true,
-        onStartClick = onStartClick,
+        onStartClick = {
+            scope.launch { onStartClick() }
+        },
     )
 }
 
