@@ -138,12 +138,20 @@ fun AddRecordScreen(
                 },
             )
             if (type == RecordType.TRANSFER) {
-                TransferAccounts(enabledAccounts, fromAccountId, toAccountId, { fromAccountId = it }, { toAccountId = it })
+                TransferAccounts(
+                    accounts = enabledAccounts,
+                    accountCategories = categories,
+                    fromId = fromAccountId,
+                    toId = toAccountId,
+                    onFrom = { fromAccountId = it },
+                    onTo = { toAccountId = it },
+                )
             } else {
                 CategoryGrid(availableCategories, categoryId) { categoryId = it }
             }
             FormArea(
                 accounts = enabledAccounts,
+                accountCategories = categories,
                 accountId = accountId,
                 showAccount = type != RecordType.TRANSFER,
                 occurredAt = occurredAt,

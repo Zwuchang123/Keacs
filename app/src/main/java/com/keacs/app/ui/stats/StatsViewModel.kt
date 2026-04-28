@@ -11,6 +11,7 @@ import com.keacs.app.domain.model.RecordType
 import com.keacs.app.domain.rule.balanceFor
 import com.keacs.app.domain.rule.totalExpense
 import com.keacs.app.domain.rule.totalIncome
+import com.keacs.app.ui.management.accountIconOptionFor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -113,7 +114,7 @@ class StatsViewModel(
         val categoryStatsResult = buildCategoryStats(periodRecords, categoryMap, tab)
         val dailyTrend = buildDailyTrend(periodRecords, period, periodStart, tab)
         val netAssetTrend = buildNetAssetTrend(accounts, records, date)
-        val accountBalances = buildAccountBalances(accounts, records)
+        val accountBalances = buildAccountBalances(accounts, categories, records)
 
         StatsUiState(
             selectedTab = tab,
@@ -259,14 +260,16 @@ class StatsViewModel(
 
     private fun buildAccountBalances(
         accounts: List<AccountEntity>,
+        categories: List<CategoryEntity>,
         records: List<RecordEntity>,
     ): List<AccountBalanceStats> {
         return accounts.filter { it.isEnabled }.map { account ->
+            val iconOption = accountIconOptionFor(account, categories)
             AccountBalanceStats(
                 accountId = account.id,
                 accountName = account.name,
-                iconKey = account.iconKey,
-                colorKey = account.colorKey,
+                iconKey = iconOption.key,
+                colorKey = iconOption.colorKey,
                 balance = balanceFor(account, records),
                 isAsset = account.nature == PresetSeedData.ACCOUNT_ASSET,
             )

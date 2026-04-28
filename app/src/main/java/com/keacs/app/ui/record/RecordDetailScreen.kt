@@ -48,6 +48,7 @@ import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.model.RecordType
 import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.KeacsCard
+import com.keacs.app.ui.management.accountIconOptionFor
 import com.keacs.app.ui.management.colorFor
 import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.theme.KeacsColors
@@ -109,7 +110,7 @@ fun RecordDetailScreen(
             )
             RecordInfoCard(
                 record = record,
-                category = category,
+                categories = categories,
                 fromAccount = fromAccount,
                 toAccount = toAccount,
             )
@@ -233,7 +234,7 @@ private fun RecordDetailCard(
 @Composable
 private fun RecordInfoCard(
     record: RecordEntity,
-    category: CategoryEntity?,
+    categories: List<CategoryEntity>,
     fromAccount: AccountEntity?,
     toAccount: AccountEntity?,
 ) {
@@ -245,8 +246,10 @@ private fun RecordInfoCard(
         ) {
             when (record.type) {
                 RecordType.TRANSFER -> {
+                    val fromIcon = accountIconOptionFor(fromAccount, categories)
+                    val toIcon = accountIconOptionFor(toAccount, categories)
                     InfoRow(
-                        icon = Icons.Rounded.AccountBalanceWallet,
+                        icon = fromIcon.icon,
                         label = "转出账户",
                         value = fromAccount?.name ?: "未选择",
                         valueColor = KeacsColors.Expense,
@@ -257,7 +260,7 @@ private fun RecordInfoCard(
                         color = KeacsColors.Border,
                     )
                     InfoRow(
-                        icon = Icons.Rounded.AccountBalanceWallet,
+                        icon = toIcon.icon,
                         label = "转入账户",
                         value = toAccount?.name ?: "未选择",
                         valueColor = KeacsColors.Income,
@@ -266,8 +269,9 @@ private fun RecordInfoCard(
                 else -> {
                     val accountLabel = if (record.type == RecordType.INCOME) "收入账户" else "支出账户"
                     val account = if (record.type == RecordType.INCOME) toAccount else fromAccount
+                    val accountIcon = accountIconOptionFor(account, categories)
                     InfoRow(
-                        icon = Icons.Rounded.AccountBalanceWallet,
+                        icon = accountIcon.icon,
                         label = accountLabel,
                         value = account?.name ?: "未选择",
                     )

@@ -49,6 +49,7 @@ import androidx.compose.material.icons.rounded.Work
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.keacs.app.data.local.database.PresetSeedData
+import com.keacs.app.data.local.entity.AccountEntity
 import com.keacs.app.data.local.entity.CategoryEntity
 import com.keacs.app.ui.theme.KeacsColors
 
@@ -147,6 +148,32 @@ fun accountTypeOptions(categories: List<CategoryEntity>): List<IconOption> {
         .filter { it.direction == PresetSeedData.CATEGORY_ACCOUNT && it.isEnabled }
         .map { IconOption(it.iconKey, it.name, iconFor(it.iconKey), it.colorKey) }
     return (customOptions + accountIconOptions).distinctBy { it.label }
+}
+
+fun accountIconOptionFor(account: AccountEntity?, categories: List<CategoryEntity>): IconOption {
+    val fallback = IconOption(
+        key = account?.iconKey ?: "more",
+        label = account?.type ?: "其他",
+        icon = iconFor(account?.iconKey ?: "more"),
+        colorKey = account?.colorKey ?: "gray",
+    )
+    if (account == null) return fallback
+    val typeName = accountCategoryName(account.type)
+    val name = accountCategoryName(account.name)
+    val category = categories.firstOrNull {
+        it.direction == PresetSeedData.CATEGORY_ACCOUNT &&
+            accountCategoryName(it.name) in listOf(typeName, name)
+    }
+    return category?.let {
+        IconOption(it.iconKey, it.name, iconFor(it.iconKey), it.colorKey)
+    } ?: fallback
+}
+
+private fun accountCategoryName(name: String): String = when (name) {
+    "花呗/白条" -> "花呗白条"
+    "消费贷", "房贷/车贷", "亲友借款" -> "借款"
+    "其他资产", "其他负债" -> "其他"
+    else -> name
 }
 
 fun iconFor(key: String): ImageVector =

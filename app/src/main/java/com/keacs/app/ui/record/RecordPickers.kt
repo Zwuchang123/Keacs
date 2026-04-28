@@ -37,6 +37,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.entity.AccountEntity
+import com.keacs.app.data.local.entity.CategoryEntity
+import com.keacs.app.ui.management.accountIconOptionFor
 import com.keacs.app.ui.components.WheelPickerBottomSheet
 import com.keacs.app.ui.components.WheelPickerColumn
 import com.keacs.app.ui.management.colorFor
@@ -52,6 +54,7 @@ enum class DatePickerMode { DAY, MONTH, YEAR }
 @Composable
 fun AccountSelectorBottomSheet(
     accounts: List<AccountEntity>,
+    accountCategories: List<CategoryEntity> = emptyList(),
     selectedId: Long?,
     title: String,
     includeNone: Boolean,
@@ -111,10 +114,11 @@ fun AccountSelectorBottomSheet(
                     }
                 }
                 items(accounts, key = { it.id }) { account ->
+                    val iconOption = accountIconOptionFor(account, accountCategories)
                     AccountPickerRow(
                         name = account.name,
-                        iconKey = account.iconKey,
-                        colorKey = account.colorKey,
+                        iconKey = iconOption.key,
+                        colorKey = iconOption.colorKey,
                         selected = selectedId == account.id,
                         onClick = {
                             onSelected(account.id)

@@ -94,11 +94,11 @@ abstract class KeacsDatabase : RoomDatabase() {
         private fun updateAccountIcons(db: SupportSQLiteDatabase) {
             mapOf(
                 "现金" to ("wallet" to "green"),
-                "支付宝" to ("wallet" to "blue"),
-                "微信" to ("wallet" to "cyan"),
+                "支付宝" to ("alipay" to "blue"),
+                "微信" to ("wechat" to "cyan"),
                 "银行卡" to ("bank" to "indigo"),
                 "信用卡" to ("card" to "orange"),
-                "花呗/白条" to ("card" to "yellow"),
+                "花呗/白条" to ("credit_line" to "yellow"),
                 "公积金" to ("home" to "purple"),
                 "投资账户" to ("chart" to "pink"),
                 "消费贷" to ("loan" to "red"),

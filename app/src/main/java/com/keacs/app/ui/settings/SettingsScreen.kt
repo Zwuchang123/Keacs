@@ -65,6 +65,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val accounts by repository.observeAccounts().collectAsState(initial = emptyList())
+    val categories by repository.observeCategories().collectAsState(initial = emptyList())
     val defaultAccountId by preferencesManager.defaultRecordAccountId.collectAsState(initial = null)
     val defaultRecordType by preferencesManager.defaultRecordType.collectAsState(initial = RecordType.EXPENSE)
     val enabledAccounts = accounts.filter { it.isEnabled }
@@ -130,6 +131,7 @@ fun SettingsScreen(
     if (showAccountSelector) {
         AccountSelectorBottomSheet(
             accounts = enabledAccounts,
+            accountCategories = categories,
             selectedId = defaultAccountId,
             title = "默认记账账户",
             includeNone = true,

@@ -50,6 +50,7 @@ fun AccountListScreen(
     onEditAccount: (Long?) -> Unit,
 ) {
     val accounts by repository.observeAccounts().collectAsState(initial = emptyList())
+    val categories by repository.observeCategories().collectAsState(initial = emptyList())
     val records by repository.observeRecords().collectAsState(initial = emptyList())
     val assets = accounts.filter { it.nature == PresetSeedData.ACCOUNT_ASSET }
     val liabilities = accounts.filter { it.nature == PresetSeedData.ACCOUNT_LIABILITY }
@@ -68,8 +69,8 @@ fun AccountListScreen(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
         ) {
-            item { AccountGroup("资产账户", assets, records, onEditAccount) }
-            item { AccountGroup("负债账户", liabilities, records, onEditAccount) }
+            item { AccountGroup("资产账户", assets, categories, records, onEditAccount) }
+            item { AccountGroup("负债账户", liabilities, categories, records, onEditAccount) }
         }
         Button(onClick = { onEditAccount(null) }, modifier = Modifier.fillMaxWidth()) {
             Text("＋ 新增账户")
@@ -239,6 +240,7 @@ private fun AccountSummary(totalAsset: Long, totalLiability: Long) {
 private fun AccountGroup(
     title: String,
     accounts: List<com.keacs.app.data.local.entity.AccountEntity>,
+    categories: List<com.keacs.app.data.local.entity.CategoryEntity>,
     records: List<com.keacs.app.data.local.entity.RecordEntity>,
     onEditAccount: (Long?) -> Unit,
 ) {
@@ -247,11 +249,12 @@ private fun AccountGroup(
         KeacsCard(contentPadding = PaddingValues(0.dp)) {
             Column(modifier = Modifier.padding(it)) {
                 accounts.forEachIndexed { index, account ->
+                    val iconOption = accountIconOptionFor(account, categories)
                     ManagementListItem(
                         title = account.name,
                         subtitle = if (account.isEnabled) "${natureText(account.nature)} · 当前余额" else "历史记录仍会显示",
-                        icon = iconFor(account.iconKey),
-                        color = colorFor(account.colorKey),
+                        icon = iconOption.icon,
+                        color = colorFor(iconOption.colorKey),
                         enabled = account.isEnabled,
                         trailing = formatCent(balanceFor(account, records)),
                         onClick = { onEditAccount(account.id) },

@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material3.Snackbar
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -29,22 +31,25 @@ fun KeacsSnackbar(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .then(if (atTop) Modifier.statusBarsPadding() else Modifier.navigationBarsPadding())
+            .padding(16.dp),
         contentAlignment = if (atTop) Alignment.TopCenter else Alignment.BottomCenter
     ) {
-        Snackbar(
-            modifier = Modifier
-                .then(if (atTop) Modifier.statusBarsPadding() else Modifier)
-                .padding(16.dp),
-            containerColor = if (isError) KeacsColors.Error else KeacsColors.Surface,
+        Surface(
+            modifier = Modifier.widthIn(max = 520.dp),
+            shape = MaterialTheme.shapes.medium,
+            color = if (isError) KeacsColors.Error else KeacsColors.Surface,
             contentColor = if (isError) KeacsColors.Surface else KeacsColors.TextPrimary,
-            action = {
-                TextButton(onClick = onDismiss) {
-                    Text("关闭", color = if (isError) KeacsColors.Surface else KeacsColors.Primary)
-                }
-            }
+            shadowElevation = 6.dp,
+            tonalElevation = 2.dp,
         ) {
-            Text(message)
+            Text(
+                text = message,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }

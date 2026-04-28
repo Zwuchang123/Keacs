@@ -18,7 +18,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Notes
-import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -38,18 +37,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.entity.AccountEntity
+import com.keacs.app.data.local.entity.CategoryEntity
 import com.keacs.app.ui.components.AmountText
 import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.FormFieldRow
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.NumberPad
+import com.keacs.app.ui.management.accountIconOptionFor
 import com.keacs.app.ui.management.colorFor
-import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.theme.KeacsColors
 
 @Composable
 fun TransferAccounts(
     accounts: List<AccountEntity>,
+    accountCategories: List<CategoryEntity>,
     fromId: Long?,
     toId: Long?,
     onFrom: (Long) -> Unit,
@@ -71,6 +72,7 @@ fun TransferAccounts(
             TransferAccountBox(
                 title = "转出账户",
                 account = fromAccount,
+                accountCategories = accountCategories,
                 modifier = Modifier.weight(1f),
                 onClick = { showFromSelector = true },
             )
@@ -91,6 +93,7 @@ fun TransferAccounts(
             TransferAccountBox(
                 title = "转入账户",
                 account = toAccount,
+                accountCategories = accountCategories,
                 modifier = Modifier.weight(1f),
                 onClick = { showToSelector = true },
             )
@@ -100,6 +103,7 @@ fun TransferAccounts(
     if (showFromSelector) {
         AccountSelectorBottomSheet(
             accounts = accounts,
+            accountCategories = accountCategories,
             selectedId = fromId,
             title = "选择转出账户",
             includeNone = false,
@@ -110,6 +114,7 @@ fun TransferAccounts(
     if (showToSelector) {
         AccountSelectorBottomSheet(
             accounts = accounts,
+            accountCategories = accountCategories,
             selectedId = toId,
             title = "选择转入账户",
             includeNone = false,
@@ -172,6 +177,7 @@ fun RecordErrorText(message: String?) {
 @Composable
 fun FormArea(
     accounts: List<AccountEntity>,
+    accountCategories: List<CategoryEntity>,
     accountId: Long?,
     showAccount: Boolean,
     occurredAt: Long,
@@ -182,14 +188,16 @@ fun FormArea(
 ) {
     var showAccountSelector by remember { mutableStateOf(false) }
     var showDateSelector by remember { mutableStateOf(false) }
+    val selectedAccount = accounts.firstOrNull { it.id == accountId }
+    val selectedAccountIcon = accountIconOptionFor(selectedAccount, accountCategories)
 
     KeacsCard(contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
         Column(Modifier.padding(it), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (showAccount) {
                 FormFieldRow(
-                    Icons.Rounded.AccountBalanceWallet,
+                    selectedAccountIcon.icon,
                     "账户",
-                    accounts.firstOrNull { it.id == accountId }?.name ?: "未选择",
+                    selectedAccount?.name ?: "未选择",
                     modifier = Modifier.clickable { showAccountSelector = true },
                 )
             }
@@ -206,6 +214,7 @@ fun FormArea(
     if (showAccountSelector) {
         AccountSelectorBottomSheet(
             accounts = accounts,
+            accountCategories = accountCategories,
             selectedId = accountId,
             title = "选择账户",
             includeNone = false,
@@ -231,9 +240,11 @@ fun FormArea(
 private fun TransferAccountBox(
     title: String,
     account: AccountEntity?,
+    accountCategories: List<CategoryEntity>,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val iconOption = accountIconOptionFor(account, accountCategories)
     Column(
         modifier = modifier
             .clip(MaterialTheme.shapes.medium)
@@ -244,8 +255,8 @@ private fun TransferAccountBox(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         CategoryIcon(
-            icon = iconFor(account?.iconKey ?: "more"),
-            backgroundColor = colorFor(account?.colorKey ?: "gray"),
+            icon = iconOption.icon,
+            backgroundColor = colorFor(iconOption.colorKey),
         )
         Text(title, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
         Text(

@@ -126,9 +126,12 @@ object PresetSeedData {
     }
 
     fun accountIconKey(name: String): String = when (name) {
-        "现金", "支付宝", "微信" -> "wallet"
+        "现金" -> "wallet"
+        "支付宝" -> "alipay"
+        "微信" -> "wechat"
         "银行卡" -> "bank"
-        "信用卡", "花呗/白条" -> "card"
+        "信用卡" -> "card"
+        "花呗/白条" -> "credit_line"
         "公积金" -> "home"
         "投资账户" -> "chart"
         "消费贷", "房贷/车贷", "亲友借款" -> "loan"
