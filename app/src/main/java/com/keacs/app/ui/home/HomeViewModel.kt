@@ -69,7 +69,7 @@ class HomeViewModel(
         val totalAsset = assetAccounts.sumOf { balanceFor(it, records) }
         val totalLiability = liabilityAccounts.sumOf { balanceFor(it, records) }
 
-        val recentRecords = records.sortedByDescending { it.occurredAt }.take(5)
+        val recentRecords = records.sortedByDescending { it.occurredAt }.take(8)
 
         HomeUiState(
             totalIncome = totalIncome(monthRecords),

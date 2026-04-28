@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.keacs.app.data.repository.LocalDataRepository
+import com.keacs.app.ui.components.EmptyState
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.SegmentedTabs
 import com.keacs.app.ui.management.colorFor
@@ -235,14 +237,13 @@ private fun NetAssetTrendCard(
             )
             Spacer(modifier = Modifier.height(12.dp))
             if (monthlyTrend.isEmpty()) {
-                Box(
+                EmptyState(
+                    title = "暂无数据",
+                    icon = Icons.AutoMirrored.Rounded.ReceiptLong,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(128.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("暂无数据", color = KeacsColors.TextTertiary, style = MaterialTheme.typography.bodySmall)
-                }
+                        .height(128.dp)
+                )
             } else {
                 TrendLineChart(
                     dailyTrend = monthlyTrend,
@@ -364,18 +365,13 @@ private fun TrendChartCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             if (dailyTrend.isEmpty() || dailyTrend.all { it.amount == 0L }) {
-                Box(
+                EmptyState(
+                    title = "暂无数据",
+                    icon = Icons.AutoMirrored.Rounded.ReceiptLong,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(128.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "暂无数据",
-                        color = KeacsColors.TextTertiary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
+                        .height(128.dp)
+                )
             } else {
                 TrendLineChart(
                     dailyTrend = dailyTrend,
@@ -512,18 +508,13 @@ private fun CategoryChartCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             if (categoryStats.isEmpty()) {
-                Box(
+                EmptyState(
+                    title = "暂无数据",
+                    icon = Icons.AutoMirrored.Rounded.ReceiptLong,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "暂无数据",
-                        color = KeacsColors.TextTertiary,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
+                        .height(120.dp)
+                )
             } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -689,10 +680,9 @@ private fun formatCent(value: Long): String =
     DecimalFormat("#,##0.00").format(value / 100.0)
 
 private fun formatShort(value: Long): String {
+    val rmb = value / 100.0
     return when {
-        value >= 1_000_000_00 -> String.format("%.1fW", value / 100_000_000.0)
-        value >= 1_000_00 -> String.format("%.1fW", value / 10_000_000.0)
-        value >= 1_000_00 -> String.format("%.0f", value / 100_0000.0)
-        else -> "${value / 100}"
+        rmb >= 10000.0 -> String.format(Locale.getDefault(), "%.1fW", rmb / 10000.0)
+        else -> String.format(Locale.getDefault(), "%.0f", rmb)
     }
 }

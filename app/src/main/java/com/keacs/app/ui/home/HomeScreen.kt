@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -250,11 +248,10 @@ private fun RecentRecords(
                         .height(180.dp),
                 )
             } else {
-                LazyColumn(
-                    modifier = Modifier.height((records.size * 64).dp.coerceAtMost(320.dp)),
+                Column(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    items(records, key = { it.id }) { record ->
+                    records.forEach { record ->
                         RecordListItem(
                             icon = if (record.type == RecordType.TRANSFER) Icons.Rounded.AccountBalanceWallet
                                    else iconFor(categories[record.categoryId]?.iconKey ?: "more"),
@@ -267,7 +264,6 @@ private fun RecentRecords(
                             amountColor = recordColor(record),
                             modifier = Modifier
                                 .clickable { onRecordClick(record.id) }
-                                .animateItem(),
                         )
                     }
                 }
