@@ -89,13 +89,14 @@ fun AccountEditScreen(
     val records by repository.observeRecords().collectAsState(initial = emptyList())
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
     val editing = accounts.firstOrNull { it.id == accountId }
-    val typeOptions = remember(categories, nature) { accountTypeOptions(categories, nature) }
     val useCase = remember(repository) { AccountManagementUseCase(repository) }
     val scope = rememberCoroutineScope()
 
     var name by rememberSaveable(accountId) { mutableStateOf("") }
+    // 先声明账户性质，再依赖它计算类型选项，避免局部声明顺序导致编译失败。
     var nature by rememberSaveable(accountId) { mutableStateOf(PresetSeedData.ACCOUNT_ASSET) }
     var type by rememberSaveable(accountId) { mutableStateOf("现金") }
+    val typeOptions = remember(nature, categories) { accountTypeOptions(categories, nature) }
     var balance by rememberSaveable(accountId) { mutableStateOf("0.00") }
     var iconKey by rememberSaveable(accountId) { mutableStateOf("wallet") }
     var colorKey by rememberSaveable(accountId) { mutableStateOf("green") }
