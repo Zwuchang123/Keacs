@@ -86,9 +86,10 @@ fun AccountEditScreen(
     onDone: () -> Unit,
 ) {
     val accounts by repository.observeAccounts().collectAsState(initial = emptyList())
+    val records by repository.observeRecords().collectAsState(initial = emptyList())
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
     val editing = accounts.firstOrNull { it.id == accountId }
-    val typeOptions = remember(categories) { accountTypeOptions(categories) }
+    val typeOptions = remember(categories, nature) { accountTypeOptions(categories, nature) }
     val useCase = remember(repository) { AccountManagementUseCase(repository) }
     val scope = rememberCoroutineScope()
 
@@ -109,7 +110,8 @@ fun AccountEditScreen(
             name = it.name
             nature = it.nature
             type = it.type
-            balance = centsToInput(it.initialBalanceCent)
+            // 这里展示“当前余额”，确保记录增减后，编辑页与列表页金额一致。
+            balance = centsToInput(balanceFor(it, records))
             iconKey = it.iconKey
             colorKey = it.colorKey
             isEnabled = it.isEnabled
@@ -166,8 +168,16 @@ fun AccountEditScreen(
                         error = "余额格式不正确"
                         return@launch
                     }
+                    val current = editing
+                    // 这里保存的是初始余额，因此要把“目标当前余额”换算为初始余额，避免记录效果被重复计算。
+                    val initialBalanceCent = if (current == null) {
+                        cents
+                    } else {
+                        val currentBalance = balanceFor(current, records)
+                        current.initialBalanceCent + (cents - currentBalance)
+                    }
                     runCatching {
-                        useCase.save(accountId, name, nature, type, iconKey, colorKey, cents, isEnabled)
+                        useCase.save(accountId, name, nature, type, iconKey, colorKey, initialBalanceCent, isEnabled)
                     }.onSuccess { onDone() }
                         .onFailure { error = it.message ?: "保存失败，请稍后重试" }
                 }
@@ -252,11 +262,16 @@ private fun AccountGroup(
                     val iconOption = accountIconOptionFor(account, categories)
                     ManagementListItem(
                         title = account.name,
-                        subtitle = if (account.isEnabled) "${natureText(account.nature)} · 当前余额" else "历史记录仍会显示",
+                        subtitle = if (account.isEnabled) "" else "历史记录仍会显示",
                         icon = iconOption.icon,
                         color = colorFor(iconOption.colorKey),
                         enabled = account.isEnabled,
                         trailing = formatCent(balanceFor(account, records)),
+                        trailingColor = if (account.nature == PresetSeedData.ACCOUNT_LIABILITY) {
+                            KeacsColors.Expense
+                        } else {
+                            KeacsColors.Income
+                        },
                         onClick = { onEditAccount(account.id) },
                     )
                     if (index != accounts.lastIndex) ListDivider()
@@ -265,9 +280,6 @@ private fun AccountGroup(
         }
     }
 }
-
-private fun natureText(nature: String): String =
-    if (nature == PresetSeedData.ACCOUNT_LIABILITY) "负债" else "资产"
 
 private fun formatCent(value: Long): String =
     DecimalFormat("#,##0.00").format(value / 100.0)
