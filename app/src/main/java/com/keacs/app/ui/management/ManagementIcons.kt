@@ -9,15 +9,21 @@ import androidx.compose.material.icons.rounded.AttachMoney
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.BusinessCenter
+import androidx.compose.material.icons.rounded.Cake
 import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.CardMembership
+import androidx.compose.material.icons.rounded.ChildCare
+import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.DirectionsBus
 import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Fastfood
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Flight
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Hotel
 import androidx.compose.material.icons.rounded.LocalAtm
 import androidx.compose.material.icons.rounded.LocalCafe
 import androidx.compose.material.icons.rounded.LocalGroceryStore
@@ -26,6 +32,7 @@ import androidx.compose.material.icons.rounded.LocalMall
 import androidx.compose.material.icons.rounded.LocalPizza
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Park
 import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.PhoneAndroid
@@ -43,6 +50,7 @@ import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material.icons.rounded.Train
 import androidx.compose.material.icons.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.TwoWheeler
 import androidx.compose.material.icons.rounded.VolunteerActivism
 import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material.icons.rounded.Work
@@ -83,6 +91,13 @@ val expenseIconOptions = listOf(
     IconOption("school", "教育", Icons.Rounded.School, "yellow"),
     IconOption("chart", "投资", Icons.Rounded.BarChart, "green"),
     IconOption("heart", "人情", Icons.Rounded.Favorite, "pink"),
+    IconOption("hotel", "酒店", Icons.Rounded.Hotel, "indigo"),
+    IconOption("fitness", "健身", Icons.Rounded.FitnessCenter, "blue"),
+    IconOption("cleaning", "保洁", Icons.Rounded.CleaningServices, "cyan"),
+    IconOption("childcare", "育儿", Icons.Rounded.ChildCare, "yellow"),
+    IconOption("computer", "数码", Icons.Rounded.Computer, "purple"),
+    IconOption("park", "户外", Icons.Rounded.Park, "green"),
+    IconOption("scooter", "骑行", Icons.Rounded.TwoWheeler, "orange"),
     IconOption("more", "其他", Icons.Rounded.MoreHoriz, "gray"),
 )
 
@@ -108,6 +123,13 @@ val incomeIconOptions = listOf(
     IconOption("mall_income", "销售", Icons.Rounded.LocalMall, "orange"),
     IconOption("study_income", "助学", Icons.Rounded.School, "yellow"),
     IconOption("care_income", "人情", Icons.Rounded.Favorite, "pink"),
+    IconOption("cake_income", "节庆", Icons.Rounded.Cake, "orange"),
+    IconOption("fitness_income", "教练", Icons.Rounded.FitnessCenter, "blue"),
+    IconOption("computer_income", "技术", Icons.Rounded.Computer, "indigo"),
+    IconOption("park_income", "活动", Icons.Rounded.Park, "green"),
+    IconOption("hotel_income", "住宿", Icons.Rounded.Hotel, "cyan"),
+    IconOption("childcare_income", "托育", Icons.Rounded.ChildCare, "yellow"),
+    IconOption("scooter_income", "配送", Icons.Rounded.TwoWheeler, "purple"),
     IconOption("more", "其他", Icons.Rounded.MoreHoriz, "gray"),
 )
 
@@ -136,6 +158,15 @@ val accountIconOptions = listOf(
     IconOption("more", "其他", Icons.Rounded.MoreHoriz, "gray"),
 )
 
+private val assetAccountIconKeys = setOf(
+    "wallet", "alipay", "wechat", "bank", "home", "chart", "savings", "cash_card", "fund", "stock",
+    "atm", "house_asset", "car_asset", "business_account", "office_account", "request_account", "gift_account", "more",
+)
+
+private val liabilityAccountIconKeys = setOf(
+    "card", "credit_line", "loan", "paid_account", "more",
+)
+
 fun categoryOptions(direction: String): List<IconOption> =
     when (direction) {
         PresetSeedData.CATEGORY_INCOME -> incomeIconOptions
@@ -143,11 +174,15 @@ fun categoryOptions(direction: String): List<IconOption> =
         else -> expenseIconOptions
     }
 
-fun accountTypeOptions(categories: List<CategoryEntity>): List<IconOption> {
+fun accountTypeOptions(categories: List<CategoryEntity>, nature: String): List<IconOption> {
     val customOptions = categories
         .filter { it.direction == PresetSeedData.CATEGORY_ACCOUNT && it.isEnabled }
         .map { IconOption(it.iconKey, it.name, iconFor(it.iconKey), it.colorKey) }
-    return (customOptions + accountIconOptions).distinctBy { it.label }
+    val natureOptions = accountIconOptions.filter { option ->
+        val keys = if (nature == PresetSeedData.ACCOUNT_LIABILITY) liabilityAccountIconKeys else assetAccountIconKeys
+        option.key in keys
+    }
+    return (customOptions + natureOptions).distinctBy { it.label }
 }
 
 fun accountIconOptionFor(account: AccountEntity?, categories: List<CategoryEntity>): IconOption {
