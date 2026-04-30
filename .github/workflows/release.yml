@@ -21,6 +21,7 @@ jobs:
       GITEE_REPO: keacs
       GITHUB_REPO: Zwuchang123/Keacs
       HAS_GITEE_TOKEN: ${{ secrets.GITEE_TOKEN != '' }}
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
