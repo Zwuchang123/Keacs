@@ -38,6 +38,21 @@ jobs:
           fi
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
 
+      - name: Create tag if not exists (for manual release)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          TAG="${{ steps.resolve_tag.outputs.tag }}"
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Creating tag: $TAG"
+            git tag "$TAG"
+            git push origin "$TAG"
+          else
+            echo "Tag $TAG already exists"
+          fi
+
       - name: Checkout release ref
         shell: bash
         run: |
@@ -112,7 +127,7 @@ jobs:
               printf -- '- 请补充本次版本说明。\n\n'
               printf '安装说明：\n'
               printf -- '- 下载 APK 后按系统提示安装。\n'
-              printf -- '- 更新前建议先在“我的 -> 导出备份”保存一份备份文件。\n\n'
+              printf -- '- 更新前建议先在"我的 -> 导出备份"保存一份备份文件。\n\n'
               printf '备用下载：\n'
               printf -- '- GitHub：https://github.com/%s/releases\n' "${GITHUB_REPO}"
               printf -- '- Gitee：https://gitee.com/%s/%s/releases\n' "${GITEE_OWNER}" "${GITEE_REPO}"
