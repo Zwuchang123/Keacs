@@ -52,6 +52,7 @@ fun ManagementListItem(
     color: Color,
     enabled: Boolean,
     trailing: String? = null,
+    trailingColor: Color = KeacsColors.TextPrimary,
     onClick: () -> Unit,
 ) {
     Row(
@@ -94,7 +95,7 @@ fun ManagementListItem(
         if (trailing != null) {
             Text(
                 text = trailing,
-                color = KeacsColors.TextPrimary,
+                color = trailingColor,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(modifier = Modifier.width(8.dp))

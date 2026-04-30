@@ -126,6 +126,13 @@ class LocalDataRepository(
 
     suspend fun deleteAccount(id: Long) {
         require(database.accountDao().usageCount(id) == 0) { "已有历史记录，只能停用" }
+        val account = requireNotNull(database.accountDao().getById(id)) { "账户不存在" }
+        // 预置账户被物理删除后，初始化预置数据会再次补齐，表现为“删了又出现”。
+        // 因此对预置账户按停用处理，避免回填重现。
+        if (PresetSeedData.accounts(clock()).any { it.name == account.name }) {
+            database.accountDao().update(account.copy(isEnabled = false, updatedAt = clock()))
+            return
+        }
         database.accountDao().deleteById(id)
     }
 

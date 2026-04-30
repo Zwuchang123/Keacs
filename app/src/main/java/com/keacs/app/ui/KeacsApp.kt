@@ -276,7 +276,7 @@ fun KeacsApp(
                     repository = repository,
                     preferencesManager = preferencesManager,
                     recordId = routeId(route, ROUTE_RECORD_EDIT),
-                    onDone = { routeId(route, ROUTE_RECORD_EDIT)?.let { navigateBackTo(recordDetailRoute(it)) } },
+                    onDone = { navigateBackTo(KeacsDestination.Records.route) },
                 )
             }
         }
