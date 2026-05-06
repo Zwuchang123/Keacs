@@ -1,5 +1,6 @@
 package com.keacs.app.data.backup
 
+import com.keacs.app.BuildConfig
 import com.keacs.app.data.local.entity.AccountEntity
 import com.keacs.app.data.local.entity.CategoryEntity
 import com.keacs.app.data.local.entity.RecordEntity
@@ -7,7 +8,9 @@ import com.keacs.app.data.repository.LocalDataRepository
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.InputStream
+import java.io.InputStreamReader
 import java.io.OutputStream
+import java.io.OutputStreamWriter
 
 class BackupService(
     private val localDataRepository: LocalDataRepository
@@ -18,8 +21,11 @@ class BackupService(
         val records = localDataRepository.getRecords()
 
         val root = JSONObject()
-        root.put("backupVersion", 1)
+        root.put("backupVersion", BACKUP_VERSION)
         root.put("exportedAt", System.currentTimeMillis())
+        root.put("appVersionName", BuildConfig.VERSION_NAME)
+        root.put("appVersionCode", BuildConfig.VERSION_CODE)
+        root.put("balanceSignPolicy", BALANCE_SIGN_POLICY)
 
         val categoriesArray = JSONArray()
         categories.forEach { cat ->
@@ -72,17 +78,17 @@ class BackupService(
         }
         root.put("records", recordsArray)
 
-        outputStream.writer().use {
+        OutputStreamWriter(outputStream, Charsets.UTF_8).use {
             it.write(root.toString(2))
         }
     }
 
     suspend fun importBackup(inputStream: InputStream) {
-        val jsonString = inputStream.reader().use { it.readText() }
+        val jsonString = InputStreamReader(inputStream, Charsets.UTF_8).use { it.readText() }
         val root = JSONObject(jsonString)
 
         val version = root.optInt("backupVersion", 0)
-        require(version == 1) { "不支持的备份版本或文件格式错误" }
+        require(version in 1..BACKUP_VERSION) { "不支持的备份版本或文件格式错误" }
 
         val categoriesArray = root.optJSONArray("categories") ?: JSONArray()
         val accountsArray = root.optJSONArray("accounts") ?: JSONArray()
@@ -145,6 +151,11 @@ class BackupService(
             )
         }
 
-        localDataRepository.importBackup(categories, accounts, records)
+        localDataRepository.importBackup(categories, accounts, records, version)
+    }
+
+    private companion object {
+        const val BACKUP_VERSION = 2
+        const val BALANCE_SIGN_POLICY = "asset_positive_liability_negative"
     }
 }

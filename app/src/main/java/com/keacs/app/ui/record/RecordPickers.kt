@@ -27,6 +27,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -183,37 +184,69 @@ fun DateWheelPickerBottomSheet(
     onSelected: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val calendar = remember(selectedDate) {
-        Calendar.getInstance(Locale.getDefault()).apply { timeInMillis = selectedDate }
+    val nowMillis = remember { System.currentTimeMillis() }
+    val today = remember(nowMillis) {
+        Calendar.getInstance(Locale.getDefault()).apply { timeInMillis = nowMillis }
     }
-    val thisYear = Calendar.getInstance(Locale.getDefault()).get(Calendar.YEAR)
-    val years = remember { (thisYear - 10..thisYear + 2).map { "${it}年" } }
-    val months = remember { (1..12).map { "${it}月" } }
+    val calendar = remember(selectedDate, nowMillis) {
+        Calendar.getInstance(Locale.getDefault()).apply { timeInMillis = selectedDate.coerceAtMost(nowMillis) }
+    }
+    val thisYear = today.get(Calendar.YEAR)
+    val startYear = thisYear - 10
+    val years = remember(thisYear) { (startYear..thisYear).map { "${it}年" } }
 
-    var yearIndex by remember(selectedDate) { mutableIntStateOf((calendar.get(Calendar.YEAR) - (thisYear - 10)).coerceIn(years.indices)) }
-    var monthIndex by remember(selectedDate) { mutableIntStateOf(calendar.get(Calendar.MONTH).coerceIn(months.indices)) }
-    val days = remember(yearIndex, monthIndex) {
-        val cal = Calendar.getInstance(Locale.getDefault())
-        cal.set(thisYear - 10 + yearIndex, monthIndex, 1)
-        (1..cal.getActualMaximum(Calendar.DAY_OF_MONTH)).map { "${it}日" }
+    var yearIndex by remember(selectedDate, nowMillis) {
+        mutableIntStateOf((calendar.get(Calendar.YEAR) - startYear).coerceIn(years.indices))
     }
-    var dayIndex by remember(selectedDate, days.size) {
+    val selectedYear = startYear + yearIndex
+    val maxMonthIndex = if (selectedYear == thisYear) today.get(Calendar.MONTH) else 11
+    val months = remember(maxMonthIndex) { (1..(maxMonthIndex + 1)).map { "${it}月" } }
+    var monthIndex by remember(selectedDate, nowMillis) {
+        mutableIntStateOf(calendar.get(Calendar.MONTH).coerceIn(months.indices))
+    }
+    val safeMonthIndex = monthIndex.coerceIn(months.indices)
+    LaunchedEffect(maxMonthIndex) {
+        if (monthIndex > maxMonthIndex) monthIndex = maxMonthIndex
+    }
+
+    val maxDay = remember(selectedYear, safeMonthIndex, today) {
+        val cal = Calendar.getInstance(Locale.getDefault())
+        cal.set(selectedYear, safeMonthIndex, 1)
+        if (selectedYear == thisYear && safeMonthIndex == today.get(Calendar.MONTH)) {
+            today.get(Calendar.DAY_OF_MONTH)
+        } else {
+            cal.getActualMaximum(Calendar.DAY_OF_MONTH)
+        }
+    }
+    val days = remember(maxDay) { (1..maxDay).map { "${it}日" } }
+    var dayIndex by remember(selectedDate, days.size, nowMillis) {
         mutableIntStateOf((calendar.get(Calendar.DAY_OF_MONTH) - 1).coerceIn(days.indices))
+    }
+    val safeDayIndex = dayIndex.coerceIn(days.indices)
+    LaunchedEffect(maxDay) {
+        if (dayIndex >= maxDay) dayIndex = maxDay - 1
     }
 
     WheelPickerBottomSheet(
         title = title,
         columns = buildList {
             add(WheelPickerColumn(years, yearIndex) { yearIndex = it })
-            if (mode != DatePickerMode.YEAR) add(WheelPickerColumn(months, monthIndex) { monthIndex = it })
-            if (mode == DatePickerMode.DAY) add(WheelPickerColumn(days, dayIndex) { dayIndex = it })
+            if (mode != DatePickerMode.YEAR) add(WheelPickerColumn(months, safeMonthIndex) { monthIndex = it })
+            if (mode == DatePickerMode.DAY) add(WheelPickerColumn(days, safeDayIndex) { dayIndex = it })
         },
         onDismiss = onDismiss,
         onConfirm = {
             val result = Calendar.getInstance(Locale.getDefault())
-            result.set(thisYear - 10 + yearIndex, monthIndex, dayIndex + 1, 0, 0, 0)
+            result.set(
+                startYear + yearIndex,
+                if (mode == DatePickerMode.YEAR) 0 else safeMonthIndex,
+                if (mode == DatePickerMode.DAY) safeDayIndex + 1 else 1,
+                0,
+                0,
+                0,
+            )
             result.set(Calendar.MILLISECOND, 0)
-            onSelected(result.timeInMillis)
+            onSelected(result.timeInMillis.coerceAtMost(nowMillis))
         },
     )
 }

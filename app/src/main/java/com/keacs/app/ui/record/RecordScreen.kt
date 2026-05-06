@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -277,28 +278,36 @@ private fun MonthPickerContent(
     onMonthSelected: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val today = remember { Calendar.getInstance() }
     val current = Calendar.getInstance().apply {
         time = yearMonthFormat.parse(currentYearMonth) ?: Date()
     }
-    val thisYear = Calendar.getInstance().get(Calendar.YEAR)
-    val years = remember { (thisYear - 10..thisYear + 2).map { "${it}年" } }
-    val months = remember { (1..12).map { "${it}月" } }
+    val thisYear = today.get(Calendar.YEAR)
+    val startYear = thisYear - 10
+    val years = remember(thisYear) { (startYear..thisYear).map { "${it}年" } }
     var yearIndex by remember(currentYearMonth) {
-        mutableIntStateOf((current.get(Calendar.YEAR) - (thisYear - 10)).coerceIn(years.indices))
+        mutableIntStateOf((current.get(Calendar.YEAR) - startYear).coerceIn(years.indices))
     }
+    val selectedYear = startYear + yearIndex
+    val maxMonthIndex = if (selectedYear == thisYear) today.get(Calendar.MONTH) else 11
+    val months = remember(maxMonthIndex) { (1..(maxMonthIndex + 1)).map { "${it}月" } }
     var monthIndex by remember(currentYearMonth) {
         mutableIntStateOf(current.get(Calendar.MONTH).coerceIn(months.indices))
+    }
+    val safeMonthIndex = monthIndex.coerceIn(months.indices)
+    LaunchedEffect(maxMonthIndex) {
+        if (monthIndex > maxMonthIndex) monthIndex = maxMonthIndex
     }
 
     WheelPickerBottomSheet(
         title = "选择月份",
         columns = listOf(
             WheelPickerColumn(years, yearIndex) { yearIndex = it },
-            WheelPickerColumn(months, monthIndex) { monthIndex = it },
+            WheelPickerColumn(months, safeMonthIndex) { monthIndex = it },
         ),
         onDismiss = onDismiss,
         onConfirm = {
-            onMonthSelected("${thisYear - 10 + yearIndex}年${(monthIndex + 1).toString().padStart(2, '0')}月")
+            onMonthSelected("${startYear + yearIndex}年${(safeMonthIndex + 1).toString().padStart(2, '0')}月")
         },
     )
 }

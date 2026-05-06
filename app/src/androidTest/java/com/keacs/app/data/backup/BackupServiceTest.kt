@@ -53,8 +53,11 @@ class BackupServiceTest {
         backupService.exportBackup(outputStream)
 
         val json = JSONObject(outputStream.toString())
-        assertEquals(1, json.getInt("backupVersion"))
+        assertEquals(2, json.getInt("backupVersion"))
         assertTrue(json.has("exportedAt"))
+        assertTrue(json.has("appVersionName"))
+        assertTrue(json.has("appVersionCode"))
+        assertEquals("asset_positive_liability_negative", json.getString("balanceSignPolicy"))
         assertTrue(json.has("categories"))
         assertTrue(json.has("accounts"))
         assertTrue(json.has("records"))

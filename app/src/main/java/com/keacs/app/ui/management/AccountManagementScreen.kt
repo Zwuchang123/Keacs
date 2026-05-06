@@ -232,7 +232,7 @@ private fun AccountSummary(totalAsset: Long, totalLiability: Long) {
         ) {
             Text("净资产", color = KeacsColors.PrimaryLight, style = MaterialTheme.typography.bodySmall)
             Text(
-                text = formatCent(totalAsset - totalLiability),
+                text = formatCent(totalAsset + totalLiability),
                 color = KeacsColors.Surface,
                 style = MaterialTheme.typography.displaySmall,
                 fontFamily = FontFamily.Monospace,

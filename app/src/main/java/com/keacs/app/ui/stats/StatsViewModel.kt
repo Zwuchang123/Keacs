@@ -69,11 +69,12 @@ data class StatsUiState(
 
 class StatsViewModel(
     private val repository: LocalDataRepository,
+    private val clock: () -> Long = { System.currentTimeMillis() },
 ) : ViewModel() {
 
     private val selectedTab = MutableStateFlow(StatsTab.EXPENSE)
     private val selectedPeriod = MutableStateFlow(TimePeriod.MONTH)
-    private val selectedDate = MutableStateFlow(System.currentTimeMillis())
+    private val selectedDate = MutableStateFlow(clock())
 
     private val dataFlow = combine(
         repository.observeRecords(),
@@ -97,11 +98,14 @@ class StatsViewModel(
     ) { data, selection ->
         val (records, categories, accounts) = data
         val (tab, period, date) = selection
+        val now = clock()
+        val safeDate = date.coerceAtMost(now)
 
         val categoryMap = categories.associateBy { it.id }
         val accountMap = accounts.associateBy { it.id }
 
-        val (periodStart, periodEnd) = getPeriodRange(period, date)
+        val (periodStart, naturalPeriodEnd) = getPeriodRange(period, safeDate)
+        val periodEnd = naturalPeriodEnd.coerceAtMost(now + 1)
         val periodRecords = records.filter { it.occurredAt in periodStart until periodEnd }
 
         val income = totalIncome(periodRecords)
@@ -113,20 +117,20 @@ class StatsViewModel(
         val totalLiability = liabilityAccounts.sumOf { account -> balanceAt(account, records, periodEnd) }
 
         val categoryStatsResult = buildCategoryStats(periodRecords, categoryMap, tab)
-        val dailyTrend = buildDailyTrend(periodRecords, period, periodStart, tab)
-        val netAssetTrend = buildNetAssetTrend(accounts, records, period, periodStart)
+        val dailyTrend = buildDailyTrend(periodRecords, period, periodStart, periodEnd, tab)
+        val netAssetTrend = buildNetAssetTrend(accounts, records, period, periodStart, periodEnd)
         val accountBalances = buildAccountBalances(accounts, categories, records)
 
         StatsUiState(
             selectedTab = tab,
             selectedPeriod = period,
-            selectedDate = date,
+            selectedDate = safeDate,
             income = income,
             expense = expense,
             netBalance = income - expense,
             totalAsset = totalAsset,
             totalLiability = totalLiability,
-            netAsset = totalAsset - totalLiability,
+            netAsset = totalAsset + totalLiability,
             categoryStats = categoryStatsResult,
             dailyTrend = dailyTrend,
             netAssetTrend = netAssetTrend,
@@ -150,7 +154,7 @@ class StatsViewModel(
     }
 
     fun selectDate(date: Long) {
-        selectedDate.value = date
+        selectedDate.value = date.coerceAtMost(clock())
     }
 
     private fun getPeriodRange(period: TimePeriod, date: Long): Pair<Long, Long> {
@@ -215,6 +219,7 @@ class StatsViewModel(
         records: List<RecordEntity>,
         period: TimePeriod,
         periodStart: Long,
+        periodEnd: Long,
         tab: StatsTab,
     ): List<DailyStats> {
         if (tab == StatsTab.ASSET) return emptyList()
@@ -225,12 +230,13 @@ class StatsViewModel(
             StatsTab.ASSET -> return emptyList()
         }
 
-        val calendar = Calendar.getInstance(Locale.getDefault())
-        calendar.timeInMillis = periodStart
+        val endCalendar = Calendar.getInstance(Locale.getDefault()).apply {
+            timeInMillis = (periodEnd - 1).coerceAtLeast(periodStart)
+        }
 
         return when (period) {
             TimePeriod.MONTH -> {
-                val dayCount = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+                val dayCount = endCalendar.get(Calendar.DAY_OF_MONTH).coerceAtLeast(1)
                 (1..dayCount).map { day ->
                     val dayCalendar = Calendar.getInstance(Locale.getDefault())
                     dayCalendar.timeInMillis = periodStart
@@ -250,7 +256,8 @@ class StatsViewModel(
                 }
             }
             TimePeriod.YEAR -> {
-                (1..12).map { month ->
+                val monthCount = (endCalendar.get(Calendar.MONTH) + 1).coerceAtLeast(1)
+                (1..monthCount).map { month ->
                     val monthCalendar = Calendar.getInstance(Locale.getDefault())
                     monthCalendar.timeInMillis = periodStart
                     monthCalendar.set(Calendar.MONTH, month - 1)
@@ -295,29 +302,53 @@ class StatsViewModel(
         records: List<RecordEntity>,
         period: TimePeriod,
         periodStart: Long,
+        periodEnd: Long,
     ): List<DailyStats> {
-        val calendar = Calendar.getInstance(Locale.getDefault()).apply { timeInMillis = periodStart }
+        val endCalendar = Calendar.getInstance(Locale.getDefault()).apply {
+            timeInMillis = (periodEnd - 1).coerceAtLeast(periodStart)
+        }
         return when (period) {
             TimePeriod.MONTH -> {
-                val dayCount = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+                val dayCount = endCalendar.get(Calendar.DAY_OF_MONTH).coerceAtLeast(1)
                 (1..dayCount).map { day ->
                     val dayCalendar = Calendar.getInstance(Locale.getDefault()).apply {
                         timeInMillis = periodStart
                         set(Calendar.DAY_OF_MONTH, day)
-                        add(Calendar.DAY_OF_MONTH, 1)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
                     }
-                    DailyStats(day = day, amount = netAssetAt(accounts, records, dayCalendar.timeInMillis))
+                    val dayStart = dayCalendar.timeInMillis
+                    dayCalendar.add(Calendar.DAY_OF_MONTH, 1)
+                    val dayEnd = dayCalendar.timeInMillis.coerceAtMost(periodEnd)
+                    val hasRecord = records.any { it.occurredAt in dayStart until dayEnd }
+                    DailyStats(
+                        day = day,
+                        amount = if (hasRecord) netAssetAt(accounts, records, dayEnd) else 0L,
+                    )
                 }
             }
             TimePeriod.YEAR -> {
-                (1..12).map { month ->
+                val monthCount = (endCalendar.get(Calendar.MONTH) + 1).coerceAtLeast(1)
+                (1..monthCount).map { month ->
                     val monthCalendar = Calendar.getInstance(Locale.getDefault()).apply {
                         timeInMillis = periodStart
                         set(Calendar.MONTH, month - 1)
                         set(Calendar.DAY_OF_MONTH, 1)
-                        add(Calendar.MONTH, 1)
+                        set(Calendar.HOUR_OF_DAY, 0)
+                        set(Calendar.MINUTE, 0)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
                     }
-                    DailyStats(day = month, amount = netAssetAt(accounts, records, monthCalendar.timeInMillis))
+                    val monthStart = monthCalendar.timeInMillis
+                    monthCalendar.add(Calendar.MONTH, 1)
+                    val monthEnd = monthCalendar.timeInMillis.coerceAtMost(periodEnd)
+                    val hasRecord = records.any { it.occurredAt in monthStart until monthEnd }
+                    DailyStats(
+                        day = month,
+                        amount = if (hasRecord) netAssetAt(accounts, records, monthEnd) else 0L,
+                    )
                 }
             }
         }
@@ -330,7 +361,7 @@ class StatsViewModel(
         val liability = accounts
             .filter { account -> account.nature == PresetSeedData.ACCOUNT_LIABILITY && account.isEnabled }
             .sumOf { account -> balanceAt(account, records, time) }
-        return asset - liability
+        return asset + liability
     }
 
     companion object {

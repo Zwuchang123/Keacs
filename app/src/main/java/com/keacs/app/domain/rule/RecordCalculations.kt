@@ -1,6 +1,5 @@
 package com.keacs.app.domain.rule
 
-import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.local.entity.AccountEntity
 import com.keacs.app.data.local.entity.RecordEntity
 import com.keacs.app.domain.model.RecordType
@@ -31,12 +30,12 @@ fun accountEffect(account: AccountEntity, record: RecordEntity): Long {
 
 private fun incomeEffect(account: AccountEntity, record: RecordEntity): Long {
     if (record.toAccountId != account.id) return 0L
-    return if (account.nature == PresetSeedData.ACCOUNT_LIABILITY) -record.amountCent else record.amountCent
+    return record.amountCent
 }
 
 private fun expenseEffect(account: AccountEntity, record: RecordEntity): Long {
     if (record.fromAccountId != account.id) return 0L
-    return if (account.nature == PresetSeedData.ACCOUNT_LIABILITY) record.amountCent else -record.amountCent
+    return -record.amountCent
 }
 
 private fun transferEffect(account: AccountEntity, record: RecordEntity): Long {

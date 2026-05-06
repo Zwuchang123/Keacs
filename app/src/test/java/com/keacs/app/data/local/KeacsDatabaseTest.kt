@@ -77,7 +77,7 @@ class KeacsDatabaseTest {
         assertEquals(6, accounts.count { it.nature == PresetSeedData.ACCOUNT_LIABILITY })
         assertTrue(categories.all { it.isPreset && it.isEnabled })
         assertTrue(accounts.all { it.isEnabled && it.initialBalanceCent == 0L })
-        assertEquals("3", repository.presetVersion())
+        assertEquals("4", repository.presetVersion())
     }
 
     @Test
@@ -212,6 +212,25 @@ class KeacsDatabaseTest {
     }
 
     @Test
+    fun liabilityAccountStoresSignedBalance() = runTest {
+        repository.initializePresets()
+
+        repository.saveAccount(
+            id = null,
+            name = "备用负债",
+            nature = PresetSeedData.ACCOUNT_LIABILITY,
+            type = "信用卡",
+            iconKey = "card",
+            colorKey = "orange",
+            initialBalanceCent = 12_345,
+            isEnabled = true,
+        )
+
+        val created = repository.getAccounts().first { it.name == "备用负债" }
+        assertEquals(-12_345, created.initialBalanceCent)
+    }
+
+    @Test
     fun failedTransactionDoesNotKeepPartialData() = runTest {
         try {
             database.withTransaction {
@@ -270,7 +289,7 @@ class KeacsDatabaseTest {
         val updatedLiability = repository.getAccounts().first { it.id == liability.id }
 
         assertEquals(8_500, balanceFor(updatedAsset, records))
-        assertEquals(3_000, balanceFor(updatedLiability, records))
+        assertEquals(-5_000, balanceFor(updatedLiability, records))
         assertEquals(11_000, totalIncome(records))
         assertEquals(7_500, totalExpense(records))
     }
@@ -326,7 +345,7 @@ class KeacsDatabaseTest {
         repository.saveRecord(null, RecordType.EXPENSE, 8_000, jan5, expenseCategory.id, liability.id, null, "")
         repository.saveRecord(null, RecordType.INCOME, 50_000, feb2, incomeCategory.id, null, asset.id, "")
 
-        val viewModel = StatsViewModel(repository)
+        val viewModel = StatsViewModel(repository) { dateMillis(2026, 5, 6) + 12 * 60 * 60 * 1000L }
         try {
             viewModel.selectPeriod(TimePeriod.YEAR)
             viewModel.selectDate(dateMillis(2026, 1, 1))
@@ -337,6 +356,7 @@ class KeacsDatabaseTest {
             assertEquals(20_000, state.expense)
             assertEquals(20_000, state.dailyTrend.first { it.day == 1 }.amount)
             assertEquals(30_000, state.netAsset)
+            assertTrue(state.dailyTrend.none { it.day > 5 })
 
             viewModel.selectTab(StatsTab.INCOME)
             state = viewModel.uiState.first { !it.isLoading && it.selectedTab == StatsTab.INCOME }
@@ -354,7 +374,10 @@ class KeacsDatabaseTest {
             viewModel.selectTab(StatsTab.ASSET)
             state = viewModel.uiState.first { !it.isLoading && it.selectedTab == StatsTab.ASSET }
             assertEquals(-20_000, state.netAsset)
-            assertEquals(-20_000, state.netAssetTrend.last().amount)
+            assertEquals(-12_000, state.netAssetTrend.first { it.day == 3 }.amount)
+            assertEquals(0, state.netAssetTrend.first { it.day == 4 }.amount)
+            assertEquals(-20_000, state.netAssetTrend.first { it.day == 5 }.amount)
+            assertEquals(0, state.netAssetTrend.last().amount)
         } finally {
             viewModel.viewModelScope.cancel()
             Dispatchers.resetMain()
@@ -418,6 +441,32 @@ class KeacsDatabaseTest {
         assertEquals(existingCategory.id, records.single().categoryId)
         assertTrue(accounts.any { it.name == "现金" })
         assertTrue(accounts.any { it.name == "现金（导入2）" })
+    }
+
+    @Test
+    fun importOldBackupConvertsLiabilityBalanceToSignedValue() = runTest {
+        repository.initializePresets()
+        val oldLiability = com.keacs.app.data.local.entity.AccountEntity(
+            id = 901,
+            name = "旧信用卡",
+            nature = PresetSeedData.ACCOUNT_LIABILITY,
+            type = "信用卡",
+            iconKey = "card",
+            colorKey = "orange",
+            initialBalanceCent = 5_000,
+            isEnabled = true,
+            createdAt = 1_000L,
+            updatedAt = 1_000L,
+        )
+
+        repository.importBackup(
+            categories = emptyList(),
+            accounts = listOf(oldLiability),
+            records = emptyList(),
+            backupVersion = 1,
+        )
+
+        assertEquals(-5_000, repository.getAccounts().first { it.name == "旧信用卡" }.initialBalanceCent)
     }
 
     private fun dateMillis(year: Int, month: Int, day: Int): Long =

@@ -93,6 +93,7 @@ class LocalDataRepository(
         require(database.accountDao().countByName(trimmedName, id ?: 0L) == 0) {
             "已有同名账户，请换一个名称"
         }
+        val normalizedBalance = normalizeBalanceForNature(nature, initialBalanceCent)
         val now = clock()
         if (id == null) {
             database.accountDao().insert(
@@ -102,7 +103,7 @@ class LocalDataRepository(
                     type = type,
                     iconKey = iconKey,
                     colorKey = colorKey,
-                    initialBalanceCent = initialBalanceCent,
+                    initialBalanceCent = normalizedBalance,
                     isEnabled = isEnabled,
                     createdAt = now,
                     updatedAt = now,
@@ -117,7 +118,7 @@ class LocalDataRepository(
                     type = type,
                     iconKey = iconKey,
                     colorKey = colorKey,
-                    initialBalanceCent = initialBalanceCent,
+                    initialBalanceCent = normalizedBalance,
                     isEnabled = isEnabled,
                     updatedAt = now,
                 ),
@@ -192,20 +193,25 @@ class LocalDataRepository(
         database.withTransaction {
             val now = clock()
             val oldPresetVersion = database.appMetaDao().get(META_PRESET_VERSION)?.value
+            val oldPresetVersionNumber = oldPresetVersion?.toIntOrNull() ?: 0
+            val hadAccounts = database.accountDao().count() > 0
             migrateAccountCategoryDirections(now)
             // 预置项需要支持后续补齐，避免老用户升级后缺少新增的预置分类。
             database.categoryDao().insertAll(PresetSeedData.categories(now))
             if (oldPresetVersion == null && database.accountDao().count() == 0) {
                 database.accountDao().insertAll(PresetSeedData.accounts(now))
             }
-            if (oldPresetVersion != null && oldPresetVersion < PRESET_VERSION) {
+            if (oldPresetVersion != null && oldPresetVersionNumber < 3) {
                 migrateStoredAccountBalances(now)
+            }
+            if ((oldPresetVersion != null && oldPresetVersionNumber < 4) || (oldPresetVersion == null && hadAccounts)) {
+                migrateLiabilityBalancesToSigned(now)
             }
             // 记录初始化版本，后续迁移和排查可直接判断本地预置数据状态。
             database.appMetaDao().upsert(
                 AppMetaEntity(
                     key = META_PRESET_VERSION,
-                    value = PRESET_VERSION,
+                    value = PRESET_VERSION.toString(),
                     updatedAt = now,
                 ),
             )
@@ -214,7 +220,12 @@ class LocalDataRepository(
 
     suspend fun presetVersion(): String? = database.appMetaDao().get(META_PRESET_VERSION)?.value
 
-    suspend fun importBackup(categories: List<CategoryEntity>, accounts: List<AccountEntity>, records: List<RecordEntity>) {
+    suspend fun importBackup(
+        categories: List<CategoryEntity>,
+        accounts: List<AccountEntity>,
+        records: List<RecordEntity>,
+        backupVersion: Int = 2,
+    ) {
         database.withTransaction {
             val now = clock()
             val categoryIdMap = mutableMapOf<Long, Long>()
@@ -258,6 +269,7 @@ class LocalDataRepository(
                     acc.copy(
                         id = 0,
                         name = resolvedName,
+                        initialBalanceCent = normalizeImportedBalance(acc.nature, acc.initialBalanceCent, backupVersion),
                         createdAt = now,
                         updatedAt = now,
                     )
@@ -286,7 +298,7 @@ class LocalDataRepository(
 
     private companion object {
         const val META_PRESET_VERSION = "preset_version"
-        const val PRESET_VERSION = "3"
+        const val PRESET_VERSION = 4
         const val MAX_CATEGORY_NAME_LENGTH = 4
         val legacyLiabilityCategoryNames = setOf(
             "信用卡",
@@ -310,6 +322,20 @@ class LocalDataRepository(
         return candidate
     }
 
+    private fun normalizeBalanceForNature(nature: String, balanceCent: Long): Long =
+        if (nature == PresetSeedData.ACCOUNT_LIABILITY && balanceCent > 0) {
+            -balanceCent
+        } else {
+            balanceCent
+        }
+
+    private fun normalizeImportedBalance(nature: String, balanceCent: Long, backupVersion: Int): Long =
+        if (nature == PresetSeedData.ACCOUNT_LIABILITY && (backupVersion == 1 || balanceCent > 0)) {
+            -kotlin.math.abs(balanceCent)
+        } else {
+            balanceCent
+        }
+
     private suspend fun applyAccountEffect(record: RecordEntity, sign: Int, updatedAt: Long) {
         listOfNotNull(record.fromAccountId, record.toAccountId)
             .distinct()
@@ -330,6 +356,19 @@ class LocalDataRepository(
                 database.accountDao().addBalance(account.id, delta, updatedAt)
             }
         }
+    }
+
+    private suspend fun migrateLiabilityBalancesToSigned(updatedAt: Long) {
+        database.accountDao().getAll()
+            .filter { it.nature == PresetSeedData.ACCOUNT_LIABILITY && it.initialBalanceCent > 0 }
+            .forEach { account ->
+                val targetBalance = -account.initialBalanceCent
+                database.accountDao().addBalance(
+                    id = account.id,
+                    deltaCent = targetBalance - account.initialBalanceCent,
+                    updatedAt = updatedAt,
+                )
+            }
     }
 
     private suspend fun migrateAccountCategoryDirections(updatedAt: Long) {

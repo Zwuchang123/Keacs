@@ -198,25 +198,41 @@ Cent
 账户余额：
 
 ```text
-balance = initialBalance + recordEffects
+currentBalance = accounts.initialBalanceCent
+historicalBalanceAt(time) = currentBalance - recordEffectsAfter(time)
 ```
 
-其中 recordEffects 为该账户关联的收入、支出和转账记录的影响总和。
+`accounts.initialBalanceCent` 当前承担“账户当前余额”职责。统计历史节点时，按节点之后的账目影响从当前余额反推。账户余额采用有符号数：资产账户通常为正数，负债账户为负数。
+
+账目影响规则：
+
+```text
+income: toAccount += amount
+expense: fromAccount -= amount
+transfer: fromAccount -= amount, toAccount += amount
+```
+
+上述规则不因账户性质反向处理。
 
 资产负债：
 
 ```text
 totalAsset = sum(asset account balances)
 totalLiability = sum(liability account balances)
-netAsset = totalAsset - totalLiability
+netAsset = totalAsset + totalLiability
 ```
+
+`totalLiability` 本身为负数合计。
 
 ## 9. 备份结构
 
 ```json
 {
-  "backupVersion": 1,
+  "backupVersion": 2,
   "exportedAt": 0,
+  "appVersionName": "1.0.5",
+  "appVersionCode": 5,
+  "balanceSignPolicy": "asset_positive_liability_negative",
   "categories": [],
   "accounts": [],
   "records": []
@@ -231,6 +247,8 @@ netAsset = totalAsset - totalLiability
 - 导入时重新生成本地 ID
 - 使用临时 ID 映射恢复关联关系
 - 全流程数据库事务
+- 支持读取版本 1 和版本 2 备份
+- 导入版本 1 备份时，将负债账户余额转换为当前有符号规则
 
 ## 10. 数据迁移
 
@@ -240,5 +258,7 @@ netAsset = totalAsset - totalLiability
 
 ## 11. 兼容说明
 
-- 当前账户余额以 `accounts.initialBalanceCent` 加账目影响计算。
+- 当前账户余额保存在 `accounts.initialBalanceCent`，写入账目时同步应用账目影响。
+- 统计历史余额通过当前余额减去节点之后的账目影响反推。
+- `preset_version` 版本 4 会把旧负债账户余额迁移为负数。
 - `account_adjustments` 仅用于兼容旧数据库结构，不进入新增、编辑、统计和备份主流程。

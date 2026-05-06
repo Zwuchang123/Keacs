@@ -1,6 +1,5 @@
 package com.keacs.app.ui.stats
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -33,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
@@ -241,9 +239,14 @@ private fun NetAssetTrendCard(
                 TrendLineChart(
                     dailyTrend = monthlyTrend,
                     period = period,
+                    lineColor = if ((monthlyTrend.maxOfOrNull { it.amount } ?: 0L) >= 0L) {
+                        KeacsColors.Primary
+                    } else {
+                        KeacsColors.Expense
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(128.dp),
+                        .height(190.dp),
                 )
             }
         }
@@ -357,7 +360,7 @@ private fun TrendChartCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (dailyTrend.isEmpty() || dailyTrend.all { it.amount == 0L }) {
+            if (dailyTrend.isEmpty()) {
                 EmptyState(
                     title = "暂无数据",
                     icon = Icons.AutoMirrored.Rounded.ReceiptLong,
@@ -369,119 +372,10 @@ private fun TrendChartCard(
                 TrendLineChart(
                     dailyTrend = dailyTrend,
                     period = period,
+                    lineColor = if (tab == StatsTab.INCOME) KeacsColors.Income else KeacsColors.Expense,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(128.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TrendLineChart(
-    dailyTrend: List<DailyStats>,
-    period: TimePeriod,
-    modifier: Modifier = Modifier,
-) {
-    val gridColor = KeacsColors.Border.copy(alpha = 0.75f)
-    val maxValue = dailyTrend.maxOfOrNull { it.amount } ?: 0L
-    val minValue = dailyTrend.minOfOrNull { it.amount } ?: 0L
-    val chartMax = maxOf(maxValue, 0L)
-    val chartMin = minOf(minValue, 0L)
-    val range = (chartMax - chartMin).coerceAtLeast(1L)
-
-    Column(modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.width(46.dp),
-                verticalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    text = formatShort(chartMax),
-                    color = KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Text(
-                    text = formatShort((chartMax + chartMin) / 2),
-                    color = KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Text(
-                    text = formatShort(chartMin),
-                    color = KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-
-            Canvas(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(128.dp),
-            ) {
-                val chartHeight = size.height - 24.dp.toPx()
-                val chartTop = 0f
-
-                listOf(0f, 0.5f, 1f).forEach { ratio ->
-                    val y = chartTop + chartHeight * ratio
-                    drawLine(
-                        color = gridColor,
-                        start = Offset(0f, y),
-                        end = Offset(size.width, y),
-                        strokeWidth = 1f,
-                    )
-                }
-
-                if (dailyTrend.isNotEmpty()) {
-                    val points = dailyTrend.mapIndexed { index, stat ->
-                        val x = size.width * index / (dailyTrend.size - 1).coerceAtLeast(1)
-                        val normalizedY = (stat.amount - chartMin).toFloat() / range.toFloat()
-                        val y = chartTop + chartHeight * (1 - normalizedY)
-                        Offset(x, y)
-                    }
-
-                    val pathPoints = points.map { Offset(it.x, it.y) }
-                    pathPoints.zipWithNext().forEach { (start, end) ->
-                        drawLine(
-                            color = KeacsColors.Primary,
-                            start = start,
-                            end = end,
-                            strokeWidth = 2.5f,
-                        )
-                    }
-
-                    points.forEach { point ->
-                        drawCircle(
-                            color = KeacsColors.Primary,
-                            radius = 4f,
-                            center = point,
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 46.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            val labelCount = minOf(5, dailyTrend.size)
-            repeat(labelCount) { i ->
-                val index = if (labelCount == 1) {
-                    0
-                } else {
-                    (i * (dailyTrend.size - 1) / (labelCount - 1)).coerceIn(0, dailyTrend.size - 1)
-                }
-                Text(
-                    text = dailyTrend.getOrNull(index)?.let { axisLabel(it.day, period) }.orEmpty(),
-                    color = KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
+                        .height(190.dp),
                 )
             }
         }
@@ -598,14 +492,3 @@ private fun CategoryStatRow(stat: CategoryStats) {
 
 private fun formatCent(value: Long): String =
     DecimalFormat("#,##0.00").format(value / 100.0)
-
-private fun formatShort(value: Long): String {
-    val rmb = value / 100.0
-    return when {
-        kotlin.math.abs(rmb) >= 10000.0 -> String.format(Locale.getDefault(), "%.1f万", rmb / 10000.0)
-        else -> String.format(Locale.getDefault(), "%.0f", rmb)
-    }
-}
-
-private fun axisLabel(value: Int, period: TimePeriod): String =
-    if (period == TimePeriod.YEAR) "${value}月" else "${value}日"
