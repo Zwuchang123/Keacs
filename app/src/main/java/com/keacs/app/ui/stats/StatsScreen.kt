@@ -107,19 +107,11 @@ fun StatsScreen(
             onDateSelected = viewModel::selectDate,
         )
 
-        if (uiState.selectedTab == StatsTab.ASSET) {
-            AssetLiabilityCard(
-                totalAsset = uiState.totalAsset,
-                totalLiability = uiState.totalLiability,
-                netAsset = uiState.netAsset,
-            )
-        } else {
-            IncomeExpenseSummaryCard(
-                income = uiState.income,
-                expense = uiState.expense,
-                netBalance = uiState.netBalance,
-            )
-        }
+        IncomeExpenseSummaryCard(
+            income = uiState.income,
+            expense = uiState.expense,
+            netBalance = uiState.netBalance,
+        )
 
         when (uiState.selectedTab) {
             StatsTab.EXPENSE, StatsTab.INCOME -> {
@@ -601,73 +593,6 @@ private fun CategoryStatRow(stat: CategoryStats) {
                     .background(colorFor(stat.colorKey)),
             )
         }
-    }
-}
-
-@Composable
-private fun AssetLiabilityCard(
-    totalAsset: Long,
-    totalLiability: Long,
-    netAsset: Long,
-) {
-    KeacsCard {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-        ) {
-            Text(
-                text = "资产负债",
-                color = KeacsColors.TextPrimary,
-                style = MaterialTheme.typography.titleMedium,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                AssetStatItem(
-                    label = "总资产",
-                    amount = totalAsset,
-                    color = KeacsColors.Income,
-                )
-                AssetStatItem(
-                    label = "总负债",
-                    amount = totalLiability,
-                    color = KeacsColors.Expense,
-                )
-                AssetStatItem(
-                    label = "净资产",
-                    amount = netAsset,
-                    color = if (netAsset >= 0) KeacsColors.Primary else KeacsColors.Expense,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AssetStatItem(
-    label: String,
-    amount: Long,
-    color: Color,
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = label,
-            color = KeacsColors.TextSecondary,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = formatCent(amount),
-            color = color,
-            style = MaterialTheme.typography.bodyMedium,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.SemiBold,
-        )
     }
 }
 
