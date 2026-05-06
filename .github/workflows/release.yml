@@ -44,6 +44,44 @@ jobs:
           git fetch --force --tags
           git checkout "${{ steps.resolve_tag.outputs.tag }}"
 
+      - name: Validate app version metadata
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.resolve_tag.outputs.tag }}
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import re
+          import sys
+
+          build_file = pathlib.Path("app/build.gradle.kts")
+          content = build_file.read_text(encoding="utf-8")
+
+          version_code_match = re.search(r'^\s*versionCode\s*=\s*(\d+)\s*$', content, re.MULTILINE)
+          version_name_match = re.search(r'^\s*versionName\s*=\s*"([^"]+)"\s*$', content, re.MULTILINE)
+
+          if version_code_match is None:
+              sys.exit("app/build.gradle.kts 中缺少 versionCode，请先更新版本信息后再发版。")
+          if version_name_match is None:
+              sys.exit("app/build.gradle.kts 中缺少 versionName，请先更新版本信息后再发版。")
+
+          version_code = int(version_code_match.group(1))
+          version_name = version_name_match.group(1)
+          release_tag = os.environ["RELEASE_TAG"]
+          expected_tag = f"v{version_name}"
+
+          if version_code <= 0:
+              sys.exit("app/build.gradle.kts 中的 versionCode 必须大于 0，请先更新版本信息后再发版。")
+          if release_tag != expected_tag:
+              sys.exit(
+                  f"发布标签 {release_tag} 与 app/build.gradle.kts 中的 versionName={version_name} 不一致，"
+                  "请先更新 versionCode 和 versionName 后再发版。"
+              )
+
+          print(f"Release metadata OK: versionCode={version_code}, versionName={version_name}, tag={release_tag}")
+          PY
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -110,12 +148,6 @@ jobs:
               printf '发布日期：%s\n\n' "${RELEASE_DATE}"
               printf '更新内容：\n'
               printf -- '- 请补充本次版本说明。\n\n'
-              printf '安装说明：\n'
-              printf -- '- 下载 APK 后按系统提示安装。\n'
-              printf -- '- 更新前建议先在“我的 -> 导出备份”保存一份备份文件。\n\n'
-              printf '备用下载：\n'
-              printf -- '- GitHub：https://github.com/%s/releases\n' "${GITHUB_REPO}"
-              printf -- '- Gitee：https://gitee.com/%s/%s/releases\n' "${GITEE_OWNER}" "${GITEE_REPO}"
             } > "${NOTES_FILE}"
           fi
           {
