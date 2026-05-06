@@ -51,6 +51,9 @@ import com.keacs.app.ui.management.colorFor
 import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -284,6 +287,7 @@ private fun RecentRecords(
                             title = recordTitle(record, categories, accounts),
                             amount = recordAmount(record),
                             amountColor = recordColor(record),
+                            subtitle = recordDateText(record),
                             modifier = Modifier
                                 .clickable { onRecordClick(record.id) }
                         )
@@ -320,6 +324,9 @@ private fun recordColor(record: RecordEntity): Color =
         RecordType.EXPENSE -> KeacsColors.Expense
         else -> KeacsColors.TextPrimary
     }
+
+private fun recordDateText(record: RecordEntity): String =
+    SimpleDateFormat("yyyy年M月d日", Locale.getDefault()).format(Date(record.occurredAt))
 
 @Composable
 private fun Modifier.clipLarge(): Modifier = clip(MaterialTheme.shapes.large)

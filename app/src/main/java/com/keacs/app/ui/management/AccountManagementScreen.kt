@@ -102,6 +102,8 @@ fun AccountEditScreen(
     var amountLimitMessage by rememberSaveable(accountId) { mutableStateOf<String?>(null) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var handledDeleteRequest by rememberSaveable(accountId) { mutableStateOf(deleteRequest) }
+    var accountLoaded by rememberSaveable(accountId) { mutableStateOf(accountId == null) }
+    var accountTypeInitialized by rememberSaveable(accountId) { mutableStateOf(accountId == null) }
     val typeOptions = remember(categories, nature) { accountTypeOptions(categories, nature) }
 
     LaunchedEffect(editing?.id) {
@@ -113,15 +115,29 @@ fun AccountEditScreen(
             iconKey = it.iconKey
             colorKey = it.colorKey
             isEnabled = it.isEnabled
+            accountTypeInitialized = false
+            accountLoaded = true
         }
     }
 
-    LaunchedEffect(nature, typeOptions) {
-        if (typeOptions.none { it.label == type } && typeOptions.isNotEmpty()) {
-            val option = typeOptions.first()
-            type = option.label
+    LaunchedEffect(nature, type, typeOptions, accountLoaded, accountTypeInitialized, editing?.name, editing?.type) {
+        if (!accountLoaded) return@LaunchedEffect
+        if (typeOptions.isNotEmpty()) {
+            // 编辑旧账户时先用已有账户名称和类型做一次匹配，避免候选项加载后落到第一个类型。
+            val option = if (accountId != null && !accountTypeInitialized && editing != null) {
+                if (nature != editing.nature) return@LaunchedEffect
+                matchingAccountTypeOption(typeOptions, editing.name, editing.type) ?: return@LaunchedEffect
+            } else {
+                matchingAccountTypeOption(typeOptions, type) ?: typeOptions.first()
+            }
+            if (normalizedAccountCategoryName(type) != normalizedAccountCategoryName(option.label)) {
+                type = option.label
+            }
             iconKey = option.key
             colorKey = option.colorKey
+            if (accountId != null && !accountTypeInitialized) {
+                accountTypeInitialized = true
+            }
         }
     }
 

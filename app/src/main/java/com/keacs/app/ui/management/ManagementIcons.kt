@@ -248,21 +248,33 @@ fun accountIconOptionFor(account: AccountEntity?, categories: List<CategoryEntit
         colorKey = account?.colorKey ?: "gray",
     )
     if (account == null) return fallback
-    val typeName = accountCategoryName(account.type)
-    val name = accountCategoryName(account.name)
+    val typeName = normalizedAccountCategoryName(account.type)
+    val name = normalizedAccountCategoryName(account.name)
     val category = categories.firstOrNull {
         PresetSeedData.isAccountCategoryForNature(it.direction, account.nature) &&
-            accountCategoryName(it.name) in listOf(typeName, name)
+            normalizedAccountCategoryName(it.name) in listOf(typeName, name)
     }
     return category?.let {
         IconOption(it.iconKey, it.name, iconFor(it.iconKey), it.colorKey)
     } ?: fallback
 }
 
-private fun accountCategoryName(name: String): String = when (name) {
+internal fun normalizedAccountCategoryName(name: String): String = when (name) {
     "花呗/白条" -> "花呗白条"
     "房贷/车贷" -> "房贷车贷"
     else -> name
+}
+
+internal fun matchingAccountTypeOption(
+    options: List<IconOption>,
+    vararg names: String?,
+): IconOption? {
+    val normalizedNames = names
+        .mapNotNull { it?.takeIf(String::isNotBlank) }
+        .map { normalizedAccountCategoryName(it) }
+    return options.firstOrNull { option ->
+        normalizedAccountCategoryName(option.label) in normalizedNames
+    }
 }
 
 fun iconFor(key: String): ImageVector =

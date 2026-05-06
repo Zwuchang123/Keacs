@@ -55,7 +55,7 @@ fun AccountTypeSelector(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(options, key = { option -> option.key + option.label }) { option ->
-                    val selected = selectedType == option.label
+                    val selected = normalizedAccountCategoryName(selectedType) == normalizedAccountCategoryName(option.label)
                     Column(
                         modifier = Modifier
                             .height(68.dp)

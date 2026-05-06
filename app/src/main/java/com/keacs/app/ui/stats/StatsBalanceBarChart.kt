@@ -109,7 +109,7 @@ fun BalanceBarChart(
                     drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
                 }
 
-                val selectedCenterX = slotWidth * currentSelectedIndex + slotWidth / 2f
+                val selectedCenterX = chartXForIndex(currentSelectedIndex, dailyTrend.size, size.width)
                 drawLine(
                     color = selectedColor.copy(alpha = 0.16f),
                     start = Offset(selectedCenterX, chartTop),
@@ -153,22 +153,15 @@ fun BalanceBarChart(
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        Row(
+        ChartXAxisLabels(
+            dailyTrend = dailyTrend,
+            period = period,
+            selectedIndex = currentSelectedIndex,
+            selectedColor = selectedColor,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 48.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            axisLabelIndices(dailyTrend.size).forEach { index ->
-                val isSelected = index == currentSelectedIndex
-                Text(
-                    text = axisLabel(dailyTrend[index].day, period),
-                    color = if (isSelected) selectedColor else KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-                )
-            }
-        }
+        )
     }
 }
 

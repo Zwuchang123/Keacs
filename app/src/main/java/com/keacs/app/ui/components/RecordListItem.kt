@@ -1,5 +1,6 @@
 package com.keacs.app.ui.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -27,6 +28,7 @@ fun RecordListItem(
     amount: String,
     amountColor: Color,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
 ) {
     Row(
         modifier = modifier
@@ -37,15 +39,27 @@ fun RecordListItem(
     ) {
         CategoryIcon(icon = icon, backgroundColor = iconColor)
         Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = title,
-            color = KeacsColors.TextPrimary,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = KeacsColors.TextPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    color = KeacsColors.TextTertiary,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
         Text(
             text = amount,
             color = amountColor,

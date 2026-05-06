@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -94,8 +95,8 @@ fun TrendLineChart(
                     .pointerInput(dailyTrend) {
                         detectTapGestures { offset ->
                             val width = size.width.toFloat().coerceAtLeast(1f)
-                            selectedIndex = ((offset.x / width) * dailyTrend.lastIndex)
-                                .roundToInt()
+                            selectedIndex = ((offset.x / width) * dailyTrend.size)
+                                .toInt()
                                 .coerceIn(0, dailyTrend.lastIndex)
                         }
                     },
@@ -111,7 +112,7 @@ fun TrendLineChart(
                 }
 
                 val points = dailyTrend.mapIndexed { index, stat ->
-                    val x = size.width * index / dailyTrend.lastIndex.coerceAtLeast(1)
+                    val x = chartXForIndex(index, dailyTrend.size, size.width)
                     val normalizedY = (stat.amount - visualMin).toFloat() / visualRange.toFloat()
                     Offset(x, chartTop + chartHeight * (1f - normalizedY))
                 }
@@ -146,19 +147,53 @@ fun TrendLineChart(
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        Row(
+        ChartXAxisLabels(
+            dailyTrend = dailyTrend,
+            period = period,
+            selectedIndex = currentSelectedIndex,
+            selectedColor = lineColor,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 48.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            axisLabelIndices(dailyTrend.size).forEach { index ->
+        )
+    }
+}
+
+@Composable
+internal fun ChartXAxisLabels(
+    dailyTrend: List<DailyStats>,
+    period: TimePeriod,
+    selectedIndex: Int,
+    selectedColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val labelIndices = axisLabelIndices(dailyTrend.size)
+    Layout(
+        modifier = modifier,
+        content = {
+            labelIndices.forEach { index ->
                 Text(
                     text = axisLabel(dailyTrend[index].day, period),
-                    color = if (index == currentSelectedIndex) lineColor else KeacsColors.TextTertiary,
+                    color = if (index == selectedIndex) selectedColor else KeacsColors.TextTertiary,
                     style = MaterialTheme.typography.bodySmall,
-                    fontWeight = if (index == currentSelectedIndex) FontWeight.Medium else FontWeight.Normal,
+                    fontWeight = if (index == selectedIndex) FontWeight.Medium else FontWeight.Normal,
                 )
+            }
+        },
+    ) { measurables, constraints ->
+        val childConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+        val placeables = measurables.map { measurable -> measurable.measure(childConstraints) }
+        val width = constraints.maxWidth
+        val height = placeables.maxOfOrNull { it.height } ?: 0
+
+        layout(width, height) {
+            placeables.forEachIndexed { childIndex, placeable ->
+                val dataIndex = labelIndices[childIndex]
+                val centerX = chartXForIndex(dataIndex, dailyTrend.size, width.toFloat())
+                val x = (centerX - placeable.width / 2f)
+                    .roundToInt()
+                    .coerceIn(0, (width - placeable.width).coerceAtLeast(0))
+                placeable.placeRelative(x, 0)
             }
         }
     }
@@ -185,3 +220,6 @@ internal fun formatShort(value: Long): String {
 
 internal fun axisLabel(value: Int, period: TimePeriod): String =
     if (period == TimePeriod.YEAR) "${value}月" else "${value}日"
+
+internal fun chartXForIndex(index: Int, size: Int, width: Float): Float =
+    if (size <= 0) 0f else width * (index + 0.5f) / size.toFloat()
