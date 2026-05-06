@@ -55,7 +55,7 @@ fun CategoryGrid(
                 .padding(horizontal = 4.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            categories.take(15).chunked(5).forEach { rowCategories ->
+            categories.chunked(5).forEach { rowCategories ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),

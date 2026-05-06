@@ -23,6 +23,7 @@ import androidx.activity.compose.BackHandler
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.local.PreferencesManager
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.ui.components.KeacsBottomBar
@@ -244,12 +245,13 @@ fun KeacsApp(
 
                 route == ROUTE_CATEGORY_LIST -> CategoryListScreen(
                     repository = repository,
-                    onEditCategory = { navigateForward(categoryEditRoute(it)) },
+                    onEditCategory = { id, direction -> navigateForward(categoryEditRoute(id, direction)) },
                 )
 
                 route.startsWith(ROUTE_CATEGORY_EDIT) -> CategoryEditScreen(
                     repository = repository,
                     categoryId = routeId(route, ROUTE_CATEGORY_EDIT),
+                    initialDirection = routeDirection(route, ROUTE_CATEGORY_EDIT),
                     onDone = { navigateBackTo(ROUTE_CATEGORY_LIST) },
                 )
 
@@ -292,13 +294,17 @@ private const val ROUTE_RECORD_EDIT = "record-edit/"
 private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_ABOUT = "about"
 
-private fun categoryEditRoute(id: Long?): String = ROUTE_CATEGORY_EDIT + (id?.toString() ?: "new")
+private fun categoryEditRoute(id: Long?, direction: String): String =
+    ROUTE_CATEGORY_EDIT + (id?.toString() ?: "new") + "/" + direction
 private fun accountEditRoute(id: Long?): String = ROUTE_ACCOUNT_EDIT + (id?.toString() ?: "new")
 private fun recordDetailRoute(id: Long): String = ROUTE_RECORD_DETAIL + id
 private fun recordEditRoute(id: Long): String = ROUTE_RECORD_EDIT + id
 
 private fun routeId(route: String, prefix: String): Long? =
-    route.removePrefix(prefix).takeIf { it != "new" }?.toLongOrNull()
+    route.removePrefix(prefix).substringBefore("/").takeIf { it != "new" }?.toLongOrNull()
+
+private fun routeDirection(route: String, prefix: String): String =
+    route.removePrefix(prefix).substringAfter("/", missingDelimiterValue = PresetSeedData.CATEGORY_EXPENSE)
 
 private fun isExistingAccountEditRoute(route: String): Boolean =
     route.startsWith(ROUTE_ACCOUNT_EDIT) && routeId(route, ROUTE_ACCOUNT_EDIT) != null

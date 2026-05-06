@@ -7,6 +7,8 @@ object PresetSeedData {
     const val CATEGORY_INCOME = "INCOME"
     const val CATEGORY_EXPENSE = "EXPENSE"
     const val CATEGORY_ACCOUNT = "ACCOUNT"
+    const val CATEGORY_ACCOUNT_ASSET = "ACCOUNT_ASSET"
+    const val CATEGORY_ACCOUNT_LIABILITY = "ACCOUNT_LIABILITY"
     const val ACCOUNT_ASSET = "ASSET"
     const val ACCOUNT_LIABILITY = "LIABILITY"
 
@@ -16,36 +18,31 @@ object PresetSeedData {
             "餐饮", "交通", "日用", "住房", "水电煤", "通讯", "医疗", "娱乐", "教育", "投资", "人情",
             "恋爱", "旅行", "长辈", "房贷", "宠物", "其他",
         )
-        val accountCategories = listOf(
-            Triple("现金", "wallet", "green"),
+        val assetAccountCategories = listOf(
             Triple("支付宝", "alipay", "blue"),
             Triple("微信", "wechat", "cyan"),
+            Triple("现金", "wallet", "green"),
             Triple("银行卡", "bank", "indigo"),
-            Triple("信用卡", "card", "orange"),
-            Triple("花呗白条", "credit_line", "yellow"),
             Triple("公积金", "home", "purple"),
             Triple("投资账户", "chart", "pink"),
-            Triple("借款", "loan", "red"),
-            Triple("储蓄账户", "savings", "green"),
-            Triple("储值卡", "cash_card", "cyan"),
-            Triple("基金", "fund", "purple"),
-            Triple("股票", "stock", "green"),
-            Triple("现金卡", "atm", "indigo"),
-            Triple("房产", "house_asset", "blue"),
-            Triple("车辆", "car_asset", "orange"),
-            Triple("经营账户", "business_account", "yellow"),
-            Triple("公司账户", "office_account", "indigo"),
-            Triple("应收款", "request_account", "green"),
-            Triple("付款账户", "paid_account", "cyan"),
-            Triple("礼金账户", "gift_account", "pink"),
-            Triple("其他", "more", "gray"),
+            Triple("其他资产", "more", "gray"),
+        )
+        val liabilityAccountCategories = listOf(
+            Triple("信用卡", "card", "orange"),
+            Triple("花呗白条", "credit_line", "yellow"),
+            Triple("消费贷", "loan", "red"),
+            Triple("房贷车贷", "mortgage", "blue"),
+            Triple("亲友借款", "request_account", "green"),
+            Triple("其他负债", "more", "gray"),
         )
         return incomes.mapIndexed { index, name ->
             presetCategory(name, CATEGORY_INCOME, index, now, categoryIconKey(name), categoryColorKey(name))
         } + expenses.mapIndexed { index, name ->
             presetCategory(name, CATEGORY_EXPENSE, index, now, categoryIconKey(name), categoryColorKey(name))
-        } + accountCategories.mapIndexed { index, (name, iconKey, colorKey) ->
-            presetCategory(name, CATEGORY_ACCOUNT, index, now, iconKey, colorKey)
+        } + assetAccountCategories.mapIndexed { index, (name, iconKey, colorKey) ->
+            presetCategory(name, CATEGORY_ACCOUNT_ASSET, index, now, iconKey, colorKey)
+        } + liabilityAccountCategories.mapIndexed { index, (name, iconKey, colorKey) ->
+            presetCategory(name, CATEGORY_ACCOUNT_LIABILITY, index, now, iconKey, colorKey)
         }
     }
 
@@ -160,4 +157,24 @@ object PresetSeedData {
         "消费贷", "房贷/车贷", "亲友借款" -> "red"
         else -> "gray"
     }
+
+    fun accountCategoryDirectionFor(nature: String): String =
+        if (nature == ACCOUNT_LIABILITY) CATEGORY_ACCOUNT_LIABILITY else CATEGORY_ACCOUNT_ASSET
+
+    fun accountCategoryNatureFor(direction: String): String =
+        if (direction == CATEGORY_ACCOUNT_LIABILITY) ACCOUNT_LIABILITY else ACCOUNT_ASSET
+
+    fun isAccountCategoryDirection(direction: String): Boolean =
+        direction == CATEGORY_ACCOUNT ||
+            direction == CATEGORY_ACCOUNT_ASSET ||
+            direction == CATEGORY_ACCOUNT_LIABILITY
+
+    fun isAccountCategoryForNature(direction: String, nature: String): Boolean =
+        when (direction) {
+            CATEGORY_ACCOUNT_ASSET -> nature == ACCOUNT_ASSET
+            CATEGORY_ACCOUNT_LIABILITY -> nature == ACCOUNT_LIABILITY
+            // 兼容旧数据，旧账户分类会在初始化时迁移到新的资产/负债方向。
+            CATEGORY_ACCOUNT -> true
+            else -> false
+        }
 }

@@ -34,11 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -139,6 +136,7 @@ fun StatsScreen(
             StatsTab.ASSET -> {
                 NetAssetTrendCard(
                     monthlyTrend = uiState.netAssetTrend,
+                    period = uiState.selectedPeriod,
                 )
             }
         }
@@ -167,7 +165,6 @@ private fun PeriodSelector(
     var showPicker by remember { mutableStateOf(false) }
 
     val dateFormat = when (selectedPeriod) {
-        TimePeriod.DAY -> SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
         TimePeriod.MONTH -> SimpleDateFormat("yyyy年MM月", Locale.getDefault())
         TimePeriod.YEAR -> SimpleDateFormat("yyyy年", Locale.getDefault())
     }
@@ -211,7 +208,6 @@ private fun PeriodSelector(
             title = "选择时间",
             selectedDate = selectedDate,
             mode = when (selectedPeriod) {
-                TimePeriod.DAY -> DatePickerMode.DAY
                 TimePeriod.MONTH -> DatePickerMode.MONTH
                 TimePeriod.YEAR -> DatePickerMode.YEAR
             },
@@ -227,6 +223,7 @@ private fun PeriodSelector(
 @Composable
 private fun NetAssetTrendCard(
     monthlyTrend: List<DailyStats>,
+    period: TimePeriod,
 ) {
     KeacsCard {
         Column(
@@ -251,6 +248,7 @@ private fun NetAssetTrendCard(
             } else {
                 TrendLineChart(
                     dailyTrend = monthlyTrend,
+                    period = period,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(128.dp),
@@ -272,11 +270,10 @@ private fun PeriodTabs(
             .padding(2.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        TimePeriod.entries.forEach { period ->
+        listOf(TimePeriod.MONTH, TimePeriod.YEAR).forEach { period ->
             val isSelected = period == selectedPeriod
             Text(
                 text = when (period) {
-                    TimePeriod.DAY -> "日"
                     TimePeriod.MONTH -> "月"
                     TimePeriod.YEAR -> "年"
                 },
@@ -379,6 +376,7 @@ private fun TrendChartCard(
             } else {
                 TrendLineChart(
                     dailyTrend = dailyTrend,
+                    period = period,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(128.dp),
@@ -391,33 +389,36 @@ private fun TrendChartCard(
 @Composable
 private fun TrendLineChart(
     dailyTrend: List<DailyStats>,
+    period: TimePeriod,
     modifier: Modifier = Modifier,
 ) {
     val gridColor = KeacsColors.Border.copy(alpha = 0.75f)
-    val maxAmount = dailyTrend.maxOfOrNull { kotlin.math.abs(it.amount) } ?: 1L
-    val minAmount = dailyTrend.minOfOrNull { it.amount } ?: 0L
-    val range = (maxAmount - minAmount).coerceAtLeast(1L)
+    val maxValue = dailyTrend.maxOfOrNull { it.amount } ?: 0L
+    val minValue = dailyTrend.minOfOrNull { it.amount } ?: 0L
+    val chartMax = maxOf(maxValue, 0L)
+    val chartMin = minOf(minValue, 0L)
+    val range = (chartMax - chartMin).coerceAtLeast(1L)
 
     Column(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(
-                modifier = Modifier.width(32.dp),
+                modifier = Modifier.width(46.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = formatShort(maxAmount),
+                    text = formatShort(chartMax),
                     color = KeacsColors.TextTertiary,
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
-                    text = formatShort((maxAmount + minAmount) / 2),
+                    text = formatShort((chartMax + chartMin) / 2),
                     color = KeacsColors.TextTertiary,
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
-                    text = formatShort(minAmount),
+                    text = formatShort(chartMin),
                     color = KeacsColors.TextTertiary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -444,7 +445,7 @@ private fun TrendLineChart(
                 if (dailyTrend.isNotEmpty()) {
                     val points = dailyTrend.mapIndexed { index, stat ->
                         val x = size.width * index / (dailyTrend.size - 1).coerceAtLeast(1)
-                        val normalizedY = (stat.amount - minAmount).toFloat() / range.toFloat()
+                        val normalizedY = (stat.amount - chartMin).toFloat() / range.toFloat()
                         val y = chartTop + chartHeight * (1 - normalizedY)
                         Offset(x, y)
                     }
@@ -475,15 +476,18 @@ private fun TrendLineChart(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 32.dp),
+                .padding(start = 46.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             val labelCount = minOf(5, dailyTrend.size)
-            val step = (dailyTrend.size - 1) / (labelCount - 1).coerceAtLeast(1)
             repeat(labelCount) { i ->
-                val index = (i * step).coerceIn(0, dailyTrend.size - 1)
+                val index = if (labelCount == 1) {
+                    0
+                } else {
+                    (i * (dailyTrend.size - 1) / (labelCount - 1)).coerceIn(0, dailyTrend.size - 1)
+                }
                 Text(
-                    text = "${dailyTrend.getOrNull(index)?.day ?: ""}",
+                    text = dailyTrend.getOrNull(index)?.let { axisLabel(it.day, period) }.orEmpty(),
                     color = KeacsColors.TextTertiary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -504,7 +508,7 @@ private fun CategoryChartCard(
                 .padding(16.dp),
         ) {
             Text(
-                text = if (tab == StatsTab.EXPENSE) "支出分类" else "收入分类",
+                text = if (tab == StatsTab.EXPENSE) "支出排行榜" else "收入排行榜",
                 color = KeacsColors.TextPrimary,
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -520,22 +524,12 @@ private fun CategoryChartCard(
                         .height(120.dp)
                 )
             } else {
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    PieChart(
-                        categoryStats = categoryStats,
-                        modifier = Modifier.size(100.dp),
-                    )
-
-                    Column(
-                        modifier = Modifier.weight(1f).padding(start = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        categoryStats.take(5).forEach { stat ->
-                            CategoryStatRow(stat = stat)
-                        }
+                    categoryStats.forEach { stat ->
+                        CategoryStatRow(stat = stat)
                     }
                 }
             }
@@ -544,72 +538,69 @@ private fun CategoryChartCard(
 }
 
 @Composable
-private fun PieChart(
-    categoryStats: List<CategoryStats>,
-    modifier: Modifier = Modifier,
-) {
-    Canvas(modifier = modifier) {
-        var startAngle = -90f
-        val total = categoryStats.sumOf { it.amount.toDouble() }.toFloat()
-
-        categoryStats.forEach { stat ->
-            val sweepAngle = (stat.amount / total) * 360f
-            drawArc(
-                color = colorFor(stat.colorKey),
-                startAngle = startAngle,
-                sweepAngle = sweepAngle,
-                useCenter = true,
-                size = Size(size.minDimension, size.minDimension),
-            )
-            startAngle += sweepAngle
-        }
-    }
-}
-
-@Composable
 private fun CategoryStatRow(stat: CategoryStats) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(colorFor(stat.colorKey)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = iconFor(stat.iconKey),
+                    contentDescription = null,
+                    tint = KeacsColors.Surface,
+                    modifier = Modifier.size(15.dp),
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = stat.categoryName,
+                color = KeacsColors.TextPrimary,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+
+            Text(
+                text = formatCent(stat.amount),
+                color = KeacsColors.TextPrimary,
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = StatsViewModel.formatPercentage(stat.percentage),
+                color = KeacsColors.TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         Box(
             modifier = Modifier
-                .size(24.dp)
-                .clip(CircleShape)
-                .background(colorFor(stat.colorKey)),
-            contentAlignment = Alignment.Center,
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(MaterialTheme.shapes.small)
+                .background(KeacsColors.SurfaceSubtle),
         ) {
-            Icon(
-                imageVector = iconFor(stat.iconKey),
-                contentDescription = null,
-                tint = KeacsColors.Surface,
-                modifier = Modifier.size(14.dp),
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth((stat.percentage / 100f).coerceIn(0.02f, 1f))
+                    .height(6.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .background(colorFor(stat.colorKey)),
             )
         }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Text(
-            text = stat.categoryName,
-            color = KeacsColors.TextPrimary,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.weight(1f),
-        )
-
-        Text(
-            text = formatCent(stat.amount),
-            color = KeacsColors.TextPrimary,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Text(
-            text = StatsViewModel.formatPercentage(stat.percentage),
-            color = KeacsColors.TextSecondary,
-            style = MaterialTheme.typography.bodySmall,
-        )
     }
 }
 
@@ -686,7 +677,10 @@ private fun formatCent(value: Long): String =
 private fun formatShort(value: Long): String {
     val rmb = value / 100.0
     return when {
-        rmb >= 10000.0 -> String.format(Locale.getDefault(), "%.1fW", rmb / 10000.0)
+        kotlin.math.abs(rmb) >= 10000.0 -> String.format(Locale.getDefault(), "%.1f万", rmb / 10000.0)
         else -> String.format(Locale.getDefault(), "%.0f", rmb)
     }
 }
+
+private fun axisLabel(value: Int, period: TimePeriod): String =
+    if (period == TimePeriod.YEAR) "${value}月" else "${value}日"

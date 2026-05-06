@@ -209,19 +209,36 @@ val accountIconOptions = listOf(
     IconOption("more", "其他", Icons.Rounded.MoreHoriz, "gray"),
 )
 
+private val assetAccountIconOptions = accountIconOptions.filter {
+    it.label in setOf(
+        "现金", "支付宝", "微信", "银行卡", "公积金", "投资账户", "储蓄账户", "储值卡", "基金",
+        "股票", "现金卡", "房产", "车辆", "经营账户", "公司账户", "应收款", "礼金账户", "零钱",
+        "旅行金", "长辈账户", "宠物账户", "孩子账户", "医疗账户", "学习账户", "运动账户", "礼物账户",
+        "住宿账户", "交通账户", "通勤账户", "红包账户", "其他",
+    )
+}
+
+private val liabilityAccountIconOptions = accountIconOptions.filter {
+    it.label in setOf("信用卡", "花呗白条", "借款", "付款账户", "按揭", "其他")
+}
+
 fun categoryOptions(direction: String): List<IconOption> =
     when (direction) {
         PresetSeedData.CATEGORY_INCOME -> incomeIconOptions
+        PresetSeedData.CATEGORY_ACCOUNT_ASSET -> assetAccountIconOptions
+        PresetSeedData.CATEGORY_ACCOUNT_LIABILITY -> liabilityAccountIconOptions
         PresetSeedData.CATEGORY_ACCOUNT -> accountIconOptions
         else -> expenseIconOptions
     }
 
-fun accountTypeOptions(categories: List<CategoryEntity>): List<IconOption> {
-    val customOptions = categories
-        .filter { it.direction == PresetSeedData.CATEGORY_ACCOUNT && it.isEnabled }
+fun accountTypeOptions(categories: List<CategoryEntity>, nature: String): List<IconOption> =
+    categories
+        .filter {
+            it.isEnabled &&
+                PresetSeedData.isAccountCategoryForNature(it.direction, nature)
+        }
         .map { IconOption(it.iconKey, it.name, iconFor(it.iconKey), it.colorKey) }
-    return (customOptions + accountIconOptions).distinctBy { it.label }
-}
+        .distinctBy { it.label }
 
 fun accountIconOptionFor(account: AccountEntity?, categories: List<CategoryEntity>): IconOption {
     val fallback = IconOption(
@@ -234,7 +251,7 @@ fun accountIconOptionFor(account: AccountEntity?, categories: List<CategoryEntit
     val typeName = accountCategoryName(account.type)
     val name = accountCategoryName(account.name)
     val category = categories.firstOrNull {
-        it.direction == PresetSeedData.CATEGORY_ACCOUNT &&
+        PresetSeedData.isAccountCategoryForNature(it.direction, account.nature) &&
             accountCategoryName(it.name) in listOf(typeName, name)
     }
     return category?.let {
@@ -244,8 +261,7 @@ fun accountIconOptionFor(account: AccountEntity?, categories: List<CategoryEntit
 
 private fun accountCategoryName(name: String): String = when (name) {
     "花呗/白条" -> "花呗白条"
-    "消费贷", "房贷/车贷", "亲友借款" -> "借款"
-    "其他资产", "其他负债" -> "其他"
+    "房贷/车贷" -> "房贷车贷"
     else -> name
 }
 

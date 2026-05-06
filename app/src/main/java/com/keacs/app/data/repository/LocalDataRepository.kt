@@ -192,6 +192,7 @@ class LocalDataRepository(
         database.withTransaction {
             val now = clock()
             val oldPresetVersion = database.appMetaDao().get(META_PRESET_VERSION)?.value
+            migrateAccountCategoryDirections(now)
             // 预置项需要支持后续补齐，避免老用户升级后缺少新增的预置分类。
             database.categoryDao().insertAll(PresetSeedData.categories(now))
             if (oldPresetVersion == null && database.accountDao().count() == 0) {
@@ -222,7 +223,12 @@ class LocalDataRepository(
                 .toMutableMap()
 
             for (cat in categories) {
-                val key = cat.direction to cat.name
+                val direction = if (cat.direction == PresetSeedData.CATEGORY_ACCOUNT) {
+                    legacyAccountCategoryDirection(cat.name)
+                } else {
+                    cat.direction
+                }
+                val key = direction to cat.name
                 val existing = categoryByName[key]
                 if (existing != null) {
                     categoryIdMap[cat.id] = existing.id
@@ -231,9 +237,10 @@ class LocalDataRepository(
                 val newId = database.categoryDao().insert(
                     cat.copy(
                         id = 0,
+                        direction = direction,
                         createdAt = now,
                         updatedAt = now,
-                        sortOrder = (database.categoryDao().maxSortOrder(cat.direction) ?: -1) + 1
+                        sortOrder = (database.categoryDao().maxSortOrder(direction) ?: -1) + 1
                     )
                 )
                 categoryIdMap[cat.id] = newId
@@ -281,6 +288,16 @@ class LocalDataRepository(
         const val META_PRESET_VERSION = "preset_version"
         const val PRESET_VERSION = "3"
         const val MAX_CATEGORY_NAME_LENGTH = 4
+        val legacyLiabilityCategoryNames = setOf(
+            "信用卡",
+            "花呗白条",
+            "借款",
+            "消费贷",
+            "房贷车贷",
+            "房贷/车贷",
+            "亲友借款",
+            "其他负债",
+        )
     }
 
     private fun uniqueAccountName(baseName: String, usedNames: MutableSet<String>): String {
@@ -314,6 +331,26 @@ class LocalDataRepository(
             }
         }
     }
+
+    private suspend fun migrateAccountCategoryDirections(updatedAt: Long) {
+        database.categoryDao().getAll()
+            .filter { it.direction == PresetSeedData.CATEGORY_ACCOUNT }
+            .forEach { category ->
+                database.categoryDao().update(
+                    category.copy(
+                        direction = legacyAccountCategoryDirection(category.name),
+                        updatedAt = updatedAt,
+                    ),
+                )
+            }
+    }
+
+    private fun legacyAccountCategoryDirection(name: String): String =
+        if (name in legacyLiabilityCategoryNames) {
+            PresetSeedData.CATEGORY_ACCOUNT_LIABILITY
+        } else {
+            PresetSeedData.CATEGORY_ACCOUNT_ASSET
+        }
 
     private suspend fun validateRecord(
         type: String,

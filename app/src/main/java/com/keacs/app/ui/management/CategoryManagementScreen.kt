@@ -57,16 +57,18 @@ import kotlinx.coroutines.launch
 @Composable
 fun CategoryListScreen(
     repository: LocalDataRepository,
-    onEditCategory: (Long?) -> Unit,
+    onEditCategory: (Long?, String) -> Unit,
 ) {
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
     var selectedIndex by rememberSaveable { mutableStateOf(0) }
-    val direction = when (selectedIndex) {
-        1 -> PresetSeedData.CATEGORY_INCOME
-        2 -> PresetSeedData.CATEGORY_ACCOUNT
-        else -> PresetSeedData.CATEGORY_EXPENSE
+    val direction = categoryDirectionForTab(selectedIndex)
+    val visibleCategories = categories.filter {
+        if (selectedIndex == 2) {
+            PresetSeedData.isAccountCategoryDirection(it.direction)
+        } else {
+            it.direction == direction
+        }
     }
-    val visibleCategories = categories.filter { it.direction == direction }
 
     Column(
         modifier = Modifier
@@ -85,11 +87,11 @@ fun CategoryListScreen(
                 itemsIndexed(visibleCategories, key = { _, item -> item.id }) { index, category ->
                     ManagementListItem(
                         title = category.name,
-                        subtitle = if (category.isEnabled) "新建记录可选" else "历史记录仍会显示",
+                        subtitle = categorySubtitle(category),
                         icon = iconFor(category.iconKey),
                         color = colorFor(category.colorKey),
                         enabled = category.isEnabled,
-                        onClick = { onEditCategory(category.id) },
+                        onClick = { onEditCategory(category.id, category.direction) },
                     )
                     if (index != visibleCategories.lastIndex) {
                         ListDivider()
@@ -98,10 +100,10 @@ fun CategoryListScreen(
             }
         }
         Button(
-            onClick = { onEditCategory(null) },
+            onClick = { onEditCategory(null, direction) },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(if (direction == PresetSeedData.CATEGORY_ACCOUNT) "＋ 新增账户分类" else "＋ 新增分类")
+            Text(newCategoryButtonText(selectedIndex))
         }
     }
 }
@@ -110,6 +112,7 @@ fun CategoryListScreen(
 fun CategoryEditScreen(
     repository: LocalDataRepository,
     categoryId: Long?,
+    initialDirection: String = PresetSeedData.CATEGORY_EXPENSE,
     onDone: () -> Unit,
 ) {
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
@@ -118,7 +121,7 @@ fun CategoryEditScreen(
     val scope = rememberCoroutineScope()
 
     var name by rememberSaveable(categoryId) { mutableStateOf("") }
-    var direction by rememberSaveable(categoryId) { mutableStateOf(PresetSeedData.CATEGORY_EXPENSE) }
+    var direction by rememberSaveable(categoryId, initialDirection) { mutableStateOf(initialDirection) }
     var iconKey by rememberSaveable(categoryId) { mutableStateOf("food") }
     var colorKey by rememberSaveable(categoryId) { mutableStateOf("orange") }
     var isEnabled by rememberSaveable(categoryId) { mutableStateOf(true) }
@@ -163,6 +166,11 @@ fun CategoryEditScreen(
                 error = null
             }, error = error)
             DirectionSelector(direction) { direction = it }
+            if (PresetSeedData.isAccountCategoryDirection(direction)) {
+                NatureSelector(PresetSeedData.accountCategoryNatureFor(direction)) {
+                    direction = PresetSeedData.accountCategoryDirectionFor(it)
+                }
+            }
             IconSelector(direction, iconKey) {
                 iconKey = it.key
                 colorKey = it.colorKey
@@ -218,8 +226,8 @@ private fun DirectionSelector(
                 OptionChip("收入", direction == PresetSeedData.CATEGORY_INCOME, Modifier.weight(1f)) {
                     onSelected(PresetSeedData.CATEGORY_INCOME)
                 }
-                OptionChip("账户", direction == PresetSeedData.CATEGORY_ACCOUNT, Modifier.weight(1f)) {
-                    onSelected(PresetSeedData.CATEGORY_ACCOUNT)
+                OptionChip("账户", PresetSeedData.isAccountCategoryDirection(direction), Modifier.weight(1f)) {
+                    onSelected(PresetSeedData.CATEGORY_ACCOUNT_ASSET)
                 }
             }
         }
@@ -299,3 +307,25 @@ private fun DeleteDialog(
 }
 
 private const val MAX_CATEGORY_NAME_LENGTH = 4
+
+private fun categoryDirectionForTab(index: Int): String = when (index) {
+    1 -> PresetSeedData.CATEGORY_INCOME
+    2 -> PresetSeedData.CATEGORY_ACCOUNT_ASSET
+    else -> PresetSeedData.CATEGORY_EXPENSE
+}
+
+private fun newCategoryButtonText(index: Int): String = when (index) {
+    1 -> "新增收入分类"
+    2 -> "新增账户分类"
+    else -> "新增支出分类"
+}
+
+private fun categorySubtitle(category: CategoryEntity): String {
+    if (!category.isEnabled) return "历史记录仍会显示"
+    if (!PresetSeedData.isAccountCategoryDirection(category.direction)) return "新建记录可选"
+    return if (PresetSeedData.accountCategoryNatureFor(category.direction) == PresetSeedData.ACCOUNT_LIABILITY) {
+        "负债账户可选"
+    } else {
+        "资产账户可选"
+    }
+}

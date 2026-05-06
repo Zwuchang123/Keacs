@@ -88,7 +88,6 @@ fun AccountEditScreen(
     val accounts by repository.observeAccounts().collectAsState(initial = emptyList())
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
     val editing = accounts.firstOrNull { it.id == accountId }
-    val typeOptions = remember(categories) { accountTypeOptions(categories) }
     val useCase = remember(repository) { AccountManagementUseCase(repository) }
     val scope = rememberCoroutineScope()
 
@@ -103,6 +102,7 @@ fun AccountEditScreen(
     var amountLimitMessage by rememberSaveable(accountId) { mutableStateOf<String?>(null) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var handledDeleteRequest by rememberSaveable(accountId) { mutableStateOf(deleteRequest) }
+    val typeOptions = remember(categories, nature) { accountTypeOptions(categories, nature) }
 
     LaunchedEffect(editing?.id) {
         editing?.let {
@@ -113,6 +113,15 @@ fun AccountEditScreen(
             iconKey = it.iconKey
             colorKey = it.colorKey
             isEnabled = it.isEnabled
+        }
+    }
+
+    LaunchedEffect(nature, typeOptions) {
+        if (typeOptions.none { it.label == type } && typeOptions.isNotEmpty()) {
+            val option = typeOptions.first()
+            type = option.label
+            iconKey = option.key
+            colorKey = option.colorKey
         }
     }
 
@@ -149,7 +158,7 @@ fun AccountEditScreen(
         AccountBalanceKeyboardPanel(
             balance = balance,
             error = balanceError(balance),
-            saveEnabled = name.isNotBlank() && parseCent(balance) != null,
+            saveEnabled = name.isNotBlank() && parseCent(balance) != null && typeOptions.isNotEmpty(),
             onKeyClick = {
                 val next = nextBalanceAmount(balance, it)
                 if (next != balance && balanceInputWouldOverflow(next)) {

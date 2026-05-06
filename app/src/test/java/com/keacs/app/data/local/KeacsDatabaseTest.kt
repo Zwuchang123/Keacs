@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.withTransaction
 import androidx.test.core.app.ApplicationProvider
+import androidx.lifecycle.viewModelScope
 import com.keacs.app.data.local.database.KeacsDatabase
 import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.local.entity.CategoryEntity
@@ -13,7 +14,17 @@ import com.keacs.app.domain.model.RecordType
 import com.keacs.app.domain.rule.balanceFor
 import com.keacs.app.domain.rule.totalExpense
 import com.keacs.app.domain.rule.totalIncome
+import com.keacs.app.ui.stats.StatsTab
+import com.keacs.app.ui.stats.StatsViewModel
+import com.keacs.app.ui.stats.TimePeriod
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -21,6 +32,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.Calendar
+import java.util.Locale
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -54,11 +67,12 @@ class KeacsDatabaseTest {
         val categories = repository.getCategories()
         val accounts = repository.getAccounts()
 
-        assertEquals(46, categories.size)
+        assertEquals(37, categories.size)
         assertEquals(13, accounts.size)
         assertEquals(7, categories.count { it.direction == PresetSeedData.CATEGORY_INCOME })
         assertEquals(17, categories.count { it.direction == PresetSeedData.CATEGORY_EXPENSE })
-        assertEquals(22, categories.count { it.direction == PresetSeedData.CATEGORY_ACCOUNT })
+        assertEquals(7, categories.count { it.direction == PresetSeedData.CATEGORY_ACCOUNT_ASSET })
+        assertEquals(6, categories.count { it.direction == PresetSeedData.CATEGORY_ACCOUNT_LIABILITY })
         assertEquals(7, accounts.count { it.nature == PresetSeedData.ACCOUNT_ASSET })
         assertEquals(6, accounts.count { it.nature == PresetSeedData.ACCOUNT_LIABILITY })
         assertTrue(categories.all { it.isPreset && it.isEnabled })
@@ -71,8 +85,46 @@ class KeacsDatabaseTest {
         repository.initializePresets()
         repository.initializePresets()
 
-        assertEquals(46, database.categoryDao().count())
+        assertEquals(37, database.categoryDao().count())
         assertEquals(13, database.accountDao().count())
+    }
+
+    @Test
+    fun legacyAccountCategoriesAreSplitByNature() = runTest {
+        val now = 1_000L
+        database.categoryDao().insert(
+            CategoryEntity(
+                name = "现金",
+                direction = PresetSeedData.CATEGORY_ACCOUNT,
+                iconKey = "wallet",
+                colorKey = "green",
+                isPreset = true,
+                isEnabled = true,
+                sortOrder = 0,
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
+        database.categoryDao().insert(
+            CategoryEntity(
+                name = "信用卡",
+                direction = PresetSeedData.CATEGORY_ACCOUNT,
+                iconKey = "card",
+                colorKey = "orange",
+                isPreset = true,
+                isEnabled = true,
+                sortOrder = 1,
+                createdAt = now,
+                updatedAt = now,
+            ),
+        )
+
+        repository.initializePresets()
+
+        val categories = repository.getCategories()
+        assertTrue(categories.any { it.name == "现金" && it.direction == PresetSeedData.CATEGORY_ACCOUNT_ASSET })
+        assertTrue(categories.any { it.name == "信用卡" && it.direction == PresetSeedData.CATEGORY_ACCOUNT_LIABILITY })
+        assertFalse(categories.any { it.direction == PresetSeedData.CATEGORY_ACCOUNT })
     }
 
     @Test
@@ -257,6 +309,58 @@ class KeacsDatabaseTest {
         }.exceptionOrNull()?.message)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun statsUseSelectedMonthAndYearBuckets() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        repository.initializePresets()
+        val incomeCategory = repository.getCategories().first { it.name == "工资" }
+        val expenseCategory = repository.getCategories().first { it.name == "餐饮" }
+        val asset = repository.getAccounts().first { it.name == "现金" }
+        val liability = repository.getAccounts().first { it.name == "信用卡" }
+        val jan3 = dateMillis(2026, 1, 3)
+        val jan5 = dateMillis(2026, 1, 5)
+        val feb2 = dateMillis(2026, 2, 2)
+
+        repository.saveRecord(null, RecordType.EXPENSE, 12_000, jan3, expenseCategory.id, asset.id, null, "")
+        repository.saveRecord(null, RecordType.EXPENSE, 8_000, jan5, expenseCategory.id, liability.id, null, "")
+        repository.saveRecord(null, RecordType.INCOME, 50_000, feb2, incomeCategory.id, null, asset.id, "")
+
+        val viewModel = StatsViewModel(repository)
+        try {
+            viewModel.selectPeriod(TimePeriod.YEAR)
+            viewModel.selectDate(dateMillis(2026, 1, 1))
+            var state = viewModel.uiState.first {
+                !it.isLoading && it.selectedPeriod == TimePeriod.YEAR
+            }
+            assertEquals(50_000, state.income)
+            assertEquals(20_000, state.expense)
+            assertEquals(20_000, state.dailyTrend.first { it.day == 1 }.amount)
+            assertEquals(30_000, state.netAsset)
+
+            viewModel.selectTab(StatsTab.INCOME)
+            state = viewModel.uiState.first { !it.isLoading && it.selectedTab == StatsTab.INCOME }
+            assertEquals(50_000, state.dailyTrend.first { it.day == 2 }.amount)
+
+            viewModel.selectTab(StatsTab.EXPENSE)
+            viewModel.selectPeriod(TimePeriod.MONTH)
+            viewModel.selectDate(jan3)
+            state = viewModel.uiState.first {
+                !it.isLoading && it.selectedPeriod == TimePeriod.MONTH && it.selectedTab == StatsTab.EXPENSE
+            }
+            assertEquals(12_000, state.dailyTrend.first { it.day == 3 }.amount)
+            assertEquals(8_000, state.dailyTrend.first { it.day == 5 }.amount)
+
+            viewModel.selectTab(StatsTab.ASSET)
+            state = viewModel.uiState.first { !it.isLoading && it.selectedTab == StatsTab.ASSET }
+            assertEquals(-20_000, state.netAsset)
+            assertEquals(-20_000, state.netAssetTrend.last().amount)
+        } finally {
+            viewModel.viewModelScope.cancel()
+            Dispatchers.resetMain()
+        }
+    }
+
     @Test
     fun importBackupMergesDuplicateCategoriesAndRenamesDuplicateAccounts() = runTest {
         repository.initializePresets()
@@ -315,4 +419,10 @@ class KeacsDatabaseTest {
         assertTrue(accounts.any { it.name == "现金" })
         assertTrue(accounts.any { it.name == "现金（导入2）" })
     }
+
+    private fun dateMillis(year: Int, month: Int, day: Int): Long =
+        Calendar.getInstance(Locale.getDefault()).apply {
+            set(year, month - 1, day, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
 }
