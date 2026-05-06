@@ -230,7 +230,7 @@ private fun AccountSummary(totalAsset: Long, totalLiability: Long) {
             )
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("资产 ${formatCent(totalAsset)}", color = KeacsColors.PrimaryLight)
-                Text("负债 ${formatCent(totalLiability)}", color = KeacsColors.PrimaryLight)
+                Text("负债 ${accountBalanceText(PresetSeedData.ACCOUNT_LIABILITY, totalLiability)}", color = KeacsColors.PrimaryLight)
             }
         }
     }
@@ -252,11 +252,11 @@ private fun AccountGroup(
                     val iconOption = accountIconOptionFor(account, categories)
                     ManagementListItem(
                         title = account.name,
-                        subtitle = if (account.isEnabled) "${natureText(account.nature)} · 当前余额" else "历史记录仍会显示",
+                        subtitle = if (account.isEnabled) "" else "历史记录仍会显示",
                         icon = iconOption.icon,
                         color = colorFor(iconOption.colorKey),
                         enabled = account.isEnabled,
-                        trailing = formatCent(balanceFor(account, records)),
+                        trailing = accountBalanceText(account.nature, balanceFor(account, records)),
                         onClick = { onEditAccount(account.id) },
                     )
                     if (index != accounts.lastIndex) ListDivider()
@@ -266,8 +266,8 @@ private fun AccountGroup(
     }
 }
 
-private fun natureText(nature: String): String =
-    if (nature == PresetSeedData.ACCOUNT_LIABILITY) "负债" else "资产"
+private fun accountBalanceText(nature: String, value: Long): String =
+    if (nature == PresetSeedData.ACCOUNT_LIABILITY) "-${formatCent(kotlin.math.abs(value))}" else formatCent(value)
 
 private fun formatCent(value: Long): String =
     DecimalFormat("#,##0.00").format(value / 100.0)

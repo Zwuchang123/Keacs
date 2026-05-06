@@ -9,6 +9,7 @@ import com.keacs.app.data.local.entity.RecordEntity
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.model.RecordType
 import com.keacs.app.domain.rule.balanceFor
+import com.keacs.app.domain.rule.balanceAt
 import com.keacs.app.domain.rule.totalExpense
 import com.keacs.app.domain.rule.totalIncome
 import com.keacs.app.ui.management.accountIconOptionFor
@@ -294,13 +295,12 @@ class StatsViewModel(
             val monthStart = base.clone() as Calendar
             monthStart.add(Calendar.MONTH, it)
             val monthEnd = (monthStart.clone() as Calendar).apply { add(Calendar.MONTH, 1) }.timeInMillis
-            val recordsBeforeMonthEnd = records.filter { record -> record.occurredAt < monthEnd }
             val asset = accounts
                 .filter { account -> account.nature == PresetSeedData.ACCOUNT_ASSET && account.isEnabled }
-                .sumOf { account -> balanceFor(account, recordsBeforeMonthEnd) }
+                .sumOf { account -> balanceAt(account, records, monthEnd) }
             val liability = accounts
                 .filter { account -> account.nature == PresetSeedData.ACCOUNT_LIABILITY && account.isEnabled }
-                .sumOf { account -> balanceFor(account, recordsBeforeMonthEnd) }
+                .sumOf { account -> balanceAt(account, records, monthEnd) }
             DailyStats(day = monthStart.get(Calendar.MONTH) + 1, amount = asset - liability)
         }
     }

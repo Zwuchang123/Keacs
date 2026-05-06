@@ -317,10 +317,8 @@ private fun backRoute(route: String): String = when {
     route.startsWith(ROUTE_CATEGORY_EDIT) -> ROUTE_CATEGORY_LIST
     route.startsWith(ROUTE_ACCOUNT_EDIT) -> ROUTE_ACCOUNT_LIST
     route.startsWith(ROUTE_RECORD_DETAIL) -> KeacsDestination.Records.route
-    route.startsWith(ROUTE_RECORD_EDIT) -> {
-        val id = routeId(route, ROUTE_RECORD_EDIT)
-        if (id != null) KeacsDestination.Records.route else KeacsDestination.Records.route
-    }
+    route.startsWith(ROUTE_RECORD_EDIT) -> routeId(route, ROUTE_RECORD_EDIT)?.let { recordDetailRoute(it) }
+        ?: KeacsDestination.Records.route
     route == ROUTE_CATEGORY_LIST || route == ROUTE_ACCOUNT_LIST || route == ROUTE_SETTINGS || route == ROUTE_ABOUT -> KeacsDestination.Mine.route
     else -> KeacsDestination.Home.route
 }

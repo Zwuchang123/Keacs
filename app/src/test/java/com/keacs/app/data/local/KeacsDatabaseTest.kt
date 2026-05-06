@@ -54,16 +54,16 @@ class KeacsDatabaseTest {
         val categories = repository.getCategories()
         val accounts = repository.getAccounts()
 
-        assertEquals(41, categories.size)
+        assertEquals(46, categories.size)
         assertEquals(13, accounts.size)
         assertEquals(7, categories.count { it.direction == PresetSeedData.CATEGORY_INCOME })
-        assertEquals(12, categories.count { it.direction == PresetSeedData.CATEGORY_EXPENSE })
+        assertEquals(17, categories.count { it.direction == PresetSeedData.CATEGORY_EXPENSE })
         assertEquals(22, categories.count { it.direction == PresetSeedData.CATEGORY_ACCOUNT })
         assertEquals(7, accounts.count { it.nature == PresetSeedData.ACCOUNT_ASSET })
         assertEquals(6, accounts.count { it.nature == PresetSeedData.ACCOUNT_LIABILITY })
         assertTrue(categories.all { it.isPreset && it.isEnabled })
         assertTrue(accounts.all { it.isEnabled && it.initialBalanceCent == 0L })
-        assertEquals("2", repository.presetVersion())
+        assertEquals("3", repository.presetVersion())
     }
 
     @Test
@@ -71,8 +71,20 @@ class KeacsDatabaseTest {
         repository.initializePresets()
         repository.initializePresets()
 
-        assertEquals(41, database.categoryDao().count())
+        assertEquals(46, database.categoryDao().count())
         assertEquals(13, database.accountDao().count())
+    }
+
+    @Test
+    fun deletedPresetAccountDoesNotComeBackAfterInitialize() = runTest {
+        repository.initializePresets()
+        val cash = repository.getAccounts().first { it.name == "现金" }
+
+        repository.deleteAccount(cash.id)
+        repository.initializePresets()
+
+        assertTrue(repository.getAccounts().none { it.name == "现金" })
+        assertEquals(12, database.accountDao().count())
     }
 
     @Test
@@ -202,9 +214,11 @@ class KeacsDatabaseTest {
         repository.saveRecord(null, RecordType.TRANSFER, 3_000, 1_000, null, liability.id, asset.id, "")
 
         val records = repository.getRecords()
+        val updatedAsset = repository.getAccounts().first { it.id == asset.id }
+        val updatedLiability = repository.getAccounts().first { it.id == liability.id }
 
-        assertEquals(8_500, balanceFor(asset, records))
-        assertEquals(3_000, balanceFor(liability, records))
+        assertEquals(8_500, balanceFor(updatedAsset, records))
+        assertEquals(3_000, balanceFor(updatedLiability, records))
         assertEquals(11_000, totalIncome(records))
         assertEquals(7_500, totalExpense(records))
     }
@@ -219,11 +233,13 @@ class KeacsDatabaseTest {
         val record = repository.getRecords().first()
         repository.saveRecord(record.id, RecordType.EXPENSE, 4_000, 1_000, expenseCategory.id, asset.id, null, "")
 
-        assertEquals(-4_000, balanceFor(asset, repository.getRecords()))
+        val updatedAsset = repository.getAccounts().first { it.id == asset.id }
+        assertEquals(-4_000, balanceFor(updatedAsset, repository.getRecords()))
 
         repository.deleteRecord(record.id)
 
-        assertEquals(0, balanceFor(asset, repository.getRecords()))
+        val restoredAsset = repository.getAccounts().first { it.id == asset.id }
+        assertEquals(0, balanceFor(restoredAsset, repository.getRecords()))
         assertEquals(0, totalExpense(repository.getRecords()))
     }
 

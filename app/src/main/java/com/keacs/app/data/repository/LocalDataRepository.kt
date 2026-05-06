@@ -8,6 +8,7 @@ import com.keacs.app.data.local.entity.AppMetaEntity
 import com.keacs.app.data.local.entity.CategoryEntity
 import com.keacs.app.data.local.entity.RecordEntity
 import com.keacs.app.domain.model.RecordType
+import com.keacs.app.domain.rule.accountEffect
 import kotlinx.coroutines.flow.Flow
 
 class LocalDataRepository(
@@ -141,8 +142,12 @@ class LocalDataRepository(
     ) {
         validateRecord(type, amountCent, categoryId, fromAccountId, toAccountId)
         val now = clock()
-        if (id == null) {
-            database.recordDao().insert(
+        database.withTransaction {
+            val old = id?.let { requireNotNull(database.recordDao().getById(it)) { "账目不存在" } }
+            if (old != null) {
+                applyAccountEffect(old, -1, now)
+            }
+            val record = if (old == null) {
                 RecordEntity(
                     type = type,
                     amountCent = amountCent,
@@ -153,11 +158,8 @@ class LocalDataRepository(
                     note = note.orEmpty().trim().ifBlank { null },
                     createdAt = now,
                     updatedAt = now,
-                ),
-            )
-        } else {
-            val old = requireNotNull(database.recordDao().getById(id)) { "账目不存在" }
-            database.recordDao().update(
+                )
+            } else {
                 old.copy(
                     type = type,
                     amountCent = amountCent,
@@ -167,21 +169,37 @@ class LocalDataRepository(
                     toAccountId = normalizedToAccountId(type, toAccountId),
                     note = note.orEmpty().trim().ifBlank { null },
                     updatedAt = now,
-                ),
-            )
+                )
+            }
+            if (old == null) {
+                database.recordDao().insert(record)
+            } else {
+                database.recordDao().update(record)
+            }
+            applyAccountEffect(record, 1, now)
         }
     }
 
     suspend fun deleteRecord(id: Long) {
-        database.recordDao().deleteById(id)
+        database.withTransaction {
+            val old = requireNotNull(database.recordDao().getById(id)) { "账目不存在" }
+            applyAccountEffect(old, -1, clock())
+            database.recordDao().deleteById(id)
+        }
     }
 
     suspend fun initializePresets() {
         database.withTransaction {
             val now = clock()
+            val oldPresetVersion = database.appMetaDao().get(META_PRESET_VERSION)?.value
             // 预置项需要支持后续补齐，避免老用户升级后缺少新增的预置分类。
             database.categoryDao().insertAll(PresetSeedData.categories(now))
-            database.accountDao().insertAll(PresetSeedData.accounts(now))
+            if (oldPresetVersion == null && database.accountDao().count() == 0) {
+                database.accountDao().insertAll(PresetSeedData.accounts(now))
+            }
+            if (oldPresetVersion != null && oldPresetVersion < PRESET_VERSION) {
+                migrateStoredAccountBalances(now)
+            }
             // 记录初始化版本，后续迁移和排查可直接判断本地预置数据状态。
             database.appMetaDao().upsert(
                 AppMetaEntity(
@@ -261,7 +279,7 @@ class LocalDataRepository(
 
     private companion object {
         const val META_PRESET_VERSION = "preset_version"
-        const val PRESET_VERSION = "2"
+        const val PRESET_VERSION = "3"
         const val MAX_CATEGORY_NAME_LENGTH = 4
     }
 
@@ -273,6 +291,28 @@ class LocalDataRepository(
             suffix += 1
         }
         return candidate
+    }
+
+    private suspend fun applyAccountEffect(record: RecordEntity, sign: Int, updatedAt: Long) {
+        listOfNotNull(record.fromAccountId, record.toAccountId)
+            .distinct()
+            .forEach { accountId ->
+                val account = database.accountDao().getById(accountId) ?: return@forEach
+                val delta = accountEffect(account, record) * sign
+                if (delta != 0L) {
+                    database.accountDao().addBalance(accountId, delta, updatedAt)
+                }
+            }
+    }
+
+    private suspend fun migrateStoredAccountBalances(updatedAt: Long) {
+        val records = database.recordDao().getAll()
+        database.accountDao().getAll().forEach { account ->
+            val delta = records.sumOf { record -> accountEffect(account, record) }
+            if (delta != 0L) {
+                database.accountDao().addBalance(account.id, delta, updatedAt)
+            }
+        }
     }
 
     private suspend fun validateRecord(

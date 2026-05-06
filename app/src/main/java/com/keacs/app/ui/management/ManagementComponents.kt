@@ -83,13 +83,15 @@ fun ManagementListItem(
                     )
                 }
             }
-            Text(
-                text = subtitle,
-                color = KeacsColors.TextSecondary,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    color = KeacsColors.TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         if (trailing != null) {
             Text(

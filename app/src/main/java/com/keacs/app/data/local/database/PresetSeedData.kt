@@ -12,7 +12,10 @@ object PresetSeedData {
 
     fun categories(now: Long): List<CategoryEntity> {
         val incomes = listOf("工资", "奖金", "报销", "理财收益", "礼金", "兼职", "其他")
-        val expenses = listOf("餐饮", "交通", "日用", "住房", "水电煤", "通讯", "医疗", "娱乐", "教育", "投资", "人情", "其他")
+        val expenses = listOf(
+            "餐饮", "交通", "日用", "住房", "水电煤", "通讯", "医疗", "娱乐", "教育", "投资", "人情",
+            "恋爱", "旅行", "长辈", "房贷", "宠物", "其他",
+        )
         val accountCategories = listOf(
             Triple("现金", "wallet", "green"),
             Triple("支付宝", "alipay", "blue"),
@@ -105,6 +108,11 @@ object PresetSeedData {
         "教育" -> "school"
         "投资", "理财收益" -> "chart"
         "人情" -> "heart"
+        "恋爱" -> "love"
+        "旅行" -> "luggage"
+        "长辈" -> "elder"
+        "房贷" -> "mortgage"
+        "宠物" -> "pet"
         "工资" -> "work"
         "奖金", "礼金" -> "gift"
         "报销" -> "receipt"
@@ -119,9 +127,11 @@ object PresetSeedData {
         "住房", "兼职" -> "cyan"
         "水电煤", "奖金", "教育" -> "yellow"
         "通讯" -> "indigo"
-        "医疗" -> "red"
+        "医疗", "长辈" -> "red"
         "娱乐", "理财收益" -> "purple"
-        "人情" -> "pink"
+        "人情", "恋爱", "宠物" -> "pink"
+        "旅行" -> "cyan"
+        "房贷" -> "blue"
         else -> "gray"
     }
 

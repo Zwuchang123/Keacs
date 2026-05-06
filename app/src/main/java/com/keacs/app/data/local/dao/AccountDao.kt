@@ -19,6 +19,9 @@ interface AccountDao {
     @Update
     suspend fun update(account: AccountEntity)
 
+    @Query("UPDATE accounts SET initialBalanceCent = initialBalanceCent + :deltaCent, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun addBalance(id: Long, deltaCent: Long, updatedAt: Long)
+
     @Query("SELECT * FROM accounts ORDER BY nature ASC, id ASC")
     fun observeAll(): Flow<List<AccountEntity>>
 

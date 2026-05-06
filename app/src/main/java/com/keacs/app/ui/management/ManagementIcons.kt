@@ -6,43 +6,66 @@ import androidx.compose.material.icons.rounded.AccountBalance
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Apartment
 import androidx.compose.material.icons.rounded.AttachMoney
+import androidx.compose.material.icons.rounded.BakeryDining
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.BusinessCenter
 import androidx.compose.material.icons.rounded.CardGiftcard
 import androidx.compose.material.icons.rounded.CardMembership
+import androidx.compose.material.icons.rounded.Celebration
+import androidx.compose.material.icons.rounded.Checkroom
+import androidx.compose.material.icons.rounded.ChildCare
 import androidx.compose.material.icons.rounded.CreditCard
 import androidx.compose.material.icons.rounded.DirectionsBus
 import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.Elderly
 import androidx.compose.material.icons.rounded.Fastfood
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flight
+import androidx.compose.material.icons.rounded.Hotel
+import androidx.compose.material.icons.rounded.Icecream
+import androidx.compose.material.icons.rounded.Luggage
+import androidx.compose.material.icons.rounded.Medication
+import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.Money
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LocalAtm
 import androidx.compose.material.icons.rounded.LocalCafe
+import androidx.compose.material.icons.rounded.LocalFlorist
 import androidx.compose.material.icons.rounded.LocalGroceryStore
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.LocalMall
 import androidx.compose.material.icons.rounded.LocalPizza
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Park
 import androidx.compose.material.icons.rounded.Paid
 import androidx.compose.material.icons.rounded.Payments
+import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PriceCheck
 import androidx.compose.material.icons.rounded.QrCode2
+import androidx.compose.material.icons.rounded.RamenDining
+import androidx.compose.material.icons.rounded.RealEstateAgent
 import androidx.compose.material.icons.rounded.Redeem
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.RequestQuote
 import androidx.compose.material.icons.rounded.Savings
 import androidx.compose.material.icons.rounded.School
+import androidx.compose.material.icons.rounded.Spa
 import androidx.compose.material.icons.rounded.ShowChart
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.ShoppingCart
+import androidx.compose.material.icons.rounded.SportsBasketball
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Storefront
+import androidx.compose.material.icons.rounded.Subway
+import androidx.compose.material.icons.rounded.TheaterComedy
 import androidx.compose.material.icons.rounded.Train
 import androidx.compose.material.icons.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.TwoWheeler
 import androidx.compose.material.icons.rounded.VolunteerActivism
 import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material.icons.rounded.Work
@@ -83,6 +106,28 @@ val expenseIconOptions = listOf(
     IconOption("school", "教育", Icons.Rounded.School, "yellow"),
     IconOption("chart", "投资", Icons.Rounded.BarChart, "green"),
     IconOption("heart", "人情", Icons.Rounded.Favorite, "pink"),
+    IconOption("love", "恋爱", Icons.Rounded.Celebration, "pink"),
+    IconOption("luggage", "旅行", Icons.Rounded.Luggage, "cyan"),
+    IconOption("elder", "长辈", Icons.Rounded.Elderly, "red"),
+    IconOption("mortgage", "房贷", Icons.Rounded.RealEstateAgent, "blue"),
+    IconOption("pet", "宠物", Icons.Rounded.Pets, "pink"),
+    IconOption("ramen", "面食", Icons.Rounded.RamenDining, "orange"),
+    IconOption("bakery", "烘焙", Icons.Rounded.BakeryDining, "yellow"),
+    IconOption("icecream", "甜品", Icons.Rounded.Icecream, "pink"),
+    IconOption("bike", "骑行", Icons.Rounded.TwoWheeler, "blue"),
+    IconOption("subway", "地铁", Icons.Rounded.Subway, "indigo"),
+    IconOption("hotel", "住宿", Icons.Rounded.Hotel, "cyan"),
+    IconOption("clothes", "衣物", Icons.Rounded.Checkroom, "purple"),
+    IconOption("fitness", "运动", Icons.Rounded.FitnessCenter, "green"),
+    IconOption("basketball", "球类", Icons.Rounded.SportsBasketball, "orange"),
+    IconOption("music", "音乐", Icons.Rounded.MusicNote, "purple"),
+    IconOption("theater", "演出", Icons.Rounded.TheaterComedy, "pink"),
+    IconOption("book", "读书", Icons.Rounded.MenuBook, "yellow"),
+    IconOption("medicine", "药品", Icons.Rounded.Medication, "red"),
+    IconOption("spa", "护理", Icons.Rounded.Spa, "green"),
+    IconOption("child", "孩子", Icons.Rounded.ChildCare, "cyan"),
+    IconOption("flower", "鲜花", Icons.Rounded.LocalFlorist, "pink"),
+    IconOption("park", "户外", Icons.Rounded.Park, "green"),
     IconOption("more", "其他", Icons.Rounded.MoreHoriz, "gray"),
 )
 
@@ -108,6 +153,20 @@ val incomeIconOptions = listOf(
     IconOption("mall_income", "销售", Icons.Rounded.LocalMall, "orange"),
     IconOption("study_income", "助学", Icons.Rounded.School, "yellow"),
     IconOption("care_income", "人情", Icons.Rounded.Favorite, "pink"),
+    IconOption("celebration_income", "红包", Icons.Rounded.Celebration, "pink"),
+    IconOption("money_income", "现金", Icons.Rounded.Money, "green"),
+    IconOption("real_income", "房产", Icons.Rounded.RealEstateAgent, "blue"),
+    IconOption("pet_income", "宠物", Icons.Rounded.Pets, "pink"),
+    IconOption("elder_income", "长辈", Icons.Rounded.Elderly, "red"),
+    IconOption("flower_income", "鲜花", Icons.Rounded.LocalFlorist, "pink"),
+    IconOption("hotel_income", "住宿", Icons.Rounded.Hotel, "cyan"),
+    IconOption("luggage_income", "旅行", Icons.Rounded.Luggage, "cyan"),
+    IconOption("bike_income", "骑行", Icons.Rounded.TwoWheeler, "blue"),
+    IconOption("medicine_income", "医疗", Icons.Rounded.Medication, "red"),
+    IconOption("book_income", "图书", Icons.Rounded.MenuBook, "yellow"),
+    IconOption("music_income", "演出", Icons.Rounded.MusicNote, "purple"),
+    IconOption("fitness_income", "运动", Icons.Rounded.FitnessCenter, "green"),
+    IconOption("clothes_income", "衣物", Icons.Rounded.Checkroom, "purple"),
     IconOption("more", "其他", Icons.Rounded.MoreHoriz, "gray"),
 )
 
@@ -133,6 +192,20 @@ val accountIconOptions = listOf(
     IconOption("request_account", "应收款", Icons.Rounded.RequestQuote, "green"),
     IconOption("paid_account", "付款账户", Icons.Rounded.PriceCheck, "cyan"),
     IconOption("gift_account", "礼金账户", Icons.Rounded.Redeem, "pink"),
+    IconOption("money_account", "零钱", Icons.Rounded.Money, "green"),
+    IconOption("real_account", "按揭", Icons.Rounded.RealEstateAgent, "blue"),
+    IconOption("travel_account", "旅行金", Icons.Rounded.Luggage, "cyan"),
+    IconOption("elder_account", "长辈账户", Icons.Rounded.Elderly, "red"),
+    IconOption("pet_account", "宠物账户", Icons.Rounded.Pets, "pink"),
+    IconOption("child_account", "孩子账户", Icons.Rounded.ChildCare, "cyan"),
+    IconOption("health_account", "医疗账户", Icons.Rounded.Medication, "red"),
+    IconOption("study_account", "学习账户", Icons.Rounded.MenuBook, "yellow"),
+    IconOption("fitness_account", "运动账户", Icons.Rounded.FitnessCenter, "green"),
+    IconOption("flower_account", "礼物账户", Icons.Rounded.LocalFlorist, "pink"),
+    IconOption("hotel_account", "住宿账户", Icons.Rounded.Hotel, "cyan"),
+    IconOption("bike_account", "交通账户", Icons.Rounded.TwoWheeler, "blue"),
+    IconOption("subway_account", "通勤账户", Icons.Rounded.Subway, "indigo"),
+    IconOption("celebration_account", "红包账户", Icons.Rounded.Celebration, "pink"),
     IconOption("more", "其他", Icons.Rounded.MoreHoriz, "gray"),
 )
 

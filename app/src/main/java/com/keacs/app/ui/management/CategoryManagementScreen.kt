@@ -42,8 +42,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.local.entity.CategoryEntity
@@ -243,11 +241,11 @@ private fun IconSelector(direction: String, selectedKey: String, onSelected: (Ic
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(categoryOptions(direction), key = { option -> option.key + option.label }) { option ->
+                items(categoryOptions(direction), key = { option -> option.key }) { option ->
                     val selected = selectedKey == option.key
                     Column(
                         modifier = Modifier
-                            .height(68.dp)
+                            .height(52.dp)
                             .shadow(
                                 elevation = if (selected) 10.dp else 0.dp,
                                 shape = MaterialTheme.shapes.medium,
@@ -277,15 +275,6 @@ private fun IconSelector(direction: String, selectedKey: String, onSelected: (Ic
                                 modifier = Modifier.size(32.dp),
                             )
                         }
-                        Text(
-                            text = option.label,
-                            color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
-                            style = MaterialTheme.typography.labelSmall,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
                     }
                 }
             }
