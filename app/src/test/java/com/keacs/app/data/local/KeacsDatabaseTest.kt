@@ -347,9 +347,12 @@ class KeacsDatabaseTest {
 
         val viewModel = StatsViewModel(repository) { dateMillis(2026, 5, 6) + 12 * 60 * 60 * 1000L }
         try {
+            var state = viewModel.uiState.first { !it.isLoading }
+            assertEquals(TimePeriod.YEAR, state.selectedPeriod)
+
             viewModel.selectPeriod(TimePeriod.YEAR)
             viewModel.selectDate(dateMillis(2026, 1, 1))
-            var state = viewModel.uiState.first {
+            state = viewModel.uiState.first {
                 !it.isLoading && it.selectedPeriod == TimePeriod.YEAR
             }
             assertEquals(50_000, state.income)
@@ -374,10 +377,10 @@ class KeacsDatabaseTest {
             viewModel.selectTab(StatsTab.ASSET)
             state = viewModel.uiState.first { !it.isLoading && it.selectedTab == StatsTab.ASSET }
             assertEquals(-20_000, state.netAsset)
-            assertEquals(-12_000, state.netAssetTrend.first { it.day == 3 }.amount)
-            assertEquals(0, state.netAssetTrend.first { it.day == 4 }.amount)
-            assertEquals(-20_000, state.netAssetTrend.first { it.day == 5 }.amount)
-            assertEquals(0, state.netAssetTrend.last().amount)
+            assertEquals(-12_000, state.balanceTrend.first { it.day == 3 }.amount)
+            assertEquals(0, state.balanceTrend.first { it.day == 4 }.amount)
+            assertEquals(-8_000, state.balanceTrend.first { it.day == 5 }.amount)
+            assertEquals(0, state.balanceTrend.last().amount)
         } finally {
             viewModel.viewModelScope.cancel()
             Dispatchers.resetMain()

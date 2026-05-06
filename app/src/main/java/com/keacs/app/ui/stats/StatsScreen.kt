@@ -124,8 +124,8 @@ fun StatsScreen(
                 )
             }
             StatsTab.ASSET -> {
-                NetAssetTrendCard(
-                    monthlyTrend = uiState.netAssetTrend,
+                BalanceTrendCard(
+                    balanceTrend = uiState.balanceTrend,
                     period = uiState.selectedPeriod,
                 )
             }
@@ -211,8 +211,8 @@ private fun PeriodSelector(
 }
 
 @Composable
-private fun NetAssetTrendCard(
-    monthlyTrend: List<DailyStats>,
+private fun BalanceTrendCard(
+    balanceTrend: List<DailyStats>,
     period: TimePeriod,
 ) {
     KeacsCard {
@@ -222,12 +222,12 @@ private fun NetAssetTrendCard(
                 .padding(16.dp),
         ) {
             Text(
-                text = "净资产趋势",
+                text = "结余趋势",
                 color = KeacsColors.TextPrimary,
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(modifier = Modifier.height(12.dp))
-            if (monthlyTrend.isEmpty()) {
+            if (balanceTrend.isEmpty()) {
                 EmptyState(
                     title = "暂无数据",
                     icon = Icons.AutoMirrored.Rounded.ReceiptLong,
@@ -236,14 +236,11 @@ private fun NetAssetTrendCard(
                         .height(128.dp)
                 )
             } else {
-                TrendLineChart(
-                    dailyTrend = monthlyTrend,
+                BalanceBarChart(
+                    dailyTrend = balanceTrend,
                     period = period,
-                    lineColor = if ((monthlyTrend.maxOfOrNull { it.amount } ?: 0L) >= 0L) {
-                        KeacsColors.Primary
-                    } else {
-                        KeacsColors.Expense
-                    },
+                    positiveColor = KeacsColors.Primary,
+                    negativeColor = KeacsColors.Expense,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(190.dp),

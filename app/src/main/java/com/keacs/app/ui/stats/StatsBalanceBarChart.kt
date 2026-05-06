@@ -21,38 +21,34 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keacs.app.ui.theme.KeacsColors
-import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 @Composable
-fun TrendLineChart(
+fun BalanceBarChart(
     dailyTrend: List<DailyStats>,
     period: TimePeriod,
-    lineColor: Color,
+    positiveColor: Color,
+    negativeColor: Color,
     modifier: Modifier = Modifier,
 ) {
     if (dailyTrend.isEmpty()) return
 
-    var selectedIndex by remember(dailyTrend) {
-        mutableIntStateOf(dailyTrend.lastIndex)
-    }
+    var selectedIndex by remember(dailyTrend) { mutableIntStateOf(dailyTrend.lastIndex) }
     val currentSelectedIndex = selectedIndex.coerceIn(0, dailyTrend.lastIndex)
     val selected = dailyTrend[currentSelectedIndex]
-    val maxValue = dailyTrend.maxOf { it.amount }
-    val minValue = dailyTrend.minOf { it.amount }
-    val axisMax = maxOf(maxValue, 0L)
-    val axisMin = minOf(minValue, 0L)
-    val visualMax = if (axisMax == axisMin) axisMax + 100L else axisMax
-    val visualMin = axisMin
-    val visualRange = (visualMax - visualMin).coerceAtLeast(1L)
+    val selectedColor = balanceColor(selected.amount, positiveColor, negativeColor)
+    val axisMaxValue = dailyTrend.maxOf { abs(it.amount) }
+    val visualMaxValue = axisMaxValue.coerceAtLeast(100L)
 
     Column(modifier = modifier) {
         Row(
@@ -62,13 +58,13 @@ fun TrendLineChart(
         ) {
             Text(
                 text = StatsViewModel.formatCent(selected.amount),
-                color = lineColor,
+                color = selectedColor,
                 style = MaterialTheme.typography.bodyMedium,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.small)
-                    .background(lineColor.copy(alpha = 0.1f))
+                    .background(selectedColor.copy(alpha = 0.1f))
                     .padding(horizontal = 8.dp, vertical = 4.dp),
             )
         }
@@ -82,9 +78,9 @@ fun TrendLineChart(
                     .height(126.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(formatShort(axisMax), color = KeacsColors.TextTertiary, style = MaterialTheme.typography.bodySmall)
-                Text(formatShort((axisMax + axisMin) / 2), color = KeacsColors.TextTertiary, style = MaterialTheme.typography.bodySmall)
-                Text(formatShort(axisMin), color = KeacsColors.TextTertiary, style = MaterialTheme.typography.bodySmall)
+                Text(formatShort(axisMaxValue), color = KeacsColors.TextTertiary, style = MaterialTheme.typography.bodySmall)
+                Text(formatShort(axisMaxValue / 2), color = KeacsColors.TextTertiary, style = MaterialTheme.typography.bodySmall)
+                Text(formatShort(0), color = KeacsColors.TextTertiary, style = MaterialTheme.typography.bodySmall)
             }
 
             Canvas(
@@ -94,52 +90,63 @@ fun TrendLineChart(
                     .pointerInput(dailyTrend) {
                         detectTapGestures { offset ->
                             val width = size.width.toFloat().coerceAtLeast(1f)
-                            selectedIndex = ((offset.x / width) * dailyTrend.lastIndex)
-                                .roundToInt()
+                            selectedIndex = ((offset.x / width) * dailyTrend.size)
+                                .toInt()
                                 .coerceIn(0, dailyTrend.lastIndex)
                         }
                     },
             ) {
                 val chartTop = 8.dp.toPx()
                 val chartBottom = size.height - 10.dp.toPx()
-                val chartHeight = chartBottom - chartTop
+                val chartHeight = (chartBottom - chartTop).coerceAtLeast(1f)
                 val gridColor = KeacsColors.Border.copy(alpha = 0.75f)
+                val slotWidth = size.width / dailyTrend.size.coerceAtLeast(1)
+                val barWidth = (slotWidth * 0.56f).coerceIn(4.dp.toPx(), 18.dp.toPx())
+                val corner = CornerRadius(4.dp.toPx(), 4.dp.toPx())
 
                 listOf(0f, 0.5f, 1f).forEach { ratio ->
                     val y = chartTop + chartHeight * ratio
                     drawLine(gridColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
                 }
 
-                val points = dailyTrend.mapIndexed { index, stat ->
-                    val x = size.width * index / dailyTrend.lastIndex.coerceAtLeast(1)
-                    val normalizedY = (stat.amount - visualMin).toFloat() / visualRange.toFloat()
-                    Offset(x, chartTop + chartHeight * (1f - normalizedY))
-                }
-
-                points.zipWithNext().forEach { (start, end) ->
-                    drawLine(lineColor, start, end, strokeWidth = 3f)
-                }
-
-                val selectedPoint = points[currentSelectedIndex]
+                val selectedCenterX = slotWidth * currentSelectedIndex + slotWidth / 2f
                 drawLine(
-                    color = lineColor.copy(alpha = 0.24f),
-                    start = Offset(selectedPoint.x, chartTop),
-                    end = Offset(selectedPoint.x, chartBottom),
+                    color = selectedColor.copy(alpha = 0.16f),
+                    start = Offset(selectedCenterX, chartTop),
+                    end = Offset(selectedCenterX, chartBottom),
                     strokeWidth = 1.5f,
                 )
 
-                points.forEachIndexed { index, point ->
+                // 负结余只用颜色区分，柱子仍从底部向上增长，避免出现向下柱。
+                dailyTrend.forEachIndexed { index, stat ->
+                    val valueAbs = abs(stat.amount)
+                    val barHeight = if (valueAbs == 0L) {
+                        0f
+                    } else {
+                        (chartHeight * valueAbs.toFloat() / visualMaxValue.toFloat()).coerceAtLeast(3.dp.toPx())
+                    }
+                    val left = slotWidth * index + (slotWidth - barWidth) / 2f
+                    val top = chartBottom - barHeight
+                    val barColor = balanceColor(stat.amount, positiveColor, negativeColor)
                     val isSelected = index == currentSelectedIndex
-                    drawCircle(
-                        color = if (isSelected) KeacsColors.Surface else lineColor,
-                        radius = if (isSelected) 6.5f else 3.5f,
-                        center = point,
-                    )
-                    drawCircle(
-                        color = lineColor,
-                        radius = if (isSelected) 4.8f else 3.5f,
-                        center = point,
-                    )
+
+                    if (barHeight > 0f) {
+                        drawRoundRect(
+                            color = barColor.copy(alpha = if (isSelected) 1f else 0.72f),
+                            topLeft = Offset(left, top),
+                            size = Size(barWidth, barHeight),
+                            cornerRadius = corner,
+                        )
+                        if (isSelected) {
+                            drawRoundRect(
+                                color = barColor,
+                                topLeft = Offset(left, top),
+                                size = Size(barWidth, barHeight),
+                                cornerRadius = corner,
+                                style = Stroke(width = 1.5.dp.toPx()),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -153,35 +160,17 @@ fun TrendLineChart(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             axisLabelIndices(dailyTrend.size).forEach { index ->
+                val isSelected = index == currentSelectedIndex
                 Text(
                     text = axisLabel(dailyTrend[index].day, period),
-                    color = if (index == currentSelectedIndex) lineColor else KeacsColors.TextTertiary,
+                    color = if (isSelected) selectedColor else KeacsColors.TextTertiary,
                     style = MaterialTheme.typography.bodySmall,
-                    fontWeight = if (index == currentSelectedIndex) FontWeight.Medium else FontWeight.Normal,
+                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
                 )
             }
         }
     }
 }
 
-internal fun axisLabelIndices(size: Int): List<Int> {
-    val labelCount = minOf(6, size)
-    return (0 until labelCount).map { index ->
-        if (labelCount == 1) {
-            0
-        } else {
-            (index * (size - 1) / (labelCount - 1)).coerceIn(0, size - 1)
-        }
-    }.distinct()
-}
-
-internal fun formatShort(value: Long): String {
-    val rmb = value / 100.0
-    return when {
-        abs(rmb) >= 10000.0 -> String.format(Locale.getDefault(), "%.1f万", rmb / 10000.0)
-        else -> String.format(Locale.getDefault(), "%.0f", rmb)
-    }
-}
-
-internal fun axisLabel(value: Int, period: TimePeriod): String =
-    if (period == TimePeriod.YEAR) "${value}月" else "${value}日"
+private fun balanceColor(value: Long, positiveColor: Color, negativeColor: Color): Color =
+    if (value >= 0L) positiveColor else negativeColor

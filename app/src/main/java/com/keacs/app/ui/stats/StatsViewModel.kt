@@ -50,7 +50,7 @@ data class AccountBalanceStats(
 
 data class StatsUiState(
     val selectedTab: StatsTab = StatsTab.EXPENSE,
-    val selectedPeriod: TimePeriod = TimePeriod.MONTH,
+    val selectedPeriod: TimePeriod = TimePeriod.YEAR,
     val selectedDate: Long = System.currentTimeMillis(),
     val income: Long = 0L,
     val expense: Long = 0L,
@@ -60,7 +60,7 @@ data class StatsUiState(
     val netAsset: Long = 0L,
     val categoryStats: List<CategoryStats> = emptyList(),
     val dailyTrend: List<DailyStats> = emptyList(),
-    val netAssetTrend: List<DailyStats> = emptyList(),
+    val balanceTrend: List<DailyStats> = emptyList(),
     val accountBalances: List<AccountBalanceStats> = emptyList(),
     val categories: Map<Long, CategoryEntity> = emptyMap(),
     val accounts: Map<Long, AccountEntity> = emptyMap(),
@@ -73,7 +73,7 @@ class StatsViewModel(
 ) : ViewModel() {
 
     private val selectedTab = MutableStateFlow(StatsTab.EXPENSE)
-    private val selectedPeriod = MutableStateFlow(TimePeriod.MONTH)
+    private val selectedPeriod = MutableStateFlow(TimePeriod.YEAR)
     private val selectedDate = MutableStateFlow(clock())
 
     private val dataFlow = combine(
@@ -118,7 +118,7 @@ class StatsViewModel(
 
         val categoryStatsResult = buildCategoryStats(periodRecords, categoryMap, tab)
         val dailyTrend = buildDailyTrend(periodRecords, period, periodStart, periodEnd, tab)
-        val netAssetTrend = buildNetAssetTrend(accounts, records, period, periodStart, periodEnd)
+        val balanceTrend = buildBalanceTrend(periodRecords, period, periodStart, periodEnd)
         val accountBalances = buildAccountBalances(accounts, categories, records)
 
         StatsUiState(
@@ -133,7 +133,7 @@ class StatsViewModel(
             netAsset = totalAsset + totalLiability,
             categoryStats = categoryStatsResult,
             dailyTrend = dailyTrend,
-            netAssetTrend = netAssetTrend,
+            balanceTrend = balanceTrend,
             accountBalances = accountBalances,
             categories = categoryMap,
             accounts = accountMap,
@@ -297,8 +297,7 @@ class StatsViewModel(
         }.sortedByDescending { it.balance }
     }
 
-    private fun buildNetAssetTrend(
-        accounts: List<AccountEntity>,
+    private fun buildBalanceTrend(
         records: List<RecordEntity>,
         period: TimePeriod,
         periodStart: Long,
@@ -322,10 +321,10 @@ class StatsViewModel(
                     val dayStart = dayCalendar.timeInMillis
                     dayCalendar.add(Calendar.DAY_OF_MONTH, 1)
                     val dayEnd = dayCalendar.timeInMillis.coerceAtMost(periodEnd)
-                    val hasRecord = records.any { it.occurredAt in dayStart until dayEnd }
+                    val bucketRecords = records.filter { it.occurredAt in dayStart until dayEnd }
                     DailyStats(
                         day = day,
-                        amount = if (hasRecord) netAssetAt(accounts, records, dayEnd) else 0L,
+                        amount = totalIncome(bucketRecords) - totalExpense(bucketRecords),
                     )
                 }
             }
@@ -344,24 +343,14 @@ class StatsViewModel(
                     val monthStart = monthCalendar.timeInMillis
                     monthCalendar.add(Calendar.MONTH, 1)
                     val monthEnd = monthCalendar.timeInMillis.coerceAtMost(periodEnd)
-                    val hasRecord = records.any { it.occurredAt in monthStart until monthEnd }
+                    val bucketRecords = records.filter { it.occurredAt in monthStart until monthEnd }
                     DailyStats(
                         day = month,
-                        amount = if (hasRecord) netAssetAt(accounts, records, monthEnd) else 0L,
+                        amount = totalIncome(bucketRecords) - totalExpense(bucketRecords),
                     )
                 }
             }
         }
-    }
-
-    private fun netAssetAt(accounts: List<AccountEntity>, records: List<RecordEntity>, time: Long): Long {
-        val asset = accounts
-            .filter { account -> account.nature == PresetSeedData.ACCOUNT_ASSET && account.isEnabled }
-            .sumOf { account -> balanceAt(account, records, time) }
-        val liability = accounts
-            .filter { account -> account.nature == PresetSeedData.ACCOUNT_LIABILITY && account.isEnabled }
-            .sumOf { account -> balanceAt(account, records, time) }
-        return asset + liability
     }
 
     companion object {
