@@ -174,6 +174,7 @@ fun RecordScreen(
                                         title = recordTitle(record, categoryMap, accountMap),
                                         amount = recordAmount(record),
                                         amountColor = recordColor(record),
+                                        compact = true,
                                         modifier = Modifier.clickable { onViewRecord(record.id) },
                                     )
                                 }

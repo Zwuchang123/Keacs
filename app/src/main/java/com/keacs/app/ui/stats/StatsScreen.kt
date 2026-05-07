@@ -139,7 +139,7 @@ private fun StatsTabSelector(
     onTabSelected: (StatsTab) -> Unit,
 ) {
     SegmentedTabs(
-        items = listOf("支出", "收入", "资产"),
+        items = listOf("支出", "收入", "结余"),
         selectedIndex = selectedTab.ordinal,
         onSelected = { index -> onTabSelected(StatsTab.entries[index]) },
     )

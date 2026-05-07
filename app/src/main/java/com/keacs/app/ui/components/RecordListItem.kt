@@ -29,12 +29,16 @@ fun RecordListItem(
     amountColor: Color,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    compact: Boolean = false,
 ) {
+    val minHeight = if (compact) 48.dp else 64.dp
+    val verticalPadding = if (compact) 4.dp else 10.dp
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 64.dp)
-            .padding(vertical = 10.dp),
+            .defaultMinSize(minHeight = minHeight)
+            .padding(vertical = verticalPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         CategoryIcon(icon = icon, backgroundColor = iconColor)

@@ -56,9 +56,13 @@ fun AddRecordScreen(
     var initializedFromPreference by rememberSaveable(recordId, entryKey) { mutableStateOf(false) }
     var amountLimitMessage by rememberSaveable(recordId, entryKey) { mutableStateOf<String?>(null) }
 
-    val enabledAccounts = accounts.filter { it.isEnabled }
+    val editingAccountIds = if (editing?.type == type) setOfNotNull(editing.fromAccountId, editing.toAccountId) else emptySet()
+    val availableAccounts = accounts.filter { it.isEnabled || it.id in editingAccountIds }
     val direction = if (type == RecordType.INCOME) PresetSeedData.CATEGORY_INCOME else PresetSeedData.CATEGORY_EXPENSE
-    val availableCategories = categories.filter { it.isEnabled && it.direction == direction }
+    val editingCategoryId = if (editing?.type == type) editing.categoryId else null
+    val availableCategories = categories.filter { category ->
+        category.direction == direction && (category.isEnabled || category.id == editingCategoryId)
+    }
     val parsedAmount = amountToCent(amount)
     val canSave = parsedAmount != null && if (type == RecordType.TRANSFER) {
         fromAccountId != null && toAccountId != null && fromAccountId != toAccountId
@@ -66,7 +70,7 @@ fun AddRecordScreen(
         categoryId != null
     }
 
-    LaunchedEffect(editing?.id, defaultRecordType, defaultAccountId, enabledAccounts) {
+    LaunchedEffect(recordId, editing?.id, defaultRecordType, defaultAccountId, availableAccounts) {
         if (editing != null) {
             type = editing.type
             amount = centToInput(editing.amountCent)
@@ -77,26 +81,30 @@ fun AddRecordScreen(
             note = editing.note.orEmpty()
             occurredAt = editing.occurredAt
             initializedFromPreference = true
+        } else if (recordId != null) {
+            return@LaunchedEffect
         } else if (!initializedFromPreference) {
             val preferredType = defaultRecordType?.toRecordType() ?: return@LaunchedEffect
             type = preferredType
-            accountId = enabledAccounts.firstOrNull { it.id == defaultAccountId }?.id
+            accountId = availableAccounts.firstOrNull { it.id == defaultAccountId }?.id
             initializedFromPreference = true
         } else if (accountId == null) {
-            accountId = enabledAccounts.firstOrNull { it.id == defaultAccountId }?.id
+            accountId = availableAccounts.firstOrNull { it.id == defaultAccountId }?.id
         }
     }
 
-    LaunchedEffect(type, availableCategories, enabledAccounts) {
-        if (type != RecordType.TRANSFER && availableCategories.none { it.id == categoryId }) {
+    LaunchedEffect(type, categories, availableCategories, accounts, availableAccounts) {
+        if (recordId != null && editing == null) return@LaunchedEffect
+        // 编辑历史记录时保留原分类，即使该分类后来被停用。
+        if (type != RecordType.TRANSFER && categories.isNotEmpty() && availableCategories.none { it.id == categoryId }) {
             categoryId = availableCategories.firstOrNull()?.id
         }
-        if (type != RecordType.TRANSFER && enabledAccounts.none { it.id == accountId }) {
+        if (type != RecordType.TRANSFER && accounts.isNotEmpty() && availableAccounts.none { it.id == accountId }) {
             accountId = null
         }
-        if (type == RecordType.TRANSFER && enabledAccounts.isNotEmpty()) {
-            if (enabledAccounts.none { it.id == fromAccountId }) fromAccountId = enabledAccounts.first().id
-            if (enabledAccounts.none { it.id == toAccountId }) toAccountId = enabledAccounts.drop(1).firstOrNull()?.id
+        if (type == RecordType.TRANSFER && availableAccounts.isNotEmpty()) {
+            if (availableAccounts.none { it.id == fromAccountId }) fromAccountId = availableAccounts.first().id
+            if (availableAccounts.none { it.id == toAccountId }) toAccountId = availableAccounts.drop(1).firstOrNull()?.id
         }
     }
 
@@ -145,7 +153,7 @@ fun AddRecordScreen(
         ) {
             if (type == RecordType.TRANSFER) {
                 TransferAccounts(
-                    accounts = enabledAccounts,
+                    accounts = availableAccounts,
                     accountCategories = categories,
                     fromId = fromAccountId,
                     toId = toAccountId,
@@ -162,7 +170,7 @@ fun AddRecordScreen(
                 )
             }
             FormArea(
-                accounts = enabledAccounts,
+                accounts = availableAccounts,
                 accountCategories = categories,
                 accountId = accountId,
                 showAccount = type != RecordType.TRANSFER,

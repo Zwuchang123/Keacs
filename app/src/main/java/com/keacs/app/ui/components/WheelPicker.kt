@@ -2,8 +2,11 @@ package com.keacs.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,10 +24,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -108,13 +115,24 @@ private fun WheelColumn(
     val selectedIndex = column.selectedIndex.coerceIn(column.items.indices)
     val displayItems = listOf("") + column.items + listOf("")
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
+    val itemHeight = 44.dp
+    val itemHeightPx = with(LocalDensity.current) { itemHeight.toPx() }
+    val flingBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+    val centeredIndex by remember(listState, column.items.size, itemHeightPx) {
+        derivedStateOf {
+            val offsetStep = if (listState.firstVisibleItemScrollOffset >= itemHeightPx / 2f) 1 else 0
+            (listState.firstVisibleItemIndex + offsetStep).coerceIn(column.items.indices)
+        }
+    }
 
     LaunchedEffect(selectedIndex, column.items.size) {
-        listState.scrollToItem(selectedIndex)
+        if (!listState.isScrollInProgress) {
+            listState.scrollToItem(selectedIndex)
+        }
     }
 
     LaunchedEffect(listState, column.items.size) {
-        snapshotFlow { listState.firstVisibleItemIndex.coerceIn(column.items.indices) }
+        snapshotFlow { centeredIndex }
             .distinctUntilChanged()
             .collect { centerIndex ->
                 if (centerIndex != column.selectedIndex) {
@@ -123,34 +141,47 @@ private fun WheelColumn(
             }
     }
 
-    LazyColumn(
-        state = listState,
+    Box(
         modifier = modifier
             .height(132.dp)
             .clip(MaterialTheme.shapes.medium)
-            .background(KeacsColors.SurfaceSubtle)
-            .padding(vertical = 0.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .background(KeacsColors.SurfaceSubtle),
     ) {
-        itemsIndexed(displayItems) { index, item ->
-            val realIndex = index - 1
-            val selected = realIndex == selectedIndex
-            Text(
-                text = item,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = realIndex in column.items.indices) { column.onSelected(realIndex) }
-                    .background(
-                        if (selected) KeacsColors.PrimaryLight else KeacsColors.SurfaceSubtle,
-                        MaterialTheme.shapes.small,
-                    )
-                    .height(44.dp)
-                    .padding(horizontal = 8.dp, vertical = 12.dp),
-                color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                textAlign = TextAlign.Center,
-            )
+        // 选中背景固定在中间，列表内容只从背景下方滑过。
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth()
+                .height(itemHeight)
+                .padding(horizontal = 4.dp)
+                .clip(MaterialTheme.shapes.small)
+                .background(KeacsColors.PrimaryLight),
+        )
+        LazyColumn(
+            state = listState,
+            flingBehavior = flingBehavior,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(132.dp),
+            contentPadding = PaddingValues(0.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            itemsIndexed(displayItems) { index, item ->
+                val realIndex = index - 1
+                val selected = realIndex == centeredIndex
+                Text(
+                    text = item,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = realIndex in column.items.indices) { column.onSelected(realIndex) }
+                        .height(itemHeight)
+                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                    color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

@@ -18,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -56,23 +55,13 @@ fun TrendLineChart(
     val visualRange = (visualMax - visualMin).coerceAtLeast(1L)
 
     Column(modifier = modifier) {
-        Row(
+        SelectedChartValueLabel(
+            text = StatsViewModel.formatCent(selected.amount),
+            color = lineColor,
+            selectedIndex = currentSelectedIndex,
+            itemCount = dailyTrend.size,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = StatsViewModel.formatCent(selected.amount),
-                color = lineColor,
-                style = MaterialTheme.typography.bodyMedium,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.small)
-                    .background(lineColor.copy(alpha = 0.1f))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-            )
-        }
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -156,6 +145,45 @@ fun TrendLineChart(
                 .fillMaxWidth()
                 .padding(start = 48.dp),
         )
+    }
+}
+
+@Composable
+private fun SelectedChartValueLabel(
+    text: String,
+    color: Color,
+    selectedIndex: Int,
+    itemCount: Int,
+    modifier: Modifier = Modifier,
+) {
+    Layout(
+        modifier = modifier,
+        content = {
+            Text(
+                text = text,
+                color = color,
+                style = MaterialTheme.typography.bodyMedium,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .background(color.copy(alpha = 0.1f))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
+        },
+    ) { measurables, constraints ->
+        val placeable = measurables.first().measure(constraints.copy(minWidth = 0, minHeight = 0))
+        val width = constraints.maxWidth
+        val axisWidth = 48.dp.roundToPx()
+        val chartWidth = (width - axisWidth).coerceAtLeast(1)
+        val centerX = axisWidth + chartXForIndex(selectedIndex, itemCount, chartWidth.toFloat())
+        val x = (centerX - placeable.width / 2f)
+            .roundToInt()
+            .coerceIn(0, (width - placeable.width).coerceAtLeast(0))
+
+        layout(width, placeable.height) {
+            placeable.placeRelative(x, 0)
+        }
     }
 }
 
