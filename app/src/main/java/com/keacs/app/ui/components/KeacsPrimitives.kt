@@ -128,7 +128,7 @@ fun CategoryIcon(
 ) {
     Box(
         modifier = modifier
-            .size(36.dp)
+            .size(32.dp)
             .clip(CircleShape)
             .background(backgroundColor),
         contentAlignment = Alignment.Center,
@@ -137,7 +137,7 @@ fun CategoryIcon(
             imageVector = icon,
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(19.dp),
+            modifier = Modifier.size(17.dp),
         )
     }
 }

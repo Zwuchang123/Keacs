@@ -288,6 +288,7 @@ private fun RecentRecords(
                             amount = recordAmount(record),
                             amountColor = recordColor(record),
                             subtitle = recordDateText(record),
+                            compact = true,
                             modifier = Modifier
                                 .clickable { onRecordClick(record.id) }
                         )
