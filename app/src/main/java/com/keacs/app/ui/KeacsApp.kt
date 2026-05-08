@@ -28,6 +28,7 @@ import com.keacs.app.data.local.PreferencesManager
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.ui.components.KeacsBottomBar
 import com.keacs.app.ui.components.KeacsScaffold
+import com.keacs.app.ui.discover.DiscoverScreen
 import com.keacs.app.ui.home.HomeScreen
 import com.keacs.app.ui.home.HomeViewModel
 import com.keacs.app.ui.management.AccountEditScreen
@@ -39,10 +40,8 @@ import com.keacs.app.ui.navigation.bottomDestinations
 import com.keacs.app.ui.navigation.destinationForRoute
 import com.keacs.app.ui.record.AddRecordScreen
 import com.keacs.app.ui.record.RecordDetailScreen
-import com.keacs.app.ui.record.RecordScreen
 import com.keacs.app.ui.settings.MineScreen
 import com.keacs.app.ui.stats.StatsScreen
-import com.keacs.app.ui.theme.KeacsColors
 
 import com.keacs.app.data.backup.BackupService
 import com.keacs.app.domain.usecase.ExportBackupUseCase
@@ -78,7 +77,8 @@ fun KeacsApp(
     var currentRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
     var addSourceRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
     var addEntryKey by rememberSaveable { mutableIntStateOf(0) }
-    var recordDetailSourceRoute by rememberSaveable { mutableStateOf(KeacsDestination.Records.route) }
+    var recordDetailSourceRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
+    var categoryListTabIndex by rememberSaveable { mutableIntStateOf(0) }
     var accountDeleteRequest by rememberSaveable { mutableStateOf(0) }
     var navigationDirection by rememberSaveable { mutableIntStateOf(1) }
     val currentDestination = bottomDestinations.firstOrNull { it.route == currentRoute }
@@ -196,18 +196,10 @@ fun KeacsApp(
                     )
                     HomeScreen(
                         viewModel = homeViewModel,
-                        onRecordsClick = { navigateTo(KeacsDestination.Records.route) },
                         onRecordClick = { navigateRecordDetail(it, KeacsDestination.Home.route) },
-                        onSwipeLeft = { navigateTo(KeacsDestination.Records.route) },
+                        onSwipeLeft = { navigateTo(KeacsDestination.Stats.route) },
                     )
                 }
-
-                route == KeacsDestination.Records.route -> RecordScreen(
-                    repository = repository,
-                    onViewRecord = { navigateRecordDetail(it, KeacsDestination.Records.route) },
-                    onSwipeLeft = { navigateTo(KeacsDestination.Stats.route) },
-                    onSwipeRight = { navigateTo(KeacsDestination.Home.route) },
-                )
 
                 route == KeacsDestination.Add.route -> AddRecordScreen(
                     repository = repository,
@@ -218,8 +210,14 @@ fun KeacsApp(
 
                 route == KeacsDestination.Stats.route -> StatsScreen(
                     repository = repository,
-                    onSwipeBeyondStart = { navigateTo(KeacsDestination.Records.route) },
-                    onSwipeBeyondEnd = { navigateTo(KeacsDestination.Mine.route) },
+                    onSwipeBeyondStart = { navigateTo(KeacsDestination.Home.route) },
+                    onSwipeBeyondEnd = { navigateTo(KeacsDestination.Discover.route) },
+                )
+
+                route == KeacsDestination.Discover.route -> DiscoverScreen(
+                    repository = repository,
+                    onSwipeLeft = { navigateTo(KeacsDestination.Mine.route) },
+                    onSwipeRight = { navigateTo(KeacsDestination.Stats.route) },
                 )
 
                 route == KeacsDestination.Mine.route -> {
@@ -232,7 +230,7 @@ fun KeacsApp(
                         onAccountClick = { navigateForward(ROUTE_ACCOUNT_LIST) },
                         onSettingsClick = { navigateForward(ROUTE_SETTINGS) },
                         onAboutClick = { navigateForward(ROUTE_ABOUT) },
-                        onSwipeRight = { navigateTo(KeacsDestination.Stats.route) },
+                        onSwipeRight = { navigateTo(KeacsDestination.Discover.route) },
                     )
                 }
 
@@ -245,6 +243,8 @@ fun KeacsApp(
 
                 route == ROUTE_CATEGORY_LIST -> CategoryListScreen(
                     repository = repository,
+                    selectedIndex = categoryListTabIndex,
+                    onSelectedIndexChange = { categoryListTabIndex = it },
                     onEditCategory = { id, direction -> navigateForward(categoryEditRoute(id, direction)) },
                 )
 
@@ -311,9 +311,9 @@ private fun isExistingAccountEditRoute(route: String): Boolean =
 
 private fun navigationAnimationIndex(route: String): Int = when (route) {
     KeacsDestination.Home.route -> 0
-    KeacsDestination.Records.route -> 1
+    KeacsDestination.Stats.route -> 1
     KeacsDestination.Add.route -> 2
-    KeacsDestination.Stats.route -> 3
+    KeacsDestination.Discover.route -> 3
     KeacsDestination.Mine.route -> 4
     else -> 5
 }
@@ -322,9 +322,9 @@ private fun backRoute(route: String): String = when {
     route == KeacsDestination.Add.route -> KeacsDestination.Home.route
     route.startsWith(ROUTE_CATEGORY_EDIT) -> ROUTE_CATEGORY_LIST
     route.startsWith(ROUTE_ACCOUNT_EDIT) -> ROUTE_ACCOUNT_LIST
-    route.startsWith(ROUTE_RECORD_DETAIL) -> KeacsDestination.Records.route
+    route.startsWith(ROUTE_RECORD_DETAIL) -> KeacsDestination.Home.route
     route.startsWith(ROUTE_RECORD_EDIT) -> routeId(route, ROUTE_RECORD_EDIT)?.let { recordDetailRoute(it) }
-        ?: KeacsDestination.Records.route
+        ?: KeacsDestination.Home.route
     route == ROUTE_CATEGORY_LIST || route == ROUTE_ACCOUNT_LIST || route == ROUTE_SETTINGS || route == ROUTE_ABOUT -> KeacsDestination.Mine.route
     else -> KeacsDestination.Home.route
 }

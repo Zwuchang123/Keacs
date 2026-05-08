@@ -9,16 +9,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
-import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.SouthWest
 import androidx.compose.material.icons.rounded.NorthEast
 import androidx.compose.material3.Icon
@@ -27,6 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,17 +37,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
-import com.keacs.app.data.local.entity.CategoryEntity
-import com.keacs.app.data.local.entity.AccountEntity
-import com.keacs.app.data.local.entity.RecordEntity
-import com.keacs.app.domain.model.RecordType
-import com.keacs.app.ui.components.EmptyState
-import com.keacs.app.ui.components.KeacsCard
-import com.keacs.app.ui.components.RecordListItem
-import com.keacs.app.ui.management.colorFor
-import com.keacs.app.ui.management.iconFor
+import com.keacs.app.ui.record.DatePickerMode
+import com.keacs.app.ui.record.DateWheelPickerBottomSheet
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 import java.text.SimpleDateFormat
@@ -58,11 +49,11 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
-    onRecordsClick: () -> Unit,
     onRecordClick: (Long) -> Unit,
     onSwipeLeft: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showMonthPicker by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -87,24 +78,40 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
         OverviewCard(
+            selectedMonth = uiState.selectedMonth,
             totalIncome = uiState.totalIncome,
             totalExpense = uiState.totalExpense,
+            onMonthClick = { showMonthPicker = true },
         )
-        RecentRecords(
-            records = uiState.recentRecords,
+        MonthlyBillSection(
+            groups = uiState.dailyGroups,
             categories = uiState.categories,
             accounts = uiState.accounts,
             onRecordClick = onRecordClick,
-            onViewMoreClick = onRecordsClick,
             modifier = Modifier.weight(1f),
+        )
+    }
+
+    if (showMonthPicker) {
+        DateWheelPickerBottomSheet(
+            title = "选择月份",
+            selectedDate = uiState.selectedMonth,
+            mode = DatePickerMode.MONTH,
+            onSelected = {
+                viewModel.selectMonth(it)
+                showMonthPicker = false
+            },
+            onDismiss = { showMonthPicker = false },
         )
     }
 }
 
 @Composable
 private fun OverviewCard(
+    selectedMonth: Long,
     totalIncome: Long,
     totalExpense: Long,
+    onMonthClick: () -> Unit,
 ) {
     val monthBalance = totalIncome - totalExpense
 
@@ -137,7 +144,10 @@ private fun OverviewCard(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.medium)
+                    .clickable(onClick = onMonthClick),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -146,7 +156,7 @@ private fun OverviewCard(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "本月结余",
+                        text = formatMonthText(selectedMonth),
                         color = KeacsColors.PrimaryLight,
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -158,6 +168,11 @@ private fun OverviewCard(
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
+                Icon(
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = "选择月份",
+                    tint = KeacsColors.PrimaryLight,
+                )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -230,104 +245,7 @@ private fun OverviewPill(
 }
 
 @Composable
-private fun RecentRecords(
-    records: List<RecordEntity>,
-    categories: Map<Long, CategoryEntity>,
-    accounts: Map<Long, AccountEntity>,
-    onRecordClick: (Long) -> Unit,
-    onViewMoreClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    KeacsCard(modifier = modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxSize()
-                .padding(it),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "最近记录",
-                    color = KeacsColors.TextPrimary,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Text(
-                    text = "查看更多",
-                    color = KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.clickable(onClick = onViewMoreClick),
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (records.isEmpty()) {
-                EmptyState(
-                    title = "暂无记录",
-                    description = "快去记一笔吧，养成记账习惯",
-                    icon = Icons.AutoMirrored.Rounded.ReceiptLong,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp),
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    items(records, key = { record -> record.id }) { record ->
-                        RecordListItem(
-                            icon = if (record.type == RecordType.TRANSFER) Icons.Rounded.AccountBalanceWallet
-                                   else iconFor(categories[record.categoryId]?.iconKey ?: "more"),
-                            iconColor = if (record.type == RecordType.TRANSFER) KeacsColors.Primary
-                                        else colorFor(categories[record.categoryId]?.colorKey ?: "gray"),
-                            title = recordTitle(record, categories, accounts),
-                            amount = recordAmount(record),
-                            amountColor = recordColor(record),
-                            subtitle = recordDateText(record),
-                            compact = true,
-                            modifier = Modifier
-                                .clickable { onRecordClick(record.id) }
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-private fun recordTitle(
-    record: RecordEntity,
-    categories: Map<Long, CategoryEntity>,
-    accounts: Map<Long, AccountEntity>,
-): String {
-    val category = categories[record.categoryId]
-    return when (record.type) {
-        RecordType.INCOME -> category?.name ?: "收入"
-        RecordType.TRANSFER -> "${accounts[record.fromAccountId]?.name ?: "账户"} → ${accounts[record.toAccountId]?.name ?: "账户"}"
-        else -> category?.name ?: "支出"
-    }
-}
-
-private fun recordAmount(record: RecordEntity): String =
-    when (record.type) {
-        RecordType.INCOME -> "+${HomeViewModel.formatCent(record.amountCent)}"
-        RecordType.EXPENSE -> "-${HomeViewModel.formatCent(record.amountCent)}"
-        else -> HomeViewModel.formatCent(record.amountCent)
-    }
-
-private fun recordColor(record: RecordEntity): Color =
-    when (record.type) {
-        RecordType.INCOME -> KeacsColors.Income
-        RecordType.EXPENSE -> KeacsColors.Expense
-        else -> KeacsColors.TextPrimary
-    }
-
-private fun recordDateText(record: RecordEntity): String =
-    SimpleDateFormat("yyyy年M月d日", Locale.getDefault()).format(Date(record.occurredAt))
-
-@Composable
 private fun Modifier.clipLarge(): Modifier = clip(MaterialTheme.shapes.large)
+
+private fun formatMonthText(timestamp: Long): String =
+    SimpleDateFormat("yyyy年MM月", Locale.getDefault()).format(Date(timestamp))

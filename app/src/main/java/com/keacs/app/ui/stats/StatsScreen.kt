@@ -37,12 +37,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.ui.components.EmptyState
 import com.keacs.app.ui.components.KeacsCard
-import com.keacs.app.ui.components.SegmentedTabs
 import com.keacs.app.ui.management.colorFor
 import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.record.DatePickerMode
@@ -93,11 +93,6 @@ fun StatsScreen(
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
-        StatsTabSelector(
-            selectedTab = uiState.selectedTab,
-            onTabSelected = viewModel::selectTab,
-        )
-
         PeriodSelector(
             selectedPeriod = uiState.selectedPeriod,
             selectedDate = uiState.selectedDate,
@@ -109,6 +104,11 @@ fun StatsScreen(
             income = uiState.income,
             expense = uiState.expense,
             netBalance = uiState.netBalance,
+        )
+
+        StatsTabSelector(
+            selectedTab = uiState.selectedTab,
+            onTabSelected = viewModel::selectTab,
         )
 
         when (uiState.selectedTab) {
@@ -138,11 +138,36 @@ private fun StatsTabSelector(
     selectedTab: StatsTab,
     onTabSelected: (StatsTab) -> Unit,
 ) {
-    SegmentedTabs(
-        items = listOf("支出", "收入", "结余"),
-        selectedIndex = selectedTab.ordinal,
-        onSelected = { index -> onTabSelected(StatsTab.entries[index]) },
-    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.extraLarge)
+            .background(KeacsColors.SurfaceSubtle)
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        StatsTab.entries.forEach { tab ->
+            val selected = tab == selectedTab
+            Text(
+                text = when (tab) {
+                    StatsTab.EXPENSE -> "支出"
+                    StatsTab.INCOME -> "收入"
+                    StatsTab.ASSET -> "结余"
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(32.dp)
+                    .clip(MaterialTheme.shapes.extraLarge)
+                    .background(if (selected) KeacsColors.Surface else Color.Transparent)
+                    .clickable { onTabSelected(tab) }
+                    .padding(vertical = 7.dp),
+                color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
+                style = MaterialTheme.typography.labelMedium,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            )
+        }
+    }
 }
 
 @Composable
@@ -293,22 +318,25 @@ private fun IncomeExpenseSummaryCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             StatAmountItem(
                 label = "收入",
                 amount = income,
                 color = KeacsColors.Income,
+                modifier = Modifier.weight(1f),
             )
             StatAmountItem(
                 label = "支出",
                 amount = expense,
                 color = KeacsColors.Expense,
+                modifier = Modifier.weight(1f),
             )
             StatAmountItem(
                 label = "结余",
                 amount = netBalance,
                 color = if (netBalance >= 0) KeacsColors.Primary else KeacsColors.Expense,
+                modifier = Modifier.weight(1f),
             )
         }
     }
@@ -319,8 +347,12 @@ private fun StatAmountItem(
     label: String,
     amount: Long,
     color: Color,
+    modifier: Modifier = Modifier,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Text(
             text = label,
             color = KeacsColors.TextSecondary,
@@ -333,6 +365,8 @@ private fun StatAmountItem(
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

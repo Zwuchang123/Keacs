@@ -57,10 +57,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun CategoryListScreen(
     repository: LocalDataRepository,
+    selectedIndex: Int,
+    onSelectedIndexChange: (Int) -> Unit,
     onEditCategory: (Long?, String) -> Unit,
 ) {
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
-    var selectedIndex by rememberSaveable { mutableStateOf(0) }
     val direction = categoryDirectionForTab(selectedIndex)
     val visibleCategories = categories.filter {
         if (selectedIndex == 2) {
@@ -80,7 +81,7 @@ fun CategoryListScreen(
         SegmentedTabs(
             items = listOf("支出分类", "收入分类", "账户分类"),
             selectedIndex = selectedIndex,
-            onSelected = { selectedIndex = it },
+            onSelected = onSelectedIndexChange,
         )
         KeacsCard(contentPadding = PaddingValues(0.dp), modifier = Modifier.weight(1f)) {
             LazyColumn(modifier = Modifier.padding(it)) {
@@ -322,7 +323,7 @@ private fun newCategoryButtonText(index: Int): String = when (index) {
 
 private fun categorySubtitle(category: CategoryEntity): String {
     if (!category.isEnabled) return "历史记录仍会显示"
-    if (!PresetSeedData.isAccountCategoryDirection(category.direction)) return "新建记录可选"
+    if (!PresetSeedData.isAccountCategoryDirection(category.direction)) return ""
     return if (PresetSeedData.accountCategoryNatureFor(category.direction) == PresetSeedData.ACCOUNT_LIABILITY) {
         "负债账户可选"
     } else {
