@@ -9,9 +9,9 @@ class KeacsDestinationTest {
         assertEquals(
             listOf(
                 KeacsDestination.Home,
-                KeacsDestination.Records,
-                KeacsDestination.Add,
                 KeacsDestination.Stats,
+                KeacsDestination.Add,
+                KeacsDestination.Discover,
                 KeacsDestination.Mine,
             ),
             bottomDestinations,

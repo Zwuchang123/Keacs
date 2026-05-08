@@ -65,7 +65,7 @@ fun ManagementListItem(
     ) {
         CategoryIcon(icon = icon, backgroundColor = color)
         Spacer(modifier = Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = title,
@@ -211,9 +211,8 @@ fun SwitchCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("用于新建记录", style = MaterialTheme.typography.bodySmall, color = KeacsColors.TextSecondary)
                 Text(
-                    text = if (checked) "开启" else "关闭",
+                    text = if (checked) "已启用" else "已停用",
                     style = MaterialTheme.typography.titleMedium,
                     color = KeacsColors.TextPrimary,
                 )

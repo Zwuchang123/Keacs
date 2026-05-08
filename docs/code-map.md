@@ -3,11 +3,12 @@
 | 模块       | 路径                                                                       | 作用                       |
 | -------- | ------------------------------------------------------------------------ | ------------------------ |
 | 应用启动     | `app/src/main/java/com/keacs/app/MainActivity.kt`                        | 启动入口，处理欢迎页、本地初始化、进入主应用   |
-| 主导航      | `app/src/main/java/com/keacs/app/ui/KeacsApp.kt`                         | 串起首页、账单、新增、统计、我的及二级页面    |
+| 主导航      | `app/src/main/java/com/keacs/app/ui/KeacsApp.kt`                         | 串起首页、统计、新增、发现、我的及二级页面    |
 | UI 层     | `app/src/main/java/com/keacs/app/ui`                                     | Compose 页面、组件、导航、主题      |
 | 首页       | `app/src/main/java/com/keacs/app/ui/home`                                | 首页与首页状态                  |
-| 记录       | `app/src/main/java/com/keacs/app/ui/record`                              | 新增/编辑记录、账单列表、账目详情、选择器    |
+| 记录       | `app/src/main/java/com/keacs/app/ui/record`                              | 新增/编辑记录、账目详情、选择器         |
 | 统计       | `app/src/main/java/com/keacs/app/ui/stats`                               | 收入、支出、结余统计与图表            |
+| 发现       | `app/src/main/java/com/keacs/app/ui/discover`                            | 当月概览、资产负债概览和发现页提示        |
 | 管理       | `app/src/main/java/com/keacs/app/ui/management`                          | 分类管理、账户管理、图标与颜色映射        |
 | 设置       | `app/src/main/java/com/keacs/app/ui/settings`                            | 我的、设置、关于                 |
 | 通用组件     | `app/src/main/java/com/keacs/app/ui/components`                          | 卡片、底栏、数字键盘、弹窗等通用 UI      |

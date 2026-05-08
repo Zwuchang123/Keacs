@@ -13,20 +13,20 @@ enum class KeacsDestination(
         titleRes = R.string.nav_home,
         contentDescriptionRes = R.string.nav_to_home,
     ),
-    Records(
-        route = "records",
-        titleRes = R.string.nav_records,
-        contentDescriptionRes = R.string.nav_to_records,
+    Stats(
+        route = "stats",
+        titleRes = R.string.nav_stats,
+        contentDescriptionRes = R.string.nav_to_stats,
     ),
     Add(
         route = "add",
         titleRes = R.string.nav_add,
         contentDescriptionRes = R.string.nav_to_add,
     ),
-    Stats(
-        route = "stats",
-        titleRes = R.string.nav_stats,
-        contentDescriptionRes = R.string.nav_to_stats,
+    Discover(
+        route = "discover",
+        titleRes = R.string.nav_discover,
+        contentDescriptionRes = R.string.nav_to_discover,
     ),
     Mine(
         route = "mine",
@@ -37,9 +37,9 @@ enum class KeacsDestination(
 
 val bottomDestinations = listOf(
     KeacsDestination.Home,
-    KeacsDestination.Records,
-    KeacsDestination.Add,
     KeacsDestination.Stats,
+    KeacsDestination.Add,
+    KeacsDestination.Discover,
     KeacsDestination.Mine,
 )
 

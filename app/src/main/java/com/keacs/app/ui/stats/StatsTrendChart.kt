@@ -149,7 +149,7 @@ fun TrendLineChart(
 }
 
 @Composable
-private fun SelectedChartValueLabel(
+internal fun SelectedChartValueLabel(
     text: String,
     color: Color,
     selectedIndex: Int,

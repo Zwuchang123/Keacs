@@ -24,18 +24,18 @@ class MainActivitySmokeTest {
 
         assertScreenDisplayed("screen-home")
 
-        composeRule.onNodeWithContentDescription("切换到账单").performClick()
-        assertScreenDisplayed("screen-records")
+        composeRule.onNodeWithContentDescription("切换到统计").performClick()
+        assertScreenDisplayed("screen-stats")
 
         composeRule.onNodeWithContentDescription("切换到新增").performClick()
         assertScreenDisplayed("screen-add")
-        composeRule.onAllNodesWithContentDescription("切换到统计").assertCountEquals(0)
+        composeRule.onAllNodesWithContentDescription("切换到发现").assertCountEquals(0)
 
         composeRule.onNodeWithContentDescription("返回").performClick()
-        assertScreenDisplayed("screen-records")
-
-        composeRule.onNodeWithContentDescription("切换到统计").performClick()
         assertScreenDisplayed("screen-stats")
+
+        composeRule.onNodeWithContentDescription("切换到发现").performClick()
+        assertScreenDisplayed("screen-discover")
 
         composeRule.onNodeWithContentDescription("切换到我的").performClick()
         assertScreenDisplayed("screen-mine")
