@@ -15,10 +15,30 @@ interface ScheduledRecordDao {
     @Update
     suspend fun update(record: ScheduledRecordEntity)
 
-    @Query("SELECT * FROM scheduled_records ORDER BY isEnabled DESC, nextRunAt ASC, id DESC")
+    @Query(
+        """
+        SELECT * FROM scheduled_records
+        ORDER BY CASE type
+            WHEN 'EXPENSE' THEN 0
+            WHEN 'INCOME' THEN 1
+            WHEN 'TRANSFER' THEN 2
+            ELSE 3
+        END, isEnabled DESC, nextRunAt ASC, id DESC
+        """,
+    )
     fun observeAll(): Flow<List<ScheduledRecordEntity>>
 
-    @Query("SELECT * FROM scheduled_records ORDER BY isEnabled DESC, nextRunAt ASC, id DESC")
+    @Query(
+        """
+        SELECT * FROM scheduled_records
+        ORDER BY CASE type
+            WHEN 'EXPENSE' THEN 0
+            WHEN 'INCOME' THEN 1
+            WHEN 'TRANSFER' THEN 2
+            ELSE 3
+        END, isEnabled DESC, nextRunAt ASC, id DESC
+        """,
+    )
     suspend fun getAll(): List<ScheduledRecordEntity>
 
     @Query("SELECT * FROM scheduled_records WHERE id = :id LIMIT 1")

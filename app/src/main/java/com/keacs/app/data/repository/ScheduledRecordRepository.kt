@@ -37,13 +37,24 @@ class ScheduledRecordRepository(
         fromAccountId: Long?,
         toAccountId: Long?,
         frequency: String,
+        recurrenceValues: String? = null,
         nextRunAt: Long,
         note: String,
         isEnabled: Boolean,
     ) {
-        validateSchedule(type, amountCent, categoryId, fromAccountId, toAccountId, frequency)
+        val normalizedFrequency = normalizeFrequency(frequency)
+        validateSchedule(type, amountCent, categoryId, fromAccountId, toAccountId, normalizedFrequency)
         val now = clock()
-        val recurrence = recurrenceFromDate(frequency, nextRunAt)
+        val recurrence = recurrenceFromDate(normalizedFrequency, nextRunAt, recurrenceValues)
+        val normalizedNextRunAt = nextOccurrence(
+            frequency = normalizedFrequency,
+            month = recurrence.month,
+            day = recurrence.day,
+            weekday = recurrence.weekday,
+            recurrenceValues = recurrence.values,
+            hour = recurrence.hour,
+            afterMillis = nextRunAt - 1,
+        )
         val normalizedCategoryId = if (type == RecordType.TRANSFER) null else categoryId
         val normalizedFromAccountId = if (type == RecordType.INCOME) null else fromAccountId
         val normalizedToAccountId = if (type == RecordType.EXPENSE) null else toAccountId
@@ -55,12 +66,13 @@ class ScheduledRecordRepository(
                     categoryId = normalizedCategoryId,
                     fromAccountId = normalizedFromAccountId,
                     toAccountId = normalizedToAccountId,
-                    frequency = frequency,
+                    frequency = normalizedFrequency,
                     recurrenceMonth = recurrence.month,
                     recurrenceDay = recurrence.day,
                     recurrenceWeekday = recurrence.weekday,
+                    recurrenceValues = recurrence.values,
                     recurrenceHour = recurrence.hour,
-                    nextRunAt = nextRunAt,
+                    nextRunAt = normalizedNextRunAt,
                     note = note.trim().ifBlank { null },
                     isEnabled = isEnabled,
                     createdAt = now,
@@ -76,12 +88,13 @@ class ScheduledRecordRepository(
                     categoryId = normalizedCategoryId,
                     fromAccountId = normalizedFromAccountId,
                     toAccountId = normalizedToAccountId,
-                    frequency = frequency,
+                    frequency = normalizedFrequency,
                     recurrenceMonth = recurrence.month,
                     recurrenceDay = recurrence.day,
                     recurrenceWeekday = recurrence.weekday,
+                    recurrenceValues = recurrence.values,
                     recurrenceHour = recurrence.hour,
-                    nextRunAt = nextRunAt,
+                    nextRunAt = normalizedNextRunAt,
                     note = note.trim().ifBlank { null },
                     isEnabled = isEnabled,
                     updatedAt = now,
@@ -189,8 +202,8 @@ class ScheduledRecordRepository(
 
     companion object {
         private const val MAX_CREATE_PER_SCHEDULE = 370
+        const val DEFAULT_RECURRENCE_HOUR = 9
         private val allowedFrequencies = setOf(
-            ScheduledFrequency.DAILY,
             ScheduledFrequency.WEEKLY,
             ScheduledFrequency.MONTHLY,
             ScheduledFrequency.YEARLY,
@@ -205,17 +218,76 @@ class ScheduledRecordRepository(
                 set(Calendar.MILLISECOND, 0)
             }.timeInMillis
 
-        fun recurrenceFromDate(frequency: String, timeMillis: Long): ScheduledRecurrence {
+        fun normalizeFrequency(frequency: String): String =
+            if (frequency == ScheduledFrequency.DAILY) ScheduledFrequency.WEEKLY else frequency
+
+        fun recurrenceFromDate(
+            frequency: String,
+            timeMillis: Long,
+            recurrenceValues: String? = null,
+        ): ScheduledRecurrence {
+            val normalizedFrequency = normalizeFrequency(frequency)
             val calendar = Calendar.getInstance(Locale.getDefault()).apply { timeInMillis = timeMillis }
+            val values = recurrenceValues?.takeIf { it.isNotBlank() }
+                ?: recurrenceValuesFromParts(
+                    frequency = normalizedFrequency,
+                    month = if (normalizedFrequency == ScheduledFrequency.YEARLY) {
+                        calendar.get(Calendar.MONTH) + 1
+                    } else {
+                        null
+                    },
+                    day = when (normalizedFrequency) {
+                        ScheduledFrequency.MONTHLY, ScheduledFrequency.YEARLY -> calendar.get(Calendar.DAY_OF_MONTH)
+                        else -> null
+                    },
+                    weekday = if (normalizedFrequency == ScheduledFrequency.WEEKLY) {
+                        calendar.get(Calendar.DAY_OF_WEEK)
+                    } else {
+                        null
+                    },
+                    fallbackMillis = timeMillis,
+                )
+            val firstValue = values.substringBefore(",")
+            val firstYearlyValue = firstValue.split("-")
             return ScheduledRecurrence(
-                month = if (frequency == ScheduledFrequency.YEARLY) calendar.get(Calendar.MONTH) + 1 else null,
-                day = when (frequency) {
-                    ScheduledFrequency.MONTHLY, ScheduledFrequency.YEARLY -> calendar.get(Calendar.DAY_OF_MONTH)
+                month = if (normalizedFrequency == ScheduledFrequency.YEARLY) {
+                    firstYearlyValue.getOrNull(0)?.toIntOrNull() ?: calendar.get(Calendar.MONTH) + 1
+                } else {
+                    null
+                },
+                day = when (normalizedFrequency) {
+                    ScheduledFrequency.MONTHLY -> firstValue.toIntOrNull() ?: calendar.get(Calendar.DAY_OF_MONTH)
+                    ScheduledFrequency.YEARLY -> firstYearlyValue.getOrNull(1)?.toIntOrNull()
+                        ?: calendar.get(Calendar.DAY_OF_MONTH)
                     else -> null
                 },
-                weekday = if (frequency == ScheduledFrequency.WEEKLY) calendar.get(Calendar.DAY_OF_WEEK) else null,
-                hour = calendar.get(Calendar.HOUR_OF_DAY),
+                weekday = if (normalizedFrequency == ScheduledFrequency.WEEKLY) {
+                    firstValue.toIntOrNull() ?: calendar.get(Calendar.DAY_OF_WEEK)
+                } else {
+                    null
+                },
+                values = values,
+                hour = DEFAULT_RECURRENCE_HOUR,
             )
+        }
+
+        fun recurrenceValuesFromParts(
+            frequency: String,
+            month: Int?,
+            day: Int?,
+            weekday: Int?,
+            fallbackMillis: Long,
+        ): String {
+            val normalizedFrequency = normalizeFrequency(frequency)
+            val calendar = Calendar.getInstance(Locale.getDefault()).apply { timeInMillis = fallbackMillis }
+            return when (normalizedFrequency) {
+                ScheduledFrequency.WEEKLY -> listOf(weekday ?: calendar.get(Calendar.DAY_OF_WEEK))
+                    .joinToString(",")
+                ScheduledFrequency.YEARLY -> listOf(
+                    "${month ?: calendar.get(Calendar.MONTH) + 1}-${day ?: calendar.get(Calendar.DAY_OF_MONTH)}",
+                ).joinToString(",")
+                else -> listOf(day ?: calendar.get(Calendar.DAY_OF_MONTH)).joinToString(",")
+            }
         }
 
         fun nextDate(schedule: ScheduledRecordEntity, fromMillis: Long): Long =
@@ -224,6 +296,7 @@ class ScheduledRecordRepository(
                 month = schedule.recurrenceMonth,
                 day = schedule.recurrenceDay,
                 weekday = schedule.recurrenceWeekday,
+                recurrenceValues = schedule.recurrenceValues,
                 hour = schedule.recurrenceHour,
                 afterMillis = fromMillis,
             )
@@ -233,27 +306,40 @@ class ScheduledRecordRepository(
             month: Int?,
             day: Int?,
             weekday: Int?,
+            recurrenceValues: String? = null,
             hour: Int,
             afterMillis: Long,
         ): Long {
             val base = Calendar.getInstance(Locale.getDefault()).apply { timeInMillis = afterMillis }
-            return when (frequency) {
-                ScheduledFrequency.WEEKLY -> weeklyOccurrence(base, weekday ?: base.get(Calendar.DAY_OF_WEEK), hour)
-                ScheduledFrequency.MONTHLY -> monthlyOccurrence(base, day ?: base.get(Calendar.DAY_OF_MONTH), hour)
-                ScheduledFrequency.YEARLY -> yearlyOccurrence(
-                    base = base,
-                    month = month ?: (base.get(Calendar.MONTH) + 1),
-                    day = day ?: base.get(Calendar.DAY_OF_MONTH),
-                    hour = hour,
-                )
-                else -> dailyOccurrence(base, hour)
+            val normalizedFrequency = normalizeFrequency(frequency)
+            val safeHour = hour.takeIf { it in 0..23 } ?: DEFAULT_RECURRENCE_HOUR
+            return when (normalizedFrequency) {
+                ScheduledFrequency.WEEKLY -> {
+                    val weekdays = parseIntValues(recurrenceValues, weekday ?: base.get(Calendar.DAY_OF_WEEK))
+                        .map { it.coerceIn(Calendar.SUNDAY, Calendar.SATURDAY) }
+                    weekdays.minOf { weeklyOccurrence(base, it, safeHour) }
+                }
+                ScheduledFrequency.MONTHLY -> {
+                    val days = parseIntValues(recurrenceValues, day ?: base.get(Calendar.DAY_OF_MONTH))
+                        .map { it.coerceIn(1, 31) }
+                    days.minOf { monthlyOccurrence(base, it, safeHour) }
+                }
+                else -> {
+                    val yearlyValues = parseYearlyValues(
+                        recurrenceValues = recurrenceValues,
+                        fallbackMonth = month ?: (base.get(Calendar.MONTH) + 1),
+                        fallbackDay = day ?: base.get(Calendar.DAY_OF_MONTH),
+                    )
+                    yearlyValues.minOf { yearly ->
+                        yearlyOccurrence(
+                            base = base,
+                            month = yearly.month,
+                            day = yearly.day,
+                            hour = safeHour,
+                        )
+                    }
+                }
             }
-        }
-
-        private fun dailyOccurrence(base: Calendar, hour: Int): Long {
-            val candidate = (base.clone() as Calendar).apply { setTimeParts(hour) }
-            if (candidate.timeInMillis <= base.timeInMillis) candidate.add(Calendar.DAY_OF_YEAR, 1)
-            return candidate.timeInMillis
         }
 
         private fun weeklyOccurrence(base: Calendar, weekday: Int, hour: Int): Long {
@@ -263,6 +349,33 @@ class ScheduledRecordRepository(
             }
             if (candidate.timeInMillis <= base.timeInMillis) candidate.add(Calendar.WEEK_OF_YEAR, 1)
             return candidate.timeInMillis
+        }
+
+        private fun parseIntValues(recurrenceValues: String?, fallback: Int): List<Int> {
+            val values = recurrenceValues
+                ?.split(",")
+                ?.mapNotNull { it.trim().toIntOrNull() }
+                ?.distinct()
+                ?.takeIf { it.isNotEmpty() }
+            return values ?: listOf(fallback)
+        }
+
+        private fun parseYearlyValues(
+            recurrenceValues: String?,
+            fallbackMonth: Int,
+            fallbackDay: Int,
+        ): List<YearlyValue> {
+            val values = recurrenceValues
+                ?.split(",")
+                ?.mapNotNull { raw ->
+                    val parts = raw.trim().split("-")
+                    val valueMonth = parts.getOrNull(0)?.toIntOrNull() ?: return@mapNotNull null
+                    val valueDay = parts.getOrNull(1)?.toIntOrNull() ?: return@mapNotNull null
+                    YearlyValue(valueMonth.coerceIn(1, 12), valueDay.coerceIn(1, 31))
+                }
+                ?.distinct()
+                ?.takeIf { it.isNotEmpty() }
+            return values ?: listOf(YearlyValue(fallbackMonth, fallbackDay))
         }
 
         private fun monthlyOccurrence(base: Calendar, day: Int, hour: Int): Long {
@@ -306,5 +419,11 @@ data class ScheduledRecurrence(
     val month: Int?,
     val day: Int?,
     val weekday: Int?,
+    val values: String,
     val hour: Int,
+)
+
+private data class YearlyValue(
+    val month: Int,
+    val day: Int,
 )

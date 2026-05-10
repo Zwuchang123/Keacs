@@ -28,7 +28,7 @@ import com.keacs.app.data.local.entity.ScheduledRecordEntity
         AppMetaEntity::class,
         ScheduledRecordEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class KeacsDatabase : RoomDatabase() {
@@ -51,7 +51,7 @@ abstract class KeacsDatabase : RoomDatabase() {
                     context.applicationContext,
                     KeacsDatabase::class.java,
                     DATABASE_NAME,
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                     .also { instance = it }
             }
@@ -172,6 +172,16 @@ abstract class KeacsDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE scheduled_records ADD COLUMN recurrenceValues TEXT")
+                db.execSQL("UPDATE scheduled_records SET frequency = 'WEEKLY' WHERE frequency = 'DAILY'")
+                db.execSQL("UPDATE scheduled_records SET recurrenceHour = 9")
+                updateCategoryIcons(db)
+                updateAccountIcons(db)
+            }
+        }
+
         private fun updateCategoryIcons(db: SupportSQLiteDatabase) {
             mapOf(
                 "餐饮" to ("food" to "orange"),
@@ -188,7 +198,7 @@ abstract class KeacsDatabase : RoomDatabase() {
                 "工资" to ("work" to "blue"),
                 "奖金" to ("bonus" to "yellow"),
                 "报销" to ("receipt" to "green"),
-                "理财收益" to ("chart" to "purple"),
+                "理财收益" to ("profit_chart" to "purple"),
                 "礼金" to ("gift" to "orange"),
                 "兼职" to ("coins" to "cyan"),
             ).forEach { (name, icon) ->
@@ -197,21 +207,49 @@ abstract class KeacsDatabase : RoomDatabase() {
                     arrayOf(icon.first, icon.second, name),
                 )
             }
+            mapOf(
+                "支付宝" to ("alipay" to "blue"),
+                "微信" to ("wechat_asset" to "cyan"),
+                "现金" to ("cash_asset" to "green"),
+                "银行卡" to ("bank_asset" to "indigo"),
+                "公积金" to ("housing_fund" to "purple"),
+                "投资账户" to ("investment_asset" to "pink"),
+                "其他资产" to ("asset_more" to "gray"),
+                "信用卡" to ("credit_card_liability" to "orange"),
+                "花呗白条" to ("credit_line" to "yellow"),
+                "消费贷" to ("consumer_loan" to "red"),
+                "房贷车贷" to ("mortgage_liability" to "blue"),
+                "亲友借款" to ("friend_loan" to "green"),
+                "其他负债" to ("liability_more" to "gray"),
+            ).forEach { (name, icon) ->
+                db.execSQL(
+                    "UPDATE categories SET iconKey = ?, colorKey = ? WHERE name = ?",
+                    arrayOf(icon.first, icon.second, name),
+                )
+            }
+            db.execSQL(
+                "UPDATE categories SET iconKey = 'income_more', colorKey = 'gray' WHERE direction = 'INCOME' AND name = '其他'",
+            )
+            db.execSQL(
+                "UPDATE categories SET iconKey = 'more', colorKey = 'gray' WHERE direction = 'EXPENSE' AND name = '其他'",
+            )
         }
 
         private fun updateAccountIcons(db: SupportSQLiteDatabase) {
             mapOf(
-                "现金" to ("wallet" to "green"),
+                "现金" to ("cash_asset" to "green"),
                 "支付宝" to ("alipay" to "blue"),
-                "微信" to ("wechat" to "cyan"),
-                "银行卡" to ("bank" to "indigo"),
-                "信用卡" to ("card" to "orange"),
+                "微信" to ("wechat_asset" to "cyan"),
+                "银行卡" to ("bank_asset" to "indigo"),
+                "信用卡" to ("credit_card_liability" to "orange"),
                 "花呗/白条" to ("credit_line" to "yellow"),
-                "公积金" to ("home" to "purple"),
-                "投资账户" to ("chart" to "pink"),
-                "消费贷" to ("loan" to "red"),
-                "房贷/车贷" to ("mortgage" to "blue"),
-                "亲友借款" to ("request_account" to "green"),
+                "公积金" to ("housing_fund" to "purple"),
+                "投资账户" to ("investment_asset" to "pink"),
+                "消费贷" to ("consumer_loan" to "red"),
+                "房贷/车贷" to ("mortgage_liability" to "blue"),
+                "亲友借款" to ("friend_loan" to "green"),
+                "其他资产" to ("asset_more" to "gray"),
+                "其他负债" to ("liability_more" to "gray"),
             ).forEach { (name, icon) ->
                 db.execSQL(
                     "UPDATE accounts SET iconKey = ?, colorKey = ? WHERE name = ?",

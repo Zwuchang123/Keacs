@@ -20,25 +20,25 @@ object PresetSeedData {
         )
         val assetAccountCategories = listOf(
             Triple("支付宝", "alipay", "blue"),
-            Triple("微信", "wechat", "cyan"),
-            Triple("现金", "wallet", "green"),
-            Triple("银行卡", "bank", "indigo"),
-            Triple("公积金", "home", "purple"),
-            Triple("投资账户", "chart", "pink"),
-            Triple("其他资产", "more", "gray"),
+            Triple("微信", "wechat_asset", "cyan"),
+            Triple("现金", "cash_asset", "green"),
+            Triple("银行卡", "bank_asset", "indigo"),
+            Triple("公积金", "housing_fund", "purple"),
+            Triple("投资账户", "investment_asset", "pink"),
+            Triple("其他资产", "asset_more", "gray"),
         )
         val liabilityAccountCategories = listOf(
-            Triple("信用卡", "card", "orange"),
+            Triple("信用卡", "credit_card_liability", "orange"),
             Triple("花呗白条", "credit_line", "yellow"),
-            Triple("消费贷", "loan", "red"),
-            Triple("房贷车贷", "mortgage", "blue"),
-            Triple("亲友借款", "request_account", "green"),
-            Triple("其他负债", "more", "gray"),
+            Triple("消费贷", "consumer_loan", "red"),
+            Triple("房贷车贷", "mortgage_liability", "blue"),
+            Triple("亲友借款", "friend_loan", "green"),
+            Triple("其他负债", "liability_more", "gray"),
         )
         return incomes.mapIndexed { index, name ->
-            presetCategory(name, CATEGORY_INCOME, index, now, categoryIconKey(name), categoryColorKey(name))
+            presetCategory(name, CATEGORY_INCOME, index, now, categoryIconKey(name, CATEGORY_INCOME), categoryColorKey(name))
         } + expenses.mapIndexed { index, name ->
-            presetCategory(name, CATEGORY_EXPENSE, index, now, categoryIconKey(name), categoryColorKey(name))
+            presetCategory(name, CATEGORY_EXPENSE, index, now, categoryIconKey(name, CATEGORY_EXPENSE), categoryColorKey(name))
         } + assetAccountCategories.mapIndexed { index, (name, iconKey, colorKey) ->
             presetCategory(name, CATEGORY_ACCOUNT_ASSET, index, now, iconKey, colorKey)
         } + liabilityAccountCategories.mapIndexed { index, (name, iconKey, colorKey) ->
@@ -93,7 +93,7 @@ object PresetSeedData {
         updatedAt = now,
     )
 
-    fun categoryIconKey(name: String): String = when (name) {
+    fun categoryIconKey(name: String, direction: String = CATEGORY_EXPENSE): String = when (name) {
         "餐饮" -> "food"
         "交通" -> "bus"
         "日用", "购物" -> "bag"
@@ -103,7 +103,8 @@ object PresetSeedData {
         "医疗" -> "medical"
         "娱乐" -> "game"
         "教育" -> "school"
-        "投资", "理财收益" -> "chart"
+        "投资" -> "chart"
+        "理财收益" -> "profit_chart"
         "人情" -> "heart"
         "恋爱" -> "love"
         "旅行" -> "luggage"
@@ -115,6 +116,7 @@ object PresetSeedData {
         "礼金" -> "gift"
         "报销" -> "receipt"
         "兼职" -> "coins"
+        "其他" -> if (direction == CATEGORY_INCOME) "income_more" else "more"
         else -> "more"
     }
 
@@ -134,18 +136,20 @@ object PresetSeedData {
     }
 
     fun accountIconKey(name: String): String = when (name) {
-        "现金" -> "wallet"
+        "现金" -> "cash_asset"
         "支付宝" -> "alipay"
-        "微信" -> "wechat"
-        "银行卡" -> "bank"
-        "信用卡" -> "card"
+        "微信" -> "wechat_asset"
+        "银行卡" -> "bank_asset"
+        "信用卡" -> "credit_card_liability"
         "花呗/白条" -> "credit_line"
-        "公积金" -> "home"
-        "投资账户" -> "chart"
-        "消费贷" -> "loan"
-        "房贷/车贷" -> "mortgage"
-        "亲友借款" -> "request_account"
-        else -> "more"
+        "公积金" -> "housing_fund"
+        "投资账户" -> "investment_asset"
+        "消费贷" -> "consumer_loan"
+        "房贷/车贷" -> "mortgage_liability"
+        "亲友借款" -> "friend_loan"
+        "其他资产" -> "asset_more"
+        "其他负债" -> "liability_more"
+        else -> "asset_more"
     }
 
     fun accountColorKey(name: String): String = when (name) {

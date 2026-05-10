@@ -46,6 +46,7 @@ data class ScheduledRecordEntity(
     val recurrenceMonth: Int?,
     val recurrenceDay: Int?,
     val recurrenceWeekday: Int?,
+    val recurrenceValues: String?,
     val recurrenceHour: Int,
     val nextRunAt: Long,
     val note: String?,

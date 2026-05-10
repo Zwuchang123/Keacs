@@ -119,6 +119,7 @@ app/
 - `recurrenceMonth`
 - `recurrenceDay`
 - `recurrenceWeekday`
+- `recurrenceValues`
 - `recurrenceHour`
 - `nextRunAt`
 - `note`
@@ -207,7 +208,7 @@ keacs.db
 
 - 保存定时记账模板
 - 应用启动时生成到期账目
-- 生成后推进下次日期
+- 生成后按周、月、年配置推进下次时间
 
 ### PreferencesManager
 
@@ -292,7 +293,7 @@ netAsset = totalAsset + totalLiability
 
 ## 10. 数据迁移
 
-- Room 数据库版本从 `1` 开始，当前版本为 `4`。
+- Room 数据库版本从 `1` 开始，当前版本为 `5`。
 - 结构变更必须提供 Migration。
 - 备份文件版本独立于数据库版本。
 
@@ -300,5 +301,5 @@ netAsset = totalAsset + totalLiability
 
 - 当前账户余额保存在 `accounts.initialBalanceCent`，写入账目时同步应用账目影响。
 - 统计历史余额通过当前余额减去节点之后的账目影响反推。
-- `preset_version` 版本 4 会把旧负债账户余额迁移为负数。
+- `preset_version` 版本 5 会补齐当前预置分类和图标规则。
 - `account_adjustments` 仅用于兼容旧数据库结构，不进入新增、编辑、统计和备份主流程。

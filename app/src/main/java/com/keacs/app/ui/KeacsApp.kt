@@ -86,6 +86,7 @@ fun KeacsApp(
     var recordDetailSourceRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
     var categoryListTabIndex by rememberSaveable { mutableIntStateOf(0) }
     var accountDeleteRequest by rememberSaveable { mutableStateOf(0) }
+    var scheduledDeleteRequest by rememberSaveable { mutableStateOf(0) }
     var navigationDirection by rememberSaveable { mutableIntStateOf(1) }
     val currentDestination = bottomDestinations.firstOrNull { it.route == currentRoute }
     val screenTitle = when {
@@ -141,8 +142,17 @@ fun KeacsApp(
     KeacsScaffold(
         title = screenTitle,
         showBack = currentDestination == null || currentDestination == KeacsDestination.Add,
-        actionText = if (isExistingAccountEditRoute(currentRoute)) "删除" else null,
-        onActionClick = { accountDeleteRequest += 1 },
+        actionText = if (isExistingAccountEditRoute(currentRoute) || isExistingScheduledEditRoute(currentRoute)) {
+            "删除"
+        } else {
+            null
+        },
+        onActionClick = {
+            when {
+                isExistingAccountEditRoute(currentRoute) -> accountDeleteRequest += 1
+                isExistingScheduledEditRoute(currentRoute) -> scheduledDeleteRequest += 1
+            }
+        },
         onBackClick = {
             navigateBack()
         },
@@ -286,6 +296,7 @@ fun KeacsApp(
                     repository = repository,
                     scheduledRepository = scheduledRepository,
                     scheduleId = routeId(route, ROUTE_SCHEDULED_EDIT),
+                    deleteRequest = scheduledDeleteRequest,
                     onDone = { navigateBackTo(ROUTE_SCHEDULED_LIST) },
                 )
 
@@ -333,6 +344,9 @@ private fun routeDirection(route: String, prefix: String): String =
 
 private fun isExistingAccountEditRoute(route: String): Boolean =
     route.startsWith(ROUTE_ACCOUNT_EDIT) && routeId(route, ROUTE_ACCOUNT_EDIT) != null
+
+private fun isExistingScheduledEditRoute(route: String): Boolean =
+    route.startsWith(ROUTE_SCHEDULED_EDIT) && routeId(route, ROUTE_SCHEDULED_EDIT) != null
 
 private fun navigationAnimationIndex(route: String): Int = when (route) {
     KeacsDestination.Home.route -> 0

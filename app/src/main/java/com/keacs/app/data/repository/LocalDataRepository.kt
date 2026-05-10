@@ -312,7 +312,7 @@ class LocalDataRepository(
 
     private companion object {
         const val META_PRESET_VERSION = "preset_version"
-        const val PRESET_VERSION = 4
+        const val PRESET_VERSION = 5
         const val MAX_CATEGORY_NAME_LENGTH = 4
         val legacyLiabilityCategoryNames = setOf(
             "信用卡",

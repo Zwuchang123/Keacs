@@ -57,7 +57,7 @@ class KeacsDatabaseTest {
 
     @Test
     fun databaseVersionIsCurrent() {
-        assertEquals(4, database.openHelper.readableDatabase.version)
+        assertEquals(5, database.openHelper.readableDatabase.version)
     }
 
     @Test
@@ -77,7 +77,7 @@ class KeacsDatabaseTest {
         assertEquals(6, accounts.count { it.nature == PresetSeedData.ACCOUNT_LIABILITY })
         assertTrue(categories.all { it.isPreset && it.isEnabled })
         assertTrue(accounts.all { it.isEnabled && it.initialBalanceCent == 0L })
-        assertEquals("4", repository.presetVersion())
+        assertEquals("5", repository.presetVersion())
     }
 
     @Test

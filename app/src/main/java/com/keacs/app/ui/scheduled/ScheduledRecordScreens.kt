@@ -1,17 +1,12 @@
 package com.keacs.app.ui.scheduled
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -21,7 +16,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -30,9 +24,6 @@ import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.data.repository.ScheduledFrequency
 import com.keacs.app.data.repository.ScheduledRecordRepository
 import com.keacs.app.domain.model.RecordType
-import com.keacs.app.ui.components.FormFieldRow
-import com.keacs.app.ui.components.KeacsCard
-import com.keacs.app.ui.components.MenuDivider
 import com.keacs.app.ui.components.SegmentedTabs
 import com.keacs.app.ui.record.AccountSelectorBottomSheet
 import com.keacs.app.ui.record.AmountKeyboardPanel
@@ -48,54 +39,11 @@ import com.keacs.app.ui.theme.KeacsSpacing
 import kotlinx.coroutines.launch
 
 @Composable
-fun ScheduledRecordListScreen(
-    repository: LocalDataRepository,
-    scheduledRepository: ScheduledRecordRepository,
-    onEditSchedule: (Long?) -> Unit,
-) {
-    val schedules by scheduledRepository.observeSchedules().collectAsState(initial = emptyList())
-    val categories by repository.observeCategories().collectAsState(initial = emptyList())
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag("screen-scheduled-list")
-            .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
-        verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
-    ) {
-        KeacsCard(contentPadding = PaddingValues(0.dp), modifier = Modifier.weight(1f)) {
-            LazyColumn(modifier = Modifier.padding(it)) {
-                if (schedules.isEmpty()) {
-                    item {
-                        Text(
-                            text = "还没有定时记账",
-                            color = KeacsColors.TextSecondary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                }
-                itemsIndexed(schedules, key = { _, item -> item.id }) { index, schedule ->
-                    ScheduledRow(
-                        schedule = schedule,
-                        category = categories.firstOrNull { it.id == schedule.categoryId },
-                        onClick = { onEditSchedule(schedule.id) },
-                    )
-                    if (index != schedules.lastIndex) MenuDivider()
-                }
-            }
-        }
-        Button(onClick = { onEditSchedule(null) }, modifier = Modifier.fillMaxWidth()) {
-            Text("新增定时记账")
-        }
-    }
-}
-
-@Composable
 fun ScheduledRecordEditScreen(
     repository: LocalDataRepository,
     scheduledRepository: ScheduledRecordRepository,
     scheduleId: Long?,
+    deleteRequest: Int = 0,
     onDone: () -> Unit,
 ) {
     val schedules by scheduledRepository.observeSchedules().collectAsState(initial = emptyList())
@@ -111,12 +59,17 @@ fun ScheduledRecordEditScreen(
     var fromAccountId by rememberSaveable(scheduleId) { mutableStateOf<Long?>(null) }
     var toAccountId by rememberSaveable(scheduleId) { mutableStateOf<Long?>(null) }
     var nextRunAt by rememberSaveable(scheduleId) { mutableLongStateOf(defaultNextRunAt()) }
+    var recurrenceValues by rememberSaveable(scheduleId) {
+        mutableStateOf(defaultMonthlyRecurrenceValues(nextRunAt))
+    }
     var note by rememberSaveable(scheduleId) { mutableStateOf("") }
     var isEnabled by rememberSaveable(scheduleId) { mutableStateOf(true) }
     var error by rememberSaveable(scheduleId) { mutableStateOf<String?>(null) }
     var isSaving by rememberSaveable(scheduleId) { mutableStateOf(false) }
     var showAccountSelector by rememberSaveable { mutableStateOf(false) }
     var showDateSelector by rememberSaveable { mutableStateOf(false) }
+    var showDeleteDialog by rememberSaveable(scheduleId) { mutableStateOf(false) }
+    var handledDeleteRequest by rememberSaveable(scheduleId) { mutableStateOf(deleteRequest) }
 
     val direction = if (type == RecordType.INCOME) PresetSeedData.CATEGORY_INCOME else PresetSeedData.CATEGORY_EXPENSE
     val availableCategories = categories.filter { it.direction == direction && it.isEnabled }
@@ -131,12 +84,20 @@ fun ScheduledRecordEditScreen(
     LaunchedEffect(editing?.id) {
         editing?.let {
             type = it.type
-            frequency = it.frequency
+            frequency = ScheduledRecordRepository.normalizeFrequency(it.frequency)
             amount = centToInput(it.amountCent)
             categoryId = it.categoryId
             fromAccountId = it.fromAccountId
             toAccountId = it.toAccountId
             nextRunAt = it.nextRunAt
+            recurrenceValues = it.recurrenceValues
+                ?: ScheduledRecordRepository.recurrenceValuesFromParts(
+                    frequency = it.frequency,
+                    month = it.recurrenceMonth,
+                    day = it.recurrenceDay,
+                    weekday = it.recurrenceWeekday,
+                    fallbackMillis = it.nextRunAt,
+                )
             note = it.note.orEmpty()
             isEnabled = it.isEnabled
         }
@@ -152,6 +113,13 @@ fun ScheduledRecordEditScreen(
         if (type == RecordType.TRANSFER && availableAccounts.isNotEmpty()) {
             if (availableAccounts.none { it.id == fromAccountId }) fromAccountId = availableAccounts.first().id
             if (availableAccounts.none { it.id == toAccountId }) toAccountId = availableAccounts.drop(1).firstOrNull()?.id
+        }
+    }
+
+    LaunchedEffect(deleteRequest) {
+        if (deleteRequest > handledDeleteRequest && scheduleId != null) {
+            handledDeleteRequest = deleteRequest
+            showDeleteDialog = true
         }
     }
 
@@ -193,26 +161,19 @@ fun ScheduledRecordEditScreen(
             }
             ScheduledFormArea(
                 type = type,
-                accounts = availableAccounts.map { it.id to it.name }.toMap(),
+                accounts = availableAccounts,
+                accountCategories = categories,
                 fromAccountId = fromAccountId,
                 toAccountId = toAccountId,
                 frequency = frequency,
+                recurrenceValues = recurrenceValues,
                 nextRunAt = nextRunAt,
                 note = note,
                 isEnabled = isEnabled,
-                canDelete = scheduleId != null,
                 onAccountClick = { showAccountSelector = true },
                 onTimeClick = { showDateSelector = true },
                 onNoteChange = { note = it },
                 onEnabledChange = { isEnabled = it },
-                onDelete = {
-                    scheduleId?.let { id ->
-                        scope.launch {
-                            scheduledRepository.deleteSchedule(id)
-                            onDone()
-                        }
-                    }
-                },
             )
         }
         AmountKeyboardPanel(
@@ -245,6 +206,7 @@ fun ScheduledRecordEditScreen(
                             fromAccountId = fromAccountId,
                             toAccountId = toAccountId,
                             frequency = frequency,
+                            recurrenceValues = recurrenceValues,
                             nextRunAt = nextRunAt,
                             note = note,
                             isEnabled = isEnabled,
@@ -277,13 +239,36 @@ fun ScheduledRecordEditScreen(
     if (showDateSelector) {
         RecurrencePickerBottomSheet(
             frequency = frequency,
+            recurrenceValues = recurrenceValues,
             nextRunAt = nextRunAt,
-            onSelected = { nextFrequency, nextTime ->
+            onSelected = { nextFrequency, nextValues, nextTime ->
                 frequency = nextFrequency
+                recurrenceValues = nextValues
                 nextRunAt = nextTime
                 showDateSelector = false
             },
             onDismiss = { showDateSelector = false },
+        )
+    }
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("删除这个定时记账？") },
+            text = { Text("删除后不会影响已经生成的账目。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        scheduleId?.let { id ->
+                            scope.launch {
+                                scheduledRepository.deleteSchedule(id)
+                                onDone()
+                            }
+                        }
+                    },
+                ) { Text("删除", color = KeacsColors.Error) }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("取消") } },
         )
     }
 }
@@ -296,7 +281,13 @@ private fun defaultNextRunAt(): Long {
         month = null,
         day = calendar.get(java.util.Calendar.DAY_OF_MONTH),
         weekday = null,
-        hour = calendar.get(java.util.Calendar.HOUR_OF_DAY),
+        recurrenceValues = null,
+        hour = ScheduledRecordRepository.DEFAULT_RECURRENCE_HOUR,
         afterMillis = now,
     )
+}
+
+private fun defaultMonthlyRecurrenceValues(nextRunAt: Long): String {
+    val calendar = java.util.Calendar.getInstance(java.util.Locale.getDefault()).apply { timeInMillis = nextRunAt }
+    return calendar.get(java.util.Calendar.DAY_OF_MONTH).toString()
 }

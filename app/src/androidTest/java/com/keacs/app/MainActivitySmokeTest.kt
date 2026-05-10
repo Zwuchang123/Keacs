@@ -5,8 +5,10 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
@@ -39,6 +41,25 @@ class MainActivitySmokeTest {
 
         composeRule.onNodeWithContentDescription("切换到我的").performClick()
         assertScreenDisplayed("screen-mine")
+    }
+
+    @Test
+    fun scheduledRecordEditShowsFixedNineOClockOptions() {
+        enterMainIfWelcomeShown()
+
+        composeRule.onNodeWithContentDescription("切换到我的").performClick()
+        assertScreenDisplayed("screen-mine")
+        composeRule.onNodeWithText("定时记账").performClick()
+        assertScreenDisplayed("screen-scheduled-list")
+        composeRule.onNodeWithText("新增定时记账").performClick()
+        assertScreenDisplayed("screen-scheduled-edit")
+
+        composeRule.onNodeWithText("生成时间").performClick()
+        composeRule.onNodeWithText("每周").assertIsDisplayed()
+        composeRule.onNodeWithText("每月").assertIsDisplayed()
+        composeRule.onNodeWithText("每年").assertIsDisplayed()
+        composeRule.onAllNodesWithText("每天").assertCountEquals(0)
+        composeRule.onNodeWithText("默认 09:00 生成").assertIsDisplayed()
     }
 
     private fun enterMainIfWelcomeShown() {

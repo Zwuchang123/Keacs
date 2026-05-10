@@ -64,7 +64,7 @@ class ScheduledRecordRepositoryTest {
         assertEquals(RecordType.INCOME, record.type)
         assertEquals(10_000L, record.amountCent)
         assertEquals("固定收入", record.note)
-        assertEquals(dateMillis(2026, 6, 1), schedule.nextRunAt)
+        assertEquals(dateMillis(2026, 6, 1, 9), schedule.nextRunAt)
         assertEquals(10_000L, repository.getAccounts().first { it.id == account.id }.initialBalanceCent)
     }
 
@@ -97,7 +97,61 @@ class ScheduledRecordRepositoryTest {
         assertEquals(bank.id, record.toAccountId)
         assertEquals(-3_000L, repository.getAccounts().first { it.id == cash.id }.initialBalanceCent)
         assertEquals(3_000L, repository.getAccounts().first { it.id == bank.id }.initialBalanceCent)
-        assertEquals(dateMillis(2026, 5, 11), schedule.nextRunAt)
+        assertEquals(dateMillis(2026, 5, 11, 9), schedule.nextRunAt)
+    }
+
+    @Test
+    fun weeklyScheduleSupportsMultipleWeekdays() = runTest {
+        repository.initializePresets()
+        val category = repository.getCategories().first { it.name == "餐饮" }
+        val account = repository.getAccounts().first { it.name == "现金" }
+
+        scheduledRepository.saveSchedule(
+            id = null,
+            type = RecordType.EXPENSE,
+            amountCent = 2_000,
+            categoryId = category.id,
+            fromAccountId = account.id,
+            toAccountId = null,
+            frequency = ScheduledFrequency.WEEKLY,
+            recurrenceValues = "${Calendar.MONDAY},${Calendar.TUESDAY}",
+            nextRunAt = dateMillis(2026, 5, 4),
+            note = "",
+            isEnabled = true,
+        )
+
+        val createdCount = scheduledRepository.createDueRecords()
+
+        val records = repository.getRecords()
+        val schedule = scheduledRepository.getSchedules().single()
+        assertEquals(2, createdCount)
+        assertEquals(2, records.size)
+        assertEquals(dateMillis(2026, 5, 11, 9), schedule.nextRunAt)
+    }
+
+    @Test
+    fun nextOccurrenceUsesMonthlyAndYearlySelections() {
+        val monthly = ScheduledRecordRepository.nextOccurrence(
+            frequency = ScheduledFrequency.MONTHLY,
+            month = null,
+            day = null,
+            weekday = null,
+            recurrenceValues = "15,20",
+            hour = ScheduledRecordRepository.DEFAULT_RECURRENCE_HOUR,
+            afterMillis = dateMillis(2026, 5, 10),
+        )
+        val yearly = ScheduledRecordRepository.nextOccurrence(
+            frequency = ScheduledFrequency.YEARLY,
+            month = null,
+            day = null,
+            weekday = null,
+            recurrenceValues = "6-1,12-1",
+            hour = ScheduledRecordRepository.DEFAULT_RECURRENCE_HOUR,
+            afterMillis = dateMillis(2026, 5, 10),
+        )
+
+        assertEquals(dateMillis(2026, 5, 15, 9), monthly)
+        assertEquals(dateMillis(2026, 6, 1, 9), yearly)
     }
 
     @Test
@@ -119,9 +173,9 @@ class ScheduledRecordRepositoryTest {
         assertEquals(expenseIds[0], updatedIds[1])
     }
 
-    private fun dateMillis(year: Int, month: Int, day: Int): Long =
+    private fun dateMillis(year: Int, month: Int, day: Int, hour: Int = 0): Long =
         Calendar.getInstance(Locale.CHINA).apply {
-            set(year, month - 1, day, 0, 0, 0)
+            set(year, month - 1, day, hour, 0, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
 }

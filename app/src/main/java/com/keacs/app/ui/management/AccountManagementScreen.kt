@@ -95,7 +95,7 @@ fun AccountEditScreen(
     var nature by rememberSaveable(accountId) { mutableStateOf(PresetSeedData.ACCOUNT_ASSET) }
     var type by rememberSaveable(accountId) { mutableStateOf("现金") }
     var balance by rememberSaveable(accountId) { mutableStateOf("0.00") }
-    var iconKey by rememberSaveable(accountId) { mutableStateOf("wallet") }
+    var iconKey by rememberSaveable(accountId) { mutableStateOf("cash_asset") }
     var colorKey by rememberSaveable(accountId) { mutableStateOf("green") }
     var isEnabled by rememberSaveable(accountId) { mutableStateOf(true) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
