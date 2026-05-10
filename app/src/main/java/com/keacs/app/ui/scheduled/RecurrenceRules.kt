@@ -33,7 +33,7 @@ fun recurrenceLabel(frequency: String, recurrenceValues: String?, nextRunAt: Lon
     return when (normalizedFrequency) {
         ScheduledFrequency.WEEKLY -> {
             val labels = parseWeekdays(values, calendar.get(Calendar.DAY_OF_WEEK)).map { weekdayName(it) }
-            "每${labels.joinToString("、")} 09:00"
+            "每${labels.joinToString("、")}"
         }
         ScheduledFrequency.YEARLY -> {
             val labels = parseYearlyValues(
@@ -41,11 +41,11 @@ fun recurrenceLabel(frequency: String, recurrenceValues: String?, nextRunAt: Lon
                 fallbackMonth = calendar.get(Calendar.MONTH) + 1,
                 fallbackDay = calendar.get(Calendar.DAY_OF_MONTH),
             ).map { "${it.month}月${it.day}日" }
-            "每年${labels.joinToString("、")} 09:00"
+            "每年${labels.joinToString("、")}"
         }
         else -> {
             val labels = parseMonthDays(values, calendar.get(Calendar.DAY_OF_MONTH)).map { "${it}日" }
-            "每月${labels.joinToString("、")} 09:00"
+            "每月${labels.joinToString("、")}"
         }
     }
 }

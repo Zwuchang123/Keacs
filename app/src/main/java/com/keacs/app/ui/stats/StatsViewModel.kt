@@ -354,7 +354,7 @@ class StatsViewModel(
     }
 
     companion object {
-        private val currencyFormat = DecimalFormat("#,##0.00")
+        private val currencyFormat = DecimalFormat("#0.00")
 
         fun formatCent(value: Long): String =
             currencyFormat.format(value / 100.0)

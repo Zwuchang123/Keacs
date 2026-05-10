@@ -23,11 +23,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,6 +51,7 @@ import com.keacs.app.data.local.entity.CategoryEntity
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.usecase.CategoryManagementUseCase
 import com.keacs.app.ui.components.CategoryIcon
+import com.keacs.app.ui.components.ConfirmDialog
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.SegmentedTabs
 import com.keacs.app.ui.theme.KeacsColors
@@ -74,7 +73,7 @@ fun CategoryListScreen(
     var draggingId by remember { mutableStateOf<Long?>(null) }
     var dragOffset by remember { mutableStateOf(0f) }
     var dragStartIndex by remember { mutableStateOf<Int?>(null) }
-    val rowHeightPx = with(LocalDensity.current) { 64.dp.toPx() }
+    val rowHeightPx = with(LocalDensity.current) { 54.dp.toPx() }
     val visibleCategories = categories.filter {
         if (selectedIndex == 2) {
             PresetSeedData.isAccountCategoryDirection(it.direction)
@@ -257,7 +256,7 @@ fun CategoryEditScreen(
     if (confirmDelete) {
         DeleteDialog(
             title = "删除这个分类？",
-            text = "没有历史记录时可以删除；已经用过的分类不能删除，只能停用。",
+            text = "删除后无法恢复。",
             onDismiss = { confirmDelete = false },
             onConfirm = {
                 confirmDelete = false
@@ -357,12 +356,13 @@ private fun DeleteDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(text) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("删除", color = KeacsColors.Error) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
+    ConfirmDialog(
+        title = title,
+        text = text,
+        confirmText = "删除",
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        isDestructive = true,
     )
 }
 

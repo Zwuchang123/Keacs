@@ -159,7 +159,7 @@ fun SettingsScreen(
     if (showClearCacheConfirm) {
         ConfirmDialog(
             title = "清除缓存",
-            text = "清除缓存不会删除账单数据，但可能需要重新加载部分内容。确定清除吗？",
+            text = "清除缓存不会删除账单数据。",
             confirmText = "清除",
             onConfirm = {
                 showClearCacheConfirm = false

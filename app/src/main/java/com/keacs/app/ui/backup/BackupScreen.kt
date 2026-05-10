@@ -96,7 +96,7 @@ fun BackupScreen(
     showImportConfirm?.let { uri ->
         ConfirmDialog(
             title = "合并导入备份",
-            text = "导入会把备份内容追加到当前数据中，且不会自动去重。确定要继续导入吗？",
+            text = "导入后会和现有数据合并。",
             confirmText = "继续导入",
             onConfirm = {
                 showImportConfirm = null

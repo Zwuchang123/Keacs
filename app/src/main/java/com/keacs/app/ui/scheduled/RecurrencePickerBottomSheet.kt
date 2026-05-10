@@ -7,14 +7,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -27,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.repository.ScheduledFrequency
@@ -105,14 +113,28 @@ fun RecurrencePickerBottomSheet(
                 .navigationBarsPadding()
                 .padding(horizontal = KeacsSpacing.PageHorizontal)
                 .padding(top = 16.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(
-                text = "生成时间",
-                color = KeacsColors.TextPrimary,
-                style = MaterialTheme.typography.titleMedium,
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-            )
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                Spacer(modifier = Modifier.width(48.dp))
+                Text(
+                    text = "生成时间",
+                    color = KeacsColors.TextPrimary,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "取消",
+                        tint = KeacsColors.TextSecondary,
+                    )
+                }
+            }
             SegmentedTabs(
                 items = frequencyLabels,
                 selectedIndex = frequencyValues.indexOf(selectedFrequency).coerceAtLeast(0),
@@ -128,6 +150,7 @@ fun RecurrencePickerBottomSheet(
                 when (selectedFrequency) {
                     ScheduledFrequency.WEEKLY -> MultiChoiceGroup(
                         title = "选择星期",
+                        description = "选中的星期会在每天 09:00 自动生成",
                         options = weekdayValues.mapIndexed { index, value -> value to weekdayLabels[index] },
                         selectedValues = selectedWeekdays,
                         onToggle = { value -> selectedWeekdays = selectedWeekdays.toggle(value) },
@@ -135,12 +158,14 @@ fun RecurrencePickerBottomSheet(
                     ScheduledFrequency.YEARLY -> {
                         MultiChoiceGroup(
                             title = "选择月份",
+                            description = "先选月份，再选日期",
                             options = (1..12).map { it to "${it}月" },
                             selectedValues = selectedYearMonths,
                             onToggle = { value -> selectedYearMonths = selectedYearMonths.toggle(value) },
                         )
                         MultiChoiceGroup(
                             title = "选择日期",
+                            description = "选中的日期会在 09:00 自动生成",
                             options = (1..31).map { it to "${it}日" },
                             selectedValues = selectedYearDays,
                             onToggle = { value -> selectedYearDays = selectedYearDays.toggle(value) },
@@ -148,16 +173,12 @@ fun RecurrencePickerBottomSheet(
                     }
                     else -> MultiChoiceGroup(
                         title = "选择日期",
+                        description = "选中的日期会在 09:00 自动生成",
                         options = (1..31).map { it to "${it}日" },
                         selectedValues = selectedMonthDays,
                         onToggle = { value -> selectedMonthDays = selectedMonthDays.toggle(value) },
                     )
                 }
-                Text(
-                    text = "默认 09:00 生成",
-                    color = KeacsColors.TextSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -197,15 +218,28 @@ fun RecurrencePickerBottomSheet(
 @Composable
 private fun MultiChoiceGroup(
     title: String,
+    description: String,
     options: List<Pair<Int, String>>,
     selectedValues: Set<Int>,
     onToggle: (Int) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            Text(title, color = KeacsColors.TextPrimary, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "已选 ${selectedValues.size}",
+                color = KeacsColors.TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Text(description, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
             options.forEach { (value, label) ->
                 ChoiceChip(
@@ -230,9 +264,9 @@ private fun ChoiceChip(
             .clip(MaterialTheme.shapes.extraLarge)
             .background(if (selected) KeacsColors.Primary else KeacsColors.SurfaceSubtle)
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 7.dp),
         color = if (selected) KeacsColors.Surface else KeacsColors.TextPrimary,
-        style = MaterialTheme.typography.bodyMedium,
+        style = MaterialTheme.typography.bodySmall,
         fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
     )
 }

@@ -52,6 +52,7 @@ fun MineScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showImportConfirm by remember { mutableStateOf<Uri?>(null) }
+    var showExcelGuide by remember { mutableStateOf(false) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -136,12 +137,7 @@ fun MineScreen(
                 "Excel 添加账目",
                 KeacsColors.Income,
                 onClick = {
-                    excelLauncher.launch(
-                        arrayOf(
-                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            "*/*",
-                        ),
-                    )
+                    showExcelGuide = true
                 }
             )
         }
@@ -155,7 +151,7 @@ fun MineScreen(
     showImportConfirm?.let { uri ->
         ConfirmDialog(
             title = "合并导入备份",
-            text = "导入会把备份内容追加到当前数据中，且不会自动去重。确定要继续导入吗？",
+            text = "导入后会和现有数据合并。",
             confirmText = "继续导入",
             onConfirm = {
                 showImportConfirm = null
@@ -165,6 +161,24 @@ fun MineScreen(
             },
             onDismiss = { showImportConfirm = null },
             isDestructive = true
+        )
+    }
+
+    if (showExcelGuide) {
+        ConfirmDialog(
+            title = "Excel 添加账目",
+            text = "请准备 .xlsx 文件。\n\n表头：日期｜收支类型｜分类｜账户｜金额｜备注\n示例：2026-05-10｜支出｜餐饮｜微信｜12.50｜早餐\n\n收支类型填写“支出”或“收入”。",
+            confirmText = "选择文件",
+            onConfirm = {
+                showExcelGuide = false
+                excelLauncher.launch(
+                    arrayOf(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "*/*",
+                    ),
+                )
+            },
+            onDismiss = { showExcelGuide = false },
         )
     }
 

@@ -58,20 +58,20 @@ fun ManagementListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(64.dp)
+            .height(54.dp)
             .alpha(if (enabled) 1f else 0.48f)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CategoryIcon(icon = icon, backgroundColor = color)
-        Spacer(modifier = Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
+        CategoryIcon(icon = icon, backgroundColor = color, modifier = Modifier)
+        Spacer(modifier = Modifier.width(9.dp))
+        Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = title,
                     color = KeacsColors.TextPrimary,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

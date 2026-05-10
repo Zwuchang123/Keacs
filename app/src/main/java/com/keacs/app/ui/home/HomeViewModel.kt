@@ -90,7 +90,7 @@ class HomeViewModel(
     }
 
     companion object {
-        private val currencyFormat = DecimalFormat("#,##0.##")
+        private val currencyFormat = DecimalFormat("#0.##")
 
         fun formatCent(value: Long): String =
             currencyFormat.format(value / 100.0)

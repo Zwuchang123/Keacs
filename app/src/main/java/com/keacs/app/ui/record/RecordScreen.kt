@@ -360,7 +360,7 @@ private fun recordMatchesSearch(
 }
 
 private fun formatCent(value: Long): String =
-    DecimalFormat("#,##0.00").format(value / 100.0)
+    DecimalFormat("#0.00").format(value / 100.0)
 
 private val dateLabelFormat = SimpleDateFormat("yyyy年MM月dd日 EEEE", Locale.CHINA)
 private val yearMonthFormat = SimpleDateFormat("yyyy年MM月", Locale.getDefault())

@@ -386,7 +386,7 @@ private fun startOfMonth(timestamp: Long): Long {
 }
 
 private fun formatCent(value: Long): String =
-    DecimalFormat("#,##0.##").format(value / 100.0)
+    DecimalFormat("#0.##").format(value / 100.0)
 
 private fun formatMonthText(timestamp: Long): String =
     SimpleDateFormat("yyyy年MM月", Locale.getDefault()).format(Date(timestamp))

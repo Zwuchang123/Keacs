@@ -13,12 +13,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Notes
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -47,6 +46,7 @@ import com.keacs.app.data.local.entity.RecordEntity
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.model.RecordType
 import com.keacs.app.ui.components.CategoryIcon
+import com.keacs.app.ui.components.ConfirmDialog
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.management.accountIconOptionFor
 import com.keacs.app.ui.management.colorFor
@@ -144,29 +144,19 @@ fun RecordDetailScreen(
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("删除记录") },
-            text = { Text("确定要删除这条记录吗？删除后无法恢复。") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        scope.launch {
-                            repository.deleteRecord(recordId)
-                            showDeleteDialog = false
-                            onBack()
-                        }
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = KeacsColors.Error),
-                ) {
-                    Text("删除")
+        ConfirmDialog(
+            title = "删除记录",
+            text = "删除后无法恢复。",
+            confirmText = "删除",
+            onConfirm = {
+                scope.launch {
+                    repository.deleteRecord(recordId)
+                    showDeleteDialog = false
+                    onBack()
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("取消")
-                }
-            },
+            onDismiss = { showDeleteDialog = false },
+            isDestructive = true,
         )
     }
 }
@@ -296,7 +286,7 @@ private fun RecordInfoCard(
                 color = KeacsColors.Border,
             )
             InfoRow(
-                icon = Icons.Rounded.Notes,
+                icon = Icons.AutoMirrored.Rounded.Notes,
                 label = "备注",
                 value = record.note?.takeIf { it.isNotBlank() } ?: "未填写",
             )
@@ -336,7 +326,7 @@ private fun InfoRow(
 }
 
 private val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
-private val currencyFormat = DecimalFormat("#,##0.00")
+private val currencyFormat = DecimalFormat("#0.00")
 
 private fun formatCent(value: Long): String =
     currencyFormat.format(value / 100.0)
