@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,8 +42,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.local.entity.CategoryEntity
 import com.keacs.app.data.repository.LocalDataRepository
@@ -53,6 +58,7 @@ import com.keacs.app.ui.components.SegmentedTabs
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun CategoryListScreen(
@@ -63,6 +69,12 @@ fun CategoryListScreen(
 ) {
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
     val direction = categoryDirectionForTab(selectedIndex)
+    val useCase = remember(repository) { CategoryManagementUseCase(repository) }
+    val scope = rememberCoroutineScope()
+    var draggingId by remember { mutableStateOf<Long?>(null) }
+    var dragOffset by remember { mutableStateOf(0f) }
+    var dragStartIndex by remember { mutableStateOf<Int?>(null) }
+    val rowHeightPx = with(LocalDensity.current) { 64.dp.toPx() }
     val visibleCategories = categories.filter {
         if (selectedIndex == 2) {
             PresetSeedData.isAccountCategoryDirection(it.direction)
@@ -70,6 +82,7 @@ fun CategoryListScreen(
             it.direction == direction
         }
     }
+    val canReorder = selectedIndex != 2
 
     Column(
         modifier = Modifier
@@ -86,12 +99,58 @@ fun CategoryListScreen(
         KeacsCard(contentPadding = PaddingValues(0.dp), modifier = Modifier.weight(1f)) {
             LazyColumn(modifier = Modifier.padding(it)) {
                 itemsIndexed(visibleCategories, key = { _, item -> item.id }) { index, category ->
+                    val dragModifier = if (canReorder) {
+                        Modifier
+                            .zIndex(if (draggingId == category.id) 1f else 0f)
+                            .graphicsLayer {
+                                translationY = if (draggingId == category.id) dragOffset else 0f
+                            }
+                            .pointerInput(category.id, visibleCategories) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        draggingId = category.id
+                                        dragStartIndex = index
+                                        dragOffset = 0f
+                                    },
+                                    onDragCancel = {
+                                        draggingId = null
+                                        dragStartIndex = null
+                                        dragOffset = 0f
+                                    },
+                                    onDragEnd = {
+                                        val fromIndex = dragStartIndex
+                                        if (fromIndex != null) {
+                                            val targetIndex = (fromIndex + (dragOffset / rowHeightPx).roundToInt())
+                                                .coerceIn(visibleCategories.indices)
+                                            if (targetIndex != fromIndex) {
+                                                val reordered = visibleCategories.toMutableList()
+                                                val moved = reordered.removeAt(fromIndex)
+                                                reordered.add(targetIndex, moved)
+                                                scope.launch {
+                                                    useCase.reorder(direction, reordered.map { item -> item.id })
+                                                }
+                                            }
+                                        }
+                                        draggingId = null
+                                        dragStartIndex = null
+                                        dragOffset = 0f
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        dragOffset += dragAmount.y
+                                    },
+                                )
+                            }
+                    } else {
+                        Modifier
+                    }
                     ManagementListItem(
                         title = category.name,
                         subtitle = categorySubtitle(category),
                         icon = iconFor(category.iconKey),
                         color = colorFor(category.colorKey),
                         enabled = category.isEnabled,
+                        modifier = dragModifier,
                         onClick = { onEditCategory(category.id, category.direction) },
                     )
                     if (index != visibleCategories.lastIndex) {

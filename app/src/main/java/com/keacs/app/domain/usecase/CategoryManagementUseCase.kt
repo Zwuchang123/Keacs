@@ -19,4 +19,8 @@ class CategoryManagementUseCase(
     suspend fun delete(id: Long) {
         repository.deleteCategory(id)
     }
+
+    suspend fun reorder(direction: String, orderedIds: List<Long>) {
+        repository.reorderCategories(direction, orderedIds)
+    }
 }

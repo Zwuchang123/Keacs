@@ -51,11 +51,12 @@ fun ManagementListItem(
     icon: ImageVector,
     color: Color,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
     trailing: String? = null,
     onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(64.dp)
             .alpha(if (enabled) 1f else 0.48f)

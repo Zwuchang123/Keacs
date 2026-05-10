@@ -14,14 +14,16 @@
 
 ## 工作流程
 
-先判断任务类型，再只读取和修改必要内容；测试范围统一按“测试要求”执行，避免无关探索和重复消耗。对于代码开发任务，自测完成后请启动模拟器并安装应用供用户验收。
+先判断任务类型，再只读取和修改必要内容；测试范围统一按“测试要求”执行，不要扩大范围。
 
-| 任务类型    | 读取范围                                                                                                       | 执行范围                                   |
-| ------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| 非代码开发任务 | 只读任务相关文档                                                                                                   | 不改代码                                   |
-| 小功能优化   | 先看 `docs\code-map.md`，再读相关代码                                                                               | 只改当前功能相关代码；有需求变化时同步 `docs\prd.md` 对应章节 |
-| BUG 修复  | 先看 `docs\code-map.md`，再读缺陷相关代码                                                                             | 先复现，再修复，不扩大范围                          |
-| 大功能迭代   | 进入计划模式，并调用 Codex 已安装的 Superpowers 插件/技能；读取 `docs\prd.md`、`docs\arc.md`、`docs\design.md`、`docs\code-map.md` | 先确认方案，再更新文档和代码                         |
+不要假设用户一定是对的，运用第一性原理，主动考虑影响范围，思考更合理的方案并让用户确认。
+
+| 任务类型    | 读取范围                                                               | 执行范围                                                                                                      |
+| ------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| 非代码开发任务 | 只读任务相关文档                                                           | 不改代码                                                                                                      |
+| 小功能优化   | 先看 `docs\code-map.md`，再读相关代码                                       | 只改当前功能相关代码；有需求变化时同步 `docs\prd.md` 对应章节                                                                    |
+| BUG 修复  | 先看 `docs\code-map.md`，再读缺陷相关代码                                     | 先复现，再修复，不扩大范围                                                                                             |
+| 大功能迭代   | 读取 `docs\prd.md`、`docs\arc.md`、`docs\design.md`、`docs\code-map.md` | 进入计划模式，并调用 Codex 已安装的 Superpowers 插件。先使用Superpowers: Brainstorming技能对需求进行详细分析，与用户沟通不清晰的内容；然后确认方案；再更新文档和代码 |
 
 ## 交付与发版决策
 
@@ -124,10 +126,11 @@ git push gitee vX.Y.Z
 - PowerShell 读取中文前先执行：`chcp 65001 > $null; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8`
 - 完整自测：`.\gradlew.bat :app:compileDebugKotlin :app:assembleDebug :app:lintDebug :app:testDebugUnitTest :app:connectedDebugAndroidTest`
 - 查看设备：`adb devices`
-- 查看模拟器：`& "$env:ANDROID_HOME\emulator\emulator.exe" -list-avds`
-- 启动模拟器：`& "$env:ANDROID_HOME\emulator\emulator.exe" -avd Pixel6_API34 -no-snapshot -no-audio -no-boot-anim`
-- 安装应用：`.\gradlew.bat :app:installDebug`
-- 启动应用： `adb shell am start -n com.keacs.app/.MainActivity`
+- 设置 Android SDK 路径：`$env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"; $env:ANDROID_SDK_ROOT=$env:ANDROID_HOME`
+- 查看模拟器：`$sdk=if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { "$env:LOCALAPPDATA\Android\Sdk" }; & "$sdk\emulator\emulator.exe" -list-avds`
+- 启动模拟器：`$sdk=if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { "$env:LOCALAPPDATA\Android\Sdk" }; Start-Process -FilePath "$sdk\emulator\emulator.exe" -ArgumentList @('-avd','Pixel6_API34','-no-snapshot','-no-audio','-no-boot-anim') -WindowStyle Hidden`
+- 等待模拟器开机：`$serial='emulator-5554'; do { Start-Sleep -Seconds 5; $state=adb -s $serial get-state 2>$null; $boot=(@(adb -s $serial shell getprop sys.boot_completed 2>$null) -join '').Trim(); "state=$state boot=$boot" } until ($state -eq 'device' -and $boot -eq '1')`
+- 安装应用：`$env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"; $env:ANDROID_SDK_ROOT=$env:ANDROID_HOME; .\gradlew.bat :app:installDebug`
+- 启动应用：`adb shell am start -n com.keacs.app/.MainActivity`
 - 检查联网权限：`Select-String -Path "app\src\main\AndroidManifest.xml" -Pattern "INTERNET|ACCESS_NETWORK_STATE|uses-permission" -SimpleMatch`
 - 提交前查看：`git status --short`
-

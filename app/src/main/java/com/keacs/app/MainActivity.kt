@@ -14,6 +14,8 @@ import androidx.compose.runtime.setValue
 import com.keacs.app.data.local.PreferencesManager
 import com.keacs.app.data.local.database.KeacsDatabase
 import com.keacs.app.data.repository.LocalDataRepository
+import com.keacs.app.data.repository.ScheduledRecordRepository
+import com.keacs.app.domain.usecase.GenerateDueScheduledRecordsUseCase
 import com.keacs.app.domain.usecase.InitializeLocalDataUseCase
 import com.keacs.app.ui.KeacsApp
 import com.keacs.app.ui.theme.KeacsTheme
@@ -39,11 +41,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         preferencesManager = PreferencesManager.getInstance(applicationContext)
-        val repository = LocalDataRepository(KeacsDatabase.getInstance(applicationContext))
+        val database = KeacsDatabase.getInstance(applicationContext)
+        val repository = LocalDataRepository(database)
+        val scheduledRepository = ScheduledRecordRepository(database, repository)
 
         setContent {
             KeacsTheme {
-                AppContent(repository, preferencesManager)
+                AppContent(repository, scheduledRepository, preferencesManager)
             }
         }
     }
@@ -52,6 +56,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun AppContent(
     repository: LocalDataRepository,
+    scheduledRepository: ScheduledRecordRepository,
     preferencesManager: PreferencesManager,
 ) {
     var hasWelcomed by remember { mutableStateOf<Boolean?>(null) }
@@ -60,6 +65,7 @@ private fun AppContent(
     LaunchedEffect(Unit) {
         hasWelcomed = preferencesManager.hasWelcomed.first()
         InitializeLocalDataUseCase(repository)()
+        GenerateDueScheduledRecordsUseCase(scheduledRepository)()
         localDataReady = true
     }
 
@@ -73,6 +79,7 @@ private fun AppContent(
         )
         localDataReady -> KeacsApp(
             repository = repository,
+            scheduledRepository = scheduledRepository,
             preferencesManager = preferencesManager,
         )
         else -> LoadingScreen()

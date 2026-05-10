@@ -57,7 +57,7 @@ class KeacsDatabaseTest {
 
     @Test
     fun databaseVersionIsCurrent() {
-        assertEquals(2, database.openHelper.readableDatabase.version)
+        assertEquals(4, database.openHelper.readableDatabase.version)
     }
 
     @Test

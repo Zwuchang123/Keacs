@@ -23,9 +23,11 @@ import androidx.activity.compose.BackHandler
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.keacs.app.data.importer.ExcelRecordImportService
 import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.local.PreferencesManager
 import com.keacs.app.data.repository.LocalDataRepository
+import com.keacs.app.data.repository.ScheduledRecordRepository
 import com.keacs.app.ui.components.KeacsBottomBar
 import com.keacs.app.ui.components.KeacsScaffold
 import com.keacs.app.ui.discover.DiscoverScreen
@@ -40,6 +42,8 @@ import com.keacs.app.ui.navigation.bottomDestinations
 import com.keacs.app.ui.navigation.destinationForRoute
 import com.keacs.app.ui.record.AddRecordScreen
 import com.keacs.app.ui.record.RecordDetailScreen
+import com.keacs.app.ui.scheduled.ScheduledRecordEditScreen
+import com.keacs.app.ui.scheduled.ScheduledRecordListScreen
 import com.keacs.app.ui.settings.MineScreen
 import com.keacs.app.ui.stats.StatsScreen
 
@@ -62,7 +66,8 @@ class KeacsViewModelFactory(
             val backupService = BackupService(repository)
             return BackupViewModel(
                 exportBackupUseCase = ExportBackupUseCase(backupService),
-                importBackupUseCase = ImportBackupUseCase(backupService)
+                importBackupUseCase = ImportBackupUseCase(backupService),
+                excelRecordImportService = ExcelRecordImportService(repository),
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
@@ -72,6 +77,7 @@ class KeacsViewModelFactory(
 @Composable
 fun KeacsApp(
     repository: LocalDataRepository,
+    scheduledRepository: ScheduledRecordRepository,
     preferencesManager: PreferencesManager,
 ) {
     var currentRoute by rememberSaveable { mutableStateOf(KeacsDestination.Home.route) }
@@ -87,6 +93,8 @@ fun KeacsApp(
         currentRoute.startsWith(ROUTE_CATEGORY_EDIT) -> "编辑分类"
         currentRoute == ROUTE_ACCOUNT_LIST -> "账户管理"
         currentRoute.startsWith(ROUTE_ACCOUNT_EDIT) -> "编辑账户"
+        currentRoute == ROUTE_SCHEDULED_LIST -> "定时记账"
+        currentRoute.startsWith(ROUTE_SCHEDULED_EDIT) -> "编辑定时记账"
         currentRoute.startsWith(ROUTE_RECORD_DETAIL) -> "账目详情"
         currentRoute.startsWith(ROUTE_RECORD_EDIT) -> "编辑账目"
         currentRoute == ROUTE_SETTINGS -> "设置"
@@ -228,6 +236,7 @@ fun KeacsApp(
                         backupViewModel = backupViewModel,
                         onCategoryClick = { navigateForward(ROUTE_CATEGORY_LIST) },
                         onAccountClick = { navigateForward(ROUTE_ACCOUNT_LIST) },
+                        onScheduledClick = { navigateForward(ROUTE_SCHEDULED_LIST) },
                         onSettingsClick = { navigateForward(ROUTE_SETTINGS) },
                         onAboutClick = { navigateForward(ROUTE_ABOUT) },
                         onSwipeRight = { navigateTo(KeacsDestination.Discover.route) },
@@ -267,6 +276,19 @@ fun KeacsApp(
                     onDone = { navigateBackTo(ROUTE_ACCOUNT_LIST) },
                 )
 
+                route == ROUTE_SCHEDULED_LIST -> ScheduledRecordListScreen(
+                    repository = repository,
+                    scheduledRepository = scheduledRepository,
+                    onEditSchedule = { navigateForward(scheduledEditRoute(it)) },
+                )
+
+                route.startsWith(ROUTE_SCHEDULED_EDIT) -> ScheduledRecordEditScreen(
+                    repository = repository,
+                    scheduledRepository = scheduledRepository,
+                    scheduleId = routeId(route, ROUTE_SCHEDULED_EDIT),
+                    onDone = { navigateBackTo(ROUTE_SCHEDULED_LIST) },
+                )
+
                 route.startsWith(ROUTE_RECORD_DETAIL) -> RecordDetailScreen(
                     recordId = routeId(route, ROUTE_RECORD_DETAIL) ?: 0L,
                     repository = repository,
@@ -289,6 +311,8 @@ private const val ROUTE_CATEGORY_LIST = "category-list"
 private const val ROUTE_CATEGORY_EDIT = "category-edit/"
 private const val ROUTE_ACCOUNT_LIST = "account-list"
 private const val ROUTE_ACCOUNT_EDIT = "account-edit/"
+private const val ROUTE_SCHEDULED_LIST = "scheduled-list"
+private const val ROUTE_SCHEDULED_EDIT = "scheduled-edit/"
 private const val ROUTE_RECORD_DETAIL = "record-detail/"
 private const val ROUTE_RECORD_EDIT = "record-edit/"
 private const val ROUTE_SETTINGS = "settings"
@@ -297,6 +321,7 @@ private const val ROUTE_ABOUT = "about"
 private fun categoryEditRoute(id: Long?, direction: String): String =
     ROUTE_CATEGORY_EDIT + (id?.toString() ?: "new") + "/" + direction
 private fun accountEditRoute(id: Long?): String = ROUTE_ACCOUNT_EDIT + (id?.toString() ?: "new")
+private fun scheduledEditRoute(id: Long?): String = ROUTE_SCHEDULED_EDIT + (id?.toString() ?: "new")
 private fun recordDetailRoute(id: Long): String = ROUTE_RECORD_DETAIL + id
 private fun recordEditRoute(id: Long): String = ROUTE_RECORD_EDIT + id
 
@@ -322,10 +347,15 @@ private fun backRoute(route: String): String = when {
     route == KeacsDestination.Add.route -> KeacsDestination.Home.route
     route.startsWith(ROUTE_CATEGORY_EDIT) -> ROUTE_CATEGORY_LIST
     route.startsWith(ROUTE_ACCOUNT_EDIT) -> ROUTE_ACCOUNT_LIST
+    route.startsWith(ROUTE_SCHEDULED_EDIT) -> ROUTE_SCHEDULED_LIST
     route.startsWith(ROUTE_RECORD_DETAIL) -> KeacsDestination.Home.route
     route.startsWith(ROUTE_RECORD_EDIT) -> routeId(route, ROUTE_RECORD_EDIT)?.let { recordDetailRoute(it) }
         ?: KeacsDestination.Home.route
-    route == ROUTE_CATEGORY_LIST || route == ROUTE_ACCOUNT_LIST || route == ROUTE_SETTINGS || route == ROUTE_ABOUT -> KeacsDestination.Mine.route
+    route == ROUTE_CATEGORY_LIST ||
+        route == ROUTE_ACCOUNT_LIST ||
+        route == ROUTE_SCHEDULED_LIST ||
+        route == ROUTE_SETTINGS ||
+        route == ROUTE_ABOUT -> KeacsDestination.Mine.route
     else -> KeacsDestination.Home.route
 }
 
