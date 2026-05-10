@@ -14,27 +14,27 @@
 
 ## 工作流程
 
-先判断任务类型，再只读取和修改必要内容；测试范围统一按“测试要求”执行，避免无关探索和重复消耗。
+先判断任务类型，再只读取和修改必要内容；测试范围统一按“测试要求”执行，避免无关探索和重复消耗。对于代码开发任务，自测完成后请启动模拟器并安装应用供用户验收。
 
-| 任务类型    | 读取范围                                                                      | 执行范围                                   |
-| ------- | ------------------------------------------------------------------------- | -------------------------------------- |
-| 非代码开发任务 | 只读任务相关文档                                                                  | 不改代码                                   |
-| 小功能优化   | 先看 `docs\code-map.md`，再读相关代码                                              | 只改当前功能相关代码；有需求变化时同步 `docs\prd.md` 对应章节 |
-| BUG 修复  | 先看 `docs\code-map.md`，再读缺陷相关代码                                            | 先复现，再修复，不扩大范围                          |
-| 大功能迭代    | 进入计划模式，使用/superpowers技能；读取 `docs\prd.md`、`docs\arc.md`、`docs\design.md`、`docs\code-map.md` | 先确认方案，再更新文档和代码                         |
+| 任务类型    | 读取范围                                                                                                       | 执行范围                                   |
+| ------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| 非代码开发任务 | 只读任务相关文档                                                                                                   | 不改代码                                   |
+| 小功能优化   | 先看 `docs\code-map.md`，再读相关代码                                                                               | 只改当前功能相关代码；有需求变化时同步 `docs\prd.md` 对应章节 |
+| BUG 修复  | 先看 `docs\code-map.md`，再读缺陷相关代码                                                                             | 先复现，再修复，不扩大范围                          |
+| 大功能迭代   | 进入计划模式，并调用 Codex 已安装的 Superpowers 插件/技能；读取 `docs\prd.md`、`docs\arc.md`、`docs\design.md`、`docs\code-map.md` | 先确认方案，再更新文档和代码                         |
 
 ## 交付与发版决策
 
 核心规则：验收失败不合并、不发版；验收通过后合并到 `master` 并删除短分支；是否发版只看是否要发布 APK。
 
-| 场景 | 发版 | 合并 `master` | 删除短分支 | 必做记录 |
-| --- | --- | --- | --- | --- |
-| 非代码开发任务 | 不发版 | 验收通过后合并 | 合并后删除 | 按需更新相关文档 |
-| 小功能优化，暂不上线 | 不发版 | 验收通过后合并 | 合并后删除 | 写入 `docs\releases\next.md` |
-| BUG 修复，可等待发版 | 不发版 | 验收通过后合并 | 合并后删除 | 写入 `docs\releases\next.md` |
-| BUG 修复，需要立刻给用户更新 | 发补丁版本 | 发版准备完成后合并 | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md` |
-| 小功能优化，确认上线 | 发补丁或小版本 | 发版准备完成后合并 | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md` |
-| 大功能迭代 | 默认发版 | 发版准备完成后合并 | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md` |
+| 场景               | 发版      | 合并 `master` | 删除短分支   | 必做记录                         |
+| ---------------- | ------- | ----------- | ------- | ---------------------------- |
+| 非代码开发任务          | 不发版     | 验收通过后合并     | 合并后删除   | 按需更新相关文档                     |
+| 小功能优化，暂不上线       | 不发版     | 验收通过后合并     | 合并后删除   | 写入 `docs\releases\next.md`   |
+| BUG 修复，可等待发版     | 不发版     | 验收通过后合并     | 合并后删除   | 写入 `docs\releases\next.md`   |
+| BUG 修复，需要立刻给用户更新 | 发补丁版本   | 发版准备完成后合并   | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md` |
+| 小功能优化，确认上线       | 发补丁或小版本 | 发版准备完成后合并   | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md` |
+| 大功能迭代            | 默认发版    | 发版准备完成后合并   | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md` |
 
 不发版路径：自测通过 -> 业务验收通过 -> 更新必要文档和 `docs\releases\next.md` -> 提交 -> 合并到 `master` -> 删除短分支。
 
@@ -71,7 +71,7 @@
 | 非代码开发任务 | 内容准确性、链接有效性、是否影响现有规范             | 代码测试                  |
 | 小功能优化   | Lint、类型检查、受影响模块测试或最小可验证链路、1 条主路径 | 全量集成、UI、E2E、性能、安全测试   |
 | BUG 修复  | Lint、类型检查、问题复现、修复后回归、相关单元测试或集成测试 | 与缺陷无关的 UI、E2E、性能、安全测试 |
-| 大功能迭代    | Lint、类型检查、单元测试、集成测试、UI 测试、E2E 测试 | 无                     |
+| 大功能迭代   | Lint、类型检查、单元测试、集成测试、UI 测试、E2E 测试 | 无                     |
 
 按需补测：
 
@@ -126,6 +126,8 @@ git push gitee vX.Y.Z
 - 查看设备：`adb devices`
 - 查看模拟器：`& "$env:ANDROID_HOME\emulator\emulator.exe" -list-avds`
 - 启动模拟器：`& "$env:ANDROID_HOME\emulator\emulator.exe" -avd Pixel6_API34 -no-snapshot -no-audio -no-boot-anim`
-- 安装并启动：`.\gradlew.bat :app:installDebug`，然后 `adb shell am start -n com.keacs.app/.MainActivity`
+- 安装应用：`.\gradlew.bat :app:installDebug`
+- 启动应用： `adb shell am start -n com.keacs.app/.MainActivity`
 - 检查联网权限：`Select-String -Path "app\src\main\AndroidManifest.xml" -Pattern "INTERNET|ACCESS_NETWORK_STATE|uses-permission" -SimpleMatch`
 - 提交前查看：`git status --short`
+
