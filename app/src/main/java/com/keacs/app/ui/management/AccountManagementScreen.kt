@@ -38,10 +38,10 @@ import com.keacs.app.domain.usecase.AccountManagementUseCase
 import com.keacs.app.ui.components.ConfirmDialog
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.KeacsSnackbar
+import com.keacs.app.ui.components.formatGroupedCent
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 import kotlinx.coroutines.launch
-import java.text.DecimalFormat
 
 @Composable
 fun AccountListScreen(
@@ -93,7 +93,7 @@ fun AccountEditScreen(
     var name by rememberSaveable(accountId) { mutableStateOf("") }
     var nature by rememberSaveable(accountId) { mutableStateOf(PresetSeedData.ACCOUNT_ASSET) }
     var type by rememberSaveable(accountId) { mutableStateOf("现金") }
-    var balance by rememberSaveable(accountId) { mutableStateOf("0.00") }
+    var balance by rememberSaveable(accountId) { mutableStateOf("0") }
     var iconKey by rememberSaveable(accountId) { mutableStateOf("cash_asset") }
     var colorKey by rememberSaveable(accountId) { mutableStateOf("green") }
     var isEnabled by rememberSaveable(accountId) { mutableStateOf(true) }
@@ -244,13 +244,13 @@ private fun AccountSummary(totalAsset: Long, totalLiability: Long) {
         ) {
             Text("净资产", color = KeacsColors.PrimaryLight, style = MaterialTheme.typography.bodySmall)
             Text(
-                text = formatCent(totalAsset + totalLiability),
+                text = formatGroupedCent(totalAsset + totalLiability),
                 color = KeacsColors.Surface,
                 style = MaterialTheme.typography.displaySmall,
                 fontFamily = FontFamily.Monospace,
             )
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("资产 ${formatCent(totalAsset)}", color = KeacsColors.PrimaryLight)
+                Text("资产 ${formatGroupedCent(totalAsset)}", color = KeacsColors.PrimaryLight)
                 Text("负债 ${accountBalanceText(PresetSeedData.ACCOUNT_LIABILITY, totalLiability)}", color = KeacsColors.PrimaryLight)
             }
         }
@@ -288,7 +288,4 @@ private fun AccountGroup(
 }
 
 private fun accountBalanceText(nature: String, value: Long): String =
-    if (nature == PresetSeedData.ACCOUNT_LIABILITY) "-${formatCent(kotlin.math.abs(value))}" else formatCent(value)
-
-private fun formatCent(value: Long): String =
-    DecimalFormat("#0.00").format(value / 100.0)
+    if (nature == PresetSeedData.ACCOUNT_LIABILITY) "-${formatGroupedCent(kotlin.math.abs(value))}" else formatGroupedCent(value)

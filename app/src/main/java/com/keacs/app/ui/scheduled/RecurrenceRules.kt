@@ -21,6 +21,7 @@ fun recurrenceLabel(schedule: ScheduledRecordEntity): String =
     )
 
 fun recurrenceLabel(frequency: String, recurrenceValues: String?, nextRunAt: Long): String {
+    if (recurrenceValues.isNullOrBlank()) return ""
     val calendar = Calendar.getInstance(Locale.getDefault()).apply { timeInMillis = nextRunAt }
     val normalizedFrequency = ScheduledRecordRepository.normalizeFrequency(frequency)
     val values = recurrenceValues ?: ScheduledRecordRepository.recurrenceValuesFromParts(

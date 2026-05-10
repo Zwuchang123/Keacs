@@ -44,13 +44,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.ui.components.EmptyState
 import com.keacs.app.ui.components.KeacsCard
+import com.keacs.app.ui.components.formatCent
+import com.keacs.app.ui.components.formatGroupedCent
 import com.keacs.app.ui.management.colorFor
 import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.record.DatePickerMode
 import com.keacs.app.ui.record.DateWheelPickerBottomSheet
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
-import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -133,7 +134,6 @@ fun StatsScreen(
         }
     }
 }
-
 @Composable
 private fun StatsTabSelector(
     selectedTab: StatsTab,
@@ -365,7 +365,7 @@ private fun StatAmountItem(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = formatCent(amount),
+            text = formatGroupedCent(amount),
             color = color,
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = FontFamily.Monospace,
@@ -486,14 +486,26 @@ private fun CategoryStatRow(stat: CategoryStats) {
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Text(
-                text = "${stat.categoryName} ${StatsViewModel.formatPercentage(stat.percentage)}",
-                color = KeacsColors.TextPrimary,
-                style = MaterialTheme.typography.bodyMedium,
+            Row(
                 modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stat.categoryName,
+                    color = KeacsColors.TextPrimary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f, fill = false),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = StatsViewModel.formatPercentage(stat.percentage),
+                    color = KeacsColors.TextTertiary,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                )
+            }
 
             Text(
                 text = formatCent(stat.amount),
@@ -519,6 +531,3 @@ private fun CategoryStatRow(stat: CategoryStats) {
         }
     }
 }
-
-private fun formatCent(value: Long): String =
-    DecimalFormat("#0.00").format(value / 100.0)

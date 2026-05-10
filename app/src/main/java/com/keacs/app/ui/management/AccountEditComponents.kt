@@ -155,7 +155,7 @@ fun AccountBalanceKeyboardPanel(
 }
 
 fun centsToInput(value: Long): String =
-    java.text.DecimalFormat("0.00").format(value / 100.0)
+    java.text.DecimalFormat("#0.##").format(value / 100.0)
 
 fun parseCent(text: String): Long? =
     runCatching {
@@ -187,4 +187,4 @@ fun balanceInputWouldOverflow(next: String): Boolean {
 }
 
 private fun balanceDisplay(balance: String): String =
-    balance.ifBlank { "0.00" }
+    balance.ifBlank { "0" }

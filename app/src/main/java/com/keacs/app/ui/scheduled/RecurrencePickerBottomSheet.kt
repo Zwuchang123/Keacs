@@ -60,27 +60,32 @@ fun RecurrencePickerBottomSheet(
     }
     var selectedFrequency by remember(frequency) { mutableStateOf(initialFrequency) }
     var selectedWeekdays by remember(recurrenceValues, nextRunAt) {
-        mutableStateOf(
-            parseWeekdays(
-                values = recurrenceValues.takeIf { initialFrequency == ScheduledFrequency.WEEKLY },
-                fallback = initial.get(Calendar.DAY_OF_WEEK),
-            ).toSet(),
+        mutableStateOf<Set<Int>>(
+            recurrenceValues
+                .takeIf { initialFrequency == ScheduledFrequency.WEEKLY && !it.isNullOrBlank() }
+                ?.let { parseWeekdays(values = it, fallback = initial.get(Calendar.DAY_OF_WEEK)).toSet() }
+                ?: emptySet(),
         )
     }
     var selectedMonthDays by remember(recurrenceValues, nextRunAt) {
-        mutableStateOf(
-            parseMonthDays(
-                values = recurrenceValues.takeIf { initialFrequency == ScheduledFrequency.MONTHLY },
-                fallback = initial.get(Calendar.DAY_OF_MONTH),
-            ).toSet(),
+        mutableStateOf<Set<Int>>(
+            recurrenceValues
+                .takeIf { initialFrequency == ScheduledFrequency.MONTHLY && !it.isNullOrBlank() }
+                ?.let { parseMonthDays(values = it, fallback = initial.get(Calendar.DAY_OF_MONTH)).toSet() }
+                ?: emptySet(),
         )
     }
     val initialYearlyValues = remember(recurrenceValues, nextRunAt) {
-        parseYearlyValues(
-            values = recurrenceValues.takeIf { initialFrequency == ScheduledFrequency.YEARLY },
-            fallbackMonth = initial.get(Calendar.MONTH) + 1,
-            fallbackDay = initial.get(Calendar.DAY_OF_MONTH),
-        )
+        recurrenceValues
+            .takeIf { initialFrequency == ScheduledFrequency.YEARLY && !it.isNullOrBlank() }
+            ?.let {
+                parseYearlyValues(
+                    values = it,
+                    fallbackMonth = initial.get(Calendar.MONTH) + 1,
+                    fallbackDay = initial.get(Calendar.DAY_OF_MONTH),
+                )
+            }
+            ?: emptyList()
     }
     var selectedYearMonths by remember(initialYearlyValues) {
         mutableStateOf(initialYearlyValues.map { it.month }.toSet())
@@ -150,7 +155,6 @@ fun RecurrencePickerBottomSheet(
                 when (selectedFrequency) {
                     ScheduledFrequency.WEEKLY -> MultiChoiceGroup(
                         title = "选择星期",
-                        description = "选中的星期会在每天 09:00 自动生成",
                         options = weekdayValues.mapIndexed { index, value -> value to weekdayLabels[index] },
                         selectedValues = selectedWeekdays,
                         onToggle = { value -> selectedWeekdays = selectedWeekdays.toggle(value) },
@@ -158,14 +162,12 @@ fun RecurrencePickerBottomSheet(
                     ScheduledFrequency.YEARLY -> {
                         MultiChoiceGroup(
                             title = "选择月份",
-                            description = "先选月份，再选日期",
                             options = (1..12).map { it to "${it}月" },
                             selectedValues = selectedYearMonths,
                             onToggle = { value -> selectedYearMonths = selectedYearMonths.toggle(value) },
                         )
                         MultiChoiceGroup(
                             title = "选择日期",
-                            description = "选中的日期会在 09:00 自动生成",
                             options = (1..31).map { it to "${it}日" },
                             selectedValues = selectedYearDays,
                             onToggle = { value -> selectedYearDays = selectedYearDays.toggle(value) },
@@ -173,7 +175,6 @@ fun RecurrencePickerBottomSheet(
                     }
                     else -> MultiChoiceGroup(
                         title = "选择日期",
-                        description = "选中的日期会在 09:00 自动生成",
                         options = (1..31).map { it to "${it}日" },
                         selectedValues = selectedMonthDays,
                         onToggle = { value -> selectedMonthDays = selectedMonthDays.toggle(value) },
@@ -218,7 +219,6 @@ fun RecurrencePickerBottomSheet(
 @Composable
 private fun MultiChoiceGroup(
     title: String,
-    description: String,
     options: List<Pair<Int, String>>,
     selectedValues: Set<Int>,
     onToggle: (Int) -> Unit,
@@ -230,13 +230,7 @@ private fun MultiChoiceGroup(
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         ) {
             Text(title, color = KeacsColors.TextPrimary, style = MaterialTheme.typography.bodyMedium)
-            Text(
-                text = "已选 ${selectedValues.size}",
-                color = KeacsColors.TextSecondary,
-                style = MaterialTheme.typography.bodySmall,
-            )
         }
-        Text(description, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(7.dp),
             verticalArrangement = Arrangement.spacedBy(7.dp),

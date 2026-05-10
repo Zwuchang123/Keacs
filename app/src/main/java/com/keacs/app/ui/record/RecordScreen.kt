@@ -50,11 +50,11 @@ import com.keacs.app.ui.components.RecordListItem
 import com.keacs.app.ui.components.SearchBox
 import com.keacs.app.ui.components.WheelPickerBottomSheet
 import com.keacs.app.ui.components.WheelPickerColumn
+import com.keacs.app.ui.components.formatCent
 import com.keacs.app.ui.management.colorFor
 import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
-import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -358,9 +358,6 @@ private fun recordMatchesSearch(
         recordAccount(record, accountMap),
     ).any { it.contains(keyword, ignoreCase = true) }
 }
-
-private fun formatCent(value: Long): String =
-    DecimalFormat("#0.00").format(value / 100.0)
 
 private val dateLabelFormat = SimpleDateFormat("yyyy年MM月dd日 EEEE", Locale.CHINA)
 private val yearMonthFormat = SimpleDateFormat("yyyy年MM月", Locale.getDefault())

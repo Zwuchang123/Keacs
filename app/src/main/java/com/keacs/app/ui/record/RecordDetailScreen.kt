@@ -48,13 +48,13 @@ import com.keacs.app.domain.model.RecordType
 import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.ConfirmDialog
 import com.keacs.app.ui.components.KeacsCard
+import com.keacs.app.ui.components.formatCent
 import com.keacs.app.ui.management.accountIconOptionFor
 import com.keacs.app.ui.management.colorFor
 import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 import kotlinx.coroutines.launch
-import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -326,10 +326,6 @@ private fun InfoRow(
 }
 
 private val dateFormat = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())
-private val currencyFormat = DecimalFormat("#0.00")
-
-private fun formatCent(value: Long): String =
-    currencyFormat.format(value / 100.0)
 
 private fun formatDate(timestamp: Long): String =
     dateFormat.format(Date(timestamp))

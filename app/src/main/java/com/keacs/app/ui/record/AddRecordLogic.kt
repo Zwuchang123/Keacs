@@ -128,7 +128,7 @@ private fun String.substringAfterLastOperator(): String {
 
 private fun Char.isAmountOperator(): Boolean = this == '+' || this == '-'
 
-fun centToInput(value: Long): String = DecimalFormat("0.00").format(value / 100.0)
+fun centToInput(value: Long): String = DecimalFormat("#0.##").format(value / 100.0)
 
 fun dateLabel(time: Long): String = SimpleDateFormat("M月d日", Locale.CHINA).format(Date(time))
 

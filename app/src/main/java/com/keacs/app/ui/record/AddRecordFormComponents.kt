@@ -150,7 +150,7 @@ fun AmountKeyboardPanel(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            AmountText(amount = amount.ifBlank { "0.00" })
+            AmountText(amount = amount.ifBlank { "0" })
             Text(
                 text = message ?: if (parsedAmount == null) "金额大于0才可保存" else " ",
                 color = if (message == null) KeacsColors.TextTertiary else KeacsColors.Error,

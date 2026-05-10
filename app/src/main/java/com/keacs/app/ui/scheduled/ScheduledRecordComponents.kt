@@ -35,11 +35,11 @@ import com.keacs.app.domain.model.RecordType
 import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.FormFieldRow
 import com.keacs.app.ui.components.KeacsCard
+import com.keacs.app.ui.components.formatCent
 import com.keacs.app.ui.management.accountIconOptionFor
 import com.keacs.app.ui.management.colorFor
 import com.keacs.app.ui.management.iconFor
 import com.keacs.app.ui.theme.KeacsColors
-import java.text.DecimalFormat
 
 @Composable
 internal fun ScheduledRow(
@@ -133,7 +133,7 @@ internal fun ScheduledFormArea(
             FormFieldRow(
                 icon = Icons.Rounded.CalendarToday,
                 title = "生成时间",
-                value = recurrenceLabel(frequency, recurrenceValues, nextRunAt),
+                value = recurrenceLabel(frequency, recurrenceValues, nextRunAt).ifBlank { "选择生成时间" },
                 modifier = Modifier.clickable(onClick = onTimeClick),
             )
             ScheduledNoteField(note = note, onNoteChange = onNoteChange)
@@ -234,7 +234,7 @@ private fun scheduleTitle(
     }
 
 private fun signedAmountLabel(schedule: ScheduledRecordEntity): String {
-    val amount = DecimalFormat("#0.00").format(schedule.amountCent / 100.0)
+    val amount = formatCent(schedule.amountCent)
     return when (schedule.type) {
         RecordType.INCOME -> "+$amount"
         RecordType.EXPENSE -> "-$amount"

@@ -57,7 +57,7 @@ fun ScheduledRecordEditScreen(
     var toAccountId by rememberSaveable(scheduleId) { mutableStateOf<Long?>(null) }
     var nextRunAt by rememberSaveable(scheduleId) { mutableLongStateOf(defaultNextRunAt()) }
     var recurrenceValues by rememberSaveable(scheduleId) {
-        mutableStateOf(defaultMonthlyRecurrenceValues(nextRunAt))
+        mutableStateOf("")
     }
     var note by rememberSaveable(scheduleId) { mutableStateOf("") }
     var isEnabled by rememberSaveable(scheduleId) { mutableStateOf(true) }
@@ -72,7 +72,7 @@ fun ScheduledRecordEditScreen(
     val availableCategories = categories.filter { it.direction == direction && it.isEnabled }
     val availableAccounts = accounts.filter { it.isEnabled }
     val parsedAmount = amountToCent(amount)
-    val canSave = parsedAmount != null && if (type == RecordType.TRANSFER) {
+    val canSave = parsedAmount != null && recurrenceValues.isNotBlank() && if (type == RecordType.TRANSFER) {
         fromAccountId != null && toAccountId != null && fromAccountId != toAccountId
     } else {
         categoryId != null
@@ -177,7 +177,10 @@ fun ScheduledRecordEditScreen(
             modifier = Modifier.padding(top = 8.dp),
             amount = amount,
             parsedAmount = parsedAmount,
-            message = scheduledValidationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, error),
+            message = error ?: when {
+                parsedAmount != null && recurrenceValues.isBlank() -> "请选择生成时间"
+                else -> scheduledValidationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, null)
+            },
             saveEnabled = canSave && !isSaving,
             onKeyClick = { key ->
                 val next = nextAmount(amount, key)
@@ -266,7 +269,6 @@ fun ScheduledRecordEditScreen(
         )
     }
 }
-
 private fun defaultNextRunAt(): Long {
     val now = System.currentTimeMillis()
     val calendar = java.util.Calendar.getInstance(java.util.Locale.getDefault()).apply { timeInMillis = now }
@@ -279,9 +281,4 @@ private fun defaultNextRunAt(): Long {
         hour = ScheduledRecordRepository.DEFAULT_RECURRENCE_HOUR,
         afterMillis = now,
     )
-}
-
-private fun defaultMonthlyRecurrenceValues(nextRunAt: Long): String {
-    val calendar = java.util.Calendar.getInstance(java.util.Locale.getDefault()).apply { timeInMillis = nextRunAt }
-    return calendar.get(java.util.Calendar.DAY_OF_MONTH).toString()
 }

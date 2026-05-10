@@ -12,6 +12,7 @@ import com.keacs.app.domain.rule.balanceFor
 import com.keacs.app.domain.rule.balanceAt
 import com.keacs.app.domain.rule.totalExpense
 import com.keacs.app.domain.rule.totalIncome
+import com.keacs.app.ui.components.formatCent as formatDisplayCent
 import com.keacs.app.ui.management.accountIconOptionFor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -354,10 +355,8 @@ class StatsViewModel(
     }
 
     companion object {
-        private val currencyFormat = DecimalFormat("#0.00")
-
         fun formatCent(value: Long): String =
-            currencyFormat.format(value / 100.0)
+            formatDisplayCent(value)
 
         fun formatPercentage(value: Float): String =
             DecimalFormat("#0.0").format(value) + "%"

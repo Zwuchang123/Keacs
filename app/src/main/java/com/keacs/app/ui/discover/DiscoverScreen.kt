@@ -16,7 +16,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
-import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.NorthEast
 import androidx.compose.material.icons.rounded.SouthWest
@@ -38,7 +37,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.local.database.PresetSeedData
@@ -47,11 +45,12 @@ import com.keacs.app.domain.rule.balanceFor
 import com.keacs.app.domain.rule.totalExpense
 import com.keacs.app.domain.rule.totalIncome
 import com.keacs.app.ui.components.KeacsCard
+import com.keacs.app.ui.components.formatCent
+import com.keacs.app.ui.components.formatGroupedCent
 import com.keacs.app.ui.record.DatePickerMode
 import com.keacs.app.ui.record.DateWheelPickerBottomSheet
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
-import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -115,7 +114,6 @@ fun DiscoverScreen(
             liability = liability,
             netAsset = asset + liability,
         )
-        ComingSoonCard()
     }
 
     if (showMonthPicker) {
@@ -238,7 +236,7 @@ private fun NetAssetBlock(netAsset: Long) {
             style = MaterialTheme.typography.bodySmall,
         )
         Text(
-            text = formatCent(netAsset),
+            text = formatGroupedCent(netAsset),
             color = KeacsColors.TextPrimary,
             style = MaterialTheme.typography.headlineSmall,
             fontFamily = FontFamily.Monospace,
@@ -319,7 +317,7 @@ private fun CompactMetric(
             style = MaterialTheme.typography.bodySmall,
         )
         Text(
-            text = formatCent(amount),
+            text = formatGroupedCent(amount),
             color = KeacsColors.TextPrimary,
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = FontFamily.Monospace,
@@ -327,35 +325,6 @@ private fun CompactMetric(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-    }
-}
-
-@Composable
-private fun ComingSoonCard() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
-            .background(KeacsColors.SurfaceSubtle)
-            .padding(horizontal = 16.dp, vertical = 18.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Explore,
-                contentDescription = null,
-                tint = KeacsColors.Primary,
-            )
-            Text(
-                text = "更多功能敬请期待~",
-                color = KeacsColors.TextSecondary,
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-            )
-        }
     }
 }
 
@@ -384,9 +353,6 @@ private fun startOfMonth(timestamp: Long): Long {
     calendar.set(Calendar.MILLISECOND, 0)
     return calendar.timeInMillis
 }
-
-private fun formatCent(value: Long): String =
-    DecimalFormat("#0.##").format(value / 100.0)
 
 private fun formatMonthText(timestamp: Long): String =
     SimpleDateFormat("yyyy年MM月", Locale.getDefault()).format(Date(timestamp))
