@@ -34,12 +34,14 @@ fun NumberPad(
     saveEnabled: Boolean = false,
     onKeyClick: (String) -> Unit = {},
     onSaveClick: () -> Unit = {},
+    onDateClick: (() -> Unit)? = null,
+    dateText: String? = null,
 ) {
     val rows = listOf(
-        listOf("1", "2", "3", "⌫"),
+        listOf("1", "2", "3", "DATE"),
         listOf("4", "5", "6", "+"),
         listOf("7", "8", "9", "-"),
-        listOf(".", "0", "保存"),
+        listOf("⌫", "0", ".", "保存"),
     )
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -51,17 +53,69 @@ fun NumberPad(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 row.forEach { label ->
-                    NumberKey(
-                        label = label,
-                        modifier = Modifier.weight(if (label == "保存") 2f else 1f),
-                        enabled = label != "保存" || saveEnabled,
-                        onClick = {
-                            if (label == "保存") onSaveClick() else onKeyClick(label)
-                        },
-                    )
+                    if (label == "DATE" && onDateClick != null && dateText != null) {
+                        DateKey(
+                            text = dateText,
+                            modifier = Modifier.weight(1f),
+                            onClick = onDateClick,
+                        )
+                    } else if (label == "DATE") {
+                        // Empty spacer if date picker is not provided
+                        Box(modifier = Modifier.weight(1f))
+                    } else {
+                        NumberKey(
+                            label = label,
+                            modifier = Modifier.weight(1f),
+                            enabled = label != "保存" || saveEnabled,
+                            onClick = {
+                                if (label == "保存") onSaveClick() else onKeyClick(label)
+                            },
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DateKey(
+    text: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.92f else 1f,
+        animationSpec = tween(durationMillis = 80),
+        label = "keyScale"
+    )
+
+    Box(
+        modifier = modifier
+            .scale(scale)
+            .height(KeacsSize.MinTouch)
+            .clip(MaterialTheme.shapes.medium)
+            .background(KeacsColors.SurfaceSubtle)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                }
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color = KeacsColors.TextPrimary,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
 

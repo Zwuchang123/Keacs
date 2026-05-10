@@ -9,13 +9,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
@@ -42,76 +40,63 @@ import com.keacs.app.ui.theme.KeacsColors
 fun AccountTypeSelector(
     options: List<IconOption>,
     selectedType: String,
-    modifier: Modifier = Modifier,
     onSelected: (IconOption) -> Unit,
 ) {
-    KeacsCard(modifier = modifier) {
+    KeacsCard {
         Column(Modifier.padding(it), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("账户类型", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-            Column(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(5),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .height(228.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val chunkedOptions = options.chunked(5)
-                chunkedOptions.forEach { rowOptions ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start
+                items(options, key = { option -> option.key + option.label }) { option ->
+                    val selected = normalizedAccountCategoryName(selectedType) == normalizedAccountCategoryName(option.label)
+                    Column(
+                        modifier = Modifier
+                            .height(68.dp)
+                            .shadow(
+                                elevation = if (selected) 10.dp else 0.dp,
+                                shape = MaterialTheme.shapes.medium,
+                                ambientColor = KeacsColors.Primary.copy(alpha = 0.22f),
+                                spotColor = KeacsColors.Primary.copy(alpha = 0.22f),
+                            )
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(if (selected) KeacsColors.PrimaryLight else Color.Transparent)
+                            .clickable { onSelected(option) },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
                     ) {
-                        rowOptions.forEach { option ->
-                            val selected = normalizedAccountCategoryName(selectedType) == normalizedAccountCategoryName(option.label)
-                            Box(modifier = Modifier.weight(1f)) {
-                                Column(
-                                    modifier = Modifier
-                                        .height(68.dp)
-                                        .shadow(
-                                            elevation = if (selected) 10.dp else 0.dp,
-                                            shape = MaterialTheme.shapes.medium,
-                                            ambientColor = KeacsColors.Primary.copy(alpha = 0.22f),
-                                            spotColor = KeacsColors.Primary.copy(alpha = 0.22f),
-                                        )
-                                        .clip(MaterialTheme.shapes.medium)
-                                        .background(if (selected) KeacsColors.PrimaryLight else Color.Transparent)
-                                        .clickable { onSelected(option) },
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center,
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(38.dp)
-                                            .clip(CircleShape)
-                                            .background(if (selected) KeacsColors.PrimaryLight else KeacsColors.Surface)
-                                            .border(
-                                                BorderStroke(if (selected) 1.5.dp else 0.dp, KeacsColors.Primary),
-                                                CircleShape,
-                                            ),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        CategoryIcon(
-                                            icon = option.icon,
-                                            backgroundColor = if (selected) KeacsColors.Primary else colorFor(option.colorKey),
-                                            modifier = Modifier.size(32.dp),
-                                        )
-                                    }
-                                    Text(
-                                        text = option.label,
-                                        color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.fillMaxWidth(),
-                                    )
-                                }
-                            }
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(if (selected) KeacsColors.PrimaryLight else KeacsColors.Surface)
+                                .border(
+                                    BorderStroke(if (selected) 1.5.dp else 0.dp, KeacsColors.Primary),
+                                    CircleShape,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CategoryIcon(
+                                icon = option.icon,
+                                backgroundColor = if (selected) KeacsColors.Primary else colorFor(option.colorKey),
+                                modifier = Modifier.size(32.dp),
+                            )
                         }
-                        // Add empty weights if row is not full
-                        repeat(5 - rowOptions.size) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
+                        Text(
+                            text = option.label,
+                            color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
+                            style = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             }
@@ -120,59 +105,18 @@ fun AccountTypeSelector(
 }
 
 @Composable
-fun AccountSupplementaryRow(
-    nature: String,
-    onNatureToggle: (String) -> Unit,
-    isEnabled: Boolean,
-    onEnabledToggle: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .clip(MaterialTheme.shapes.small)
-                .background(KeacsColors.SurfaceSubtle)
-                .clickable {
-                    onNatureToggle(
-                        if (nature == PresetSeedData.ACCOUNT_ASSET) PresetSeedData.ACCOUNT_LIABILITY
-                        else PresetSeedData.ACCOUNT_ASSET
-                    )
+fun NatureSelector(nature: String, onSelected: (String) -> Unit) {
+    KeacsCard {
+        Column(Modifier.padding(it)) {
+            Text("账户性质", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                OptionChip("资产", nature == PresetSeedData.ACCOUNT_ASSET, Modifier.weight(1f)) {
+                    onSelected(PresetSeedData.ACCOUNT_ASSET)
                 }
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = if (nature == PresetSeedData.ACCOUNT_ASSET) "资产账户" else "负债账户",
-                color = KeacsColors.TextSecondary,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .clip(MaterialTheme.shapes.small)
-                .background(KeacsColors.SurfaceSubtle)
-                .clickable { onEnabledToggle(!isEnabled) }
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = if (isEnabled) "已启用" else "已停用",
-                color = if (isEnabled) KeacsColors.Primary else KeacsColors.TextTertiary,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                OptionChip("负债", nature == PresetSeedData.ACCOUNT_LIABILITY, Modifier.weight(1f)) {
+                    onSelected(PresetSeedData.ACCOUNT_LIABILITY)
+                }
+            }
         }
     }
 }
@@ -184,7 +128,6 @@ fun AccountBalanceKeyboardPanel(
     saveEnabled: Boolean,
     onKeyClick: (String) -> Unit,
     onSaveClick: () -> Unit,
-    supplementaryContent: (@Composable () -> Unit)? = null,
 ) {
     KeacsCard(contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)) {
         Column(
@@ -194,9 +137,6 @@ fun AccountBalanceKeyboardPanel(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            if (supplementaryContent != null) {
-                supplementaryContent()
-            }
             Text("当前余额", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
             AmountText(amount = balanceDisplay(balance))
             Text(
@@ -231,14 +171,17 @@ fun nextBalanceAmount(current: String, key: String): String {
     if (key == "-") return if (current.startsWith("-")) current.removePrefix("-") else "-$current"
     if (key == "+") return current.removePrefix("-")
     if (key == "⌫") return current.dropLast(1).ifBlank { "0" }
-    if (key == "." && current.contains(".")) return current
+    if (key == ".") {
+        if (current.contains(".")) return current
+        if (current.isBlank() || current == "-") return current + "0."
+    }
     val negative = current.startsWith("-")
     val raw = current.removePrefix("-")
     val base = if (raw == "0.00" || raw == "0") "" else raw
     val next = if (key == "." && base.isBlank()) "0." else base + key
     if (next.substringAfter('.', "").length > 2) return current
     val normalized = if (next.startsWith("0.")) next else next.trimStart('0').ifBlank { "0" }
-    return if (negative) "-$normalized" else normalized
+    return if (negative && normalized != "0") "-$normalized" else normalized
 }
 
 fun balanceInputWouldOverflow(next: String): Boolean {

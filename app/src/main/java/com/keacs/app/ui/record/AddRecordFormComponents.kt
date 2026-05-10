@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -134,12 +135,13 @@ fun TransferAccounts(
 @Composable
 fun AmountKeyboardPanel(
     amount: String,
-    parsedAmount: Long?,
     message: String?,
     saveEnabled: Boolean,
     onKeyClick: (String) -> Unit,
     onSaveClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onDateClick: (() -> Unit)? = null,
+    dateText: String? = null,
     supplementaryContent: (@Composable () -> Unit)? = null,
 ) {
     KeacsCard(
@@ -153,20 +155,26 @@ fun AmountKeyboardPanel(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
+            AmountText(amount = amount.ifBlank { "0" })
             if (supplementaryContent != null) {
                 supplementaryContent()
             }
-            AmountText(amount = amount.ifBlank { "0" })
-            Text(
-                text = message ?: if (parsedAmount == null) "金额大于0才可保存" else " ",
-                color = if (message == null) KeacsColors.TextTertiary else KeacsColors.Error,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-            )
+            if (message != null && message != "金额大于0才可保存") {
+                Text(
+                    text = message,
+                    color = KeacsColors.Error,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                )
+            } else {
+                Spacer(modifier = Modifier.height(16.dp)) // Maintain vertical spacing
+            }
             NumberPad(
                 saveEnabled = saveEnabled,
                 onKeyClick = onKeyClick,
                 onSaveClick = onSaveClick,
+                onDateClick = onDateClick,
+                dateText = dateText,
             )
         }
     }
@@ -228,14 +236,11 @@ fun RecordSupplementaryRow(
     accountCategories: List<CategoryEntity>,
     accountId: Long?,
     showAccount: Boolean,
-    dateText: String,
     note: String,
     onAccountClick: () -> Unit,
-    onDateClick: () -> Unit,
     onNoteChange: (String) -> Unit,
 ) {
     val selectedAccount = accounts.firstOrNull { it.id == accountId }
-    val selectedAccountIcon = accountIconOptionFor(selectedAccount, accountCategories)
 
     Row(
         modifier = Modifier
@@ -256,7 +261,7 @@ fun RecordSupplementaryRow(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = selectedAccountIcon.icon,
+                    imageVector = Icons.Rounded.AccountBalanceWallet,
                     contentDescription = null,
                     tint = KeacsColors.TextSecondary,
                     modifier = Modifier.size(16.dp)
@@ -276,37 +281,6 @@ fun RecordSupplementaryRow(
                 color = KeacsColors.Border
             )
         }
-        
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .clip(MaterialTheme.shapes.small)
-                .clickable(onClick = onDateClick)
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.CalendarToday,
-                contentDescription = null,
-                tint = KeacsColors.TextSecondary,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = dateText,
-                color = KeacsColors.TextSecondary,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        
-        VerticalDivider(
-            modifier = Modifier.padding(vertical = 6.dp),
-            thickness = 0.5.dp,
-            color = KeacsColors.Border
-        )
         
         Row(
             modifier = Modifier

@@ -130,7 +130,21 @@ private fun Char.isAmountOperator(): Boolean = this == '+' || this == '-'
 
 fun centToInput(value: Long): String = DecimalFormat("#0.##").format(value / 100.0)
 
-fun dateLabel(time: Long): String = SimpleDateFormat("M月d日", Locale.CHINA).format(Date(time))
+fun dateLabel(time: Long): String {
+    val targetDate = Date(time)
+    val targetFormat = SimpleDateFormat("yyyy/MM/dd", Locale.CHINA).format(targetDate)
+    
+    val todayMillis = System.currentTimeMillis()
+    val todayFormat = SimpleDateFormat("yyyy/MM/dd", Locale.CHINA).format(Date(todayMillis))
+    
+    val yesterdayFormat = SimpleDateFormat("yyyy/MM/dd", Locale.CHINA).format(Date(todayMillis - ONE_DAY))
+    
+    return when (targetFormat) {
+        todayFormat -> "今天"
+        yesterdayFormat -> "昨天"
+        else -> targetFormat
+    }
+}
 
 fun isSameDay(left: Long, right: Long): Boolean = dateLabel(left) == dateLabel(right)
 

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -216,7 +215,9 @@ fun CategoryEditScreen(
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
         ) {
             ManagementTextField("分类名称", name, {
@@ -229,16 +230,12 @@ fun CategoryEditScreen(
                     direction = PresetSeedData.accountCategoryDirectionFor(it)
                 }
             }
+            IconSelector(direction, iconKey) {
+                iconKey = it.key
+                colorKey = it.colorKey
+            }
             SwitchCard(isEnabled, onCheckedChange = { isEnabled = it })
             ErrorText(error)
-        }
-        IconSelector(
-            direction = direction, 
-            selectedKey = iconKey,
-            modifier = Modifier.weight(1f)
-        ) {
-            iconKey = it.key
-            colorKey = it.colorKey
         }
         ActionButtons(
             deleteText = "删除分类",
@@ -278,46 +275,34 @@ private fun DirectionSelector(
     direction: String,
     onSelected: (String) -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        OptionChip("支出", direction == PresetSeedData.CATEGORY_EXPENSE, Modifier.weight(1f)) {
-            onSelected(PresetSeedData.CATEGORY_EXPENSE)
-        }
-        OptionChip("收入", direction == PresetSeedData.CATEGORY_INCOME, Modifier.weight(1f)) {
-            onSelected(PresetSeedData.CATEGORY_INCOME)
-        }
-        OptionChip("账户", PresetSeedData.isAccountCategoryDirection(direction), Modifier.weight(1f)) {
-            onSelected(PresetSeedData.CATEGORY_ACCOUNT_ASSET)
-        }
-    }
-}
-
-@Composable
-fun NatureSelector(nature: String, onSelected: (String) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        OptionChip("资产账户", nature == PresetSeedData.ACCOUNT_ASSET, Modifier.weight(1f)) {
-            onSelected(PresetSeedData.ACCOUNT_ASSET)
-        }
-        OptionChip("负债账户", nature == PresetSeedData.ACCOUNT_LIABILITY, Modifier.weight(1f)) {
-            onSelected(PresetSeedData.ACCOUNT_LIABILITY)
+    KeacsCard {
+        Column(Modifier.padding(it)) {
+            Text("分类方向", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                OptionChip("支出", direction == PresetSeedData.CATEGORY_EXPENSE, Modifier.weight(1f)) {
+                    onSelected(PresetSeedData.CATEGORY_EXPENSE)
+                }
+                OptionChip("收入", direction == PresetSeedData.CATEGORY_INCOME, Modifier.weight(1f)) {
+                    onSelected(PresetSeedData.CATEGORY_INCOME)
+                }
+                OptionChip("账户", PresetSeedData.isAccountCategoryDirection(direction), Modifier.weight(1f)) {
+                    onSelected(PresetSeedData.CATEGORY_ACCOUNT_ASSET)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun IconSelector(
-    direction: String, 
-    selectedKey: String, 
-    modifier: Modifier = Modifier,
-    onSelected: (IconOption) -> Unit
-) {
-    KeacsCard(modifier = modifier) {
+private fun IconSelector(direction: String, selectedKey: String, onSelected: (IconOption) -> Unit) {
+    KeacsCard {
         Column(Modifier.padding(it)) {
             Text("选择图标", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
             LazyVerticalGrid(
                 columns = GridCells.Fixed(5),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .height(252.dp)
                     .padding(top = 10.dp),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),

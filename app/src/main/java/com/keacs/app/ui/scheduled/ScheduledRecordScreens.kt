@@ -163,7 +163,6 @@ fun ScheduledRecordEditScreen(
         AmountKeyboardPanel(
             modifier = Modifier.padding(top = 8.dp),
             amount = amount,
-            parsedAmount = parsedAmount,
             message = error ?: when {
                 parsedAmount != null && recurrenceValues.isBlank() -> "请选择记账时间"
                 else -> scheduledValidationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, null)
@@ -203,16 +202,16 @@ fun ScheduledRecordEditScreen(
                     isSaving = false
                 }
             },
+            onDateClick = { showDateSelector = true },
+            dateText = recurrenceLabel(frequency, recurrenceValues, nextRunAt).ifBlank { "记账时间" },
             supplementaryContent = {
                 com.keacs.app.ui.record.RecordSupplementaryRow(
                     accounts = availableAccounts,
                     accountCategories = categories,
                     accountId = if (type == RecordType.INCOME) toAccountId else fromAccountId,
                     showAccount = type != RecordType.TRANSFER,
-                    dateText = recurrenceLabel(frequency, recurrenceValues, nextRunAt).ifBlank { "记账时间" },
                     note = note,
                     onAccountClick = { showAccountSelector = true },
-                    onDateClick = { showDateSelector = true },
                     onNoteChange = { note = it }
                 )
             }

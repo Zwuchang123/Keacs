@@ -172,13 +172,21 @@ fun RecurrencePickerBottomSheet(
                             ) {
                                 selectedYearlyValues.sortedWith(compareBy<YearlyValue> { it.month }.thenBy { it.day }).forEach { yearly ->
                                     val text = "${yearly.month}月${yearly.day}日"
-                                    GridChoiceChip(
-                                        label = text,
-                                        selected = true,
-                                        onClick = {
-                                            selectedYearlyValues = selectedYearlyValues - yearly
-                                        }
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(MaterialTheme.shapes.small)
+                                            .background(KeacsColors.PrimaryLight)
+                                            .clickable { selectedYearlyValues = selectedYearlyValues - yearly }
+                                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                                        contentAlignment = androidx.compose.ui.Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = text,
+                                            color = KeacsColors.Primary,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -208,7 +216,6 @@ fun RecurrencePickerBottomSheet(
                                     val day = pickerDayIndex + 1
                                     selectedYearlyValues = selectedYearlyValues + YearlyValue(month, day)
                                 },
-                                modifier = Modifier.padding(top = 16.dp)
                             ) {
                                 Text("添加")
                             }
