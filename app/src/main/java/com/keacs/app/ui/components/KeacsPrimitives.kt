@@ -213,12 +213,16 @@ fun FormFieldRow(
             text = title,
             color = KeacsColors.TextPrimary,
             style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
         )
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = value,
             color = KeacsColors.TextSecondary,
             style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         Spacer(modifier = Modifier.width(4.dp))
         Icon(

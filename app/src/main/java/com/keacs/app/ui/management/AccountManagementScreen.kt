@@ -14,11 +14,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,6 +35,7 @@ import com.keacs.app.data.local.database.PresetSeedData
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.domain.rule.balanceFor
 import com.keacs.app.domain.usecase.AccountManagementUseCase
+import com.keacs.app.ui.components.ConfirmDialog
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.KeacsSnackbar
 import com.keacs.app.ui.theme.KeacsColors
@@ -209,23 +208,20 @@ fun AccountEditScreen(
     }
 
     if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text("删除这个账户？") },
-            text = { Text("没有历史记录时可以删除；已经用过的账户不能删除，只能停用。") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmDelete = false
-                        scope.launch {
-                            runCatching { accountId?.let { useCase.delete(it) } }
-                                .onSuccess { onDone() }
-                                .onFailure { error = it.message ?: "删除失败，请稍后重试" }
-                        }
-                    },
-                ) { Text("删除", color = KeacsColors.Error) }
+        ConfirmDialog(
+            title = "删除这个账户？",
+            text = "删除后无法恢复。",
+            confirmText = "删除",
+            onConfirm = {
+                confirmDelete = false
+                scope.launch {
+                    runCatching { accountId?.let { useCase.delete(it) } }
+                        .onSuccess { onDone() }
+                        .onFailure { error = it.message ?: "删除失败，请稍后重试" }
+                }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("取消") } },
+            onDismiss = { confirmDelete = false },
+            isDestructive = true,
         )
     }
 }
@@ -295,4 +291,4 @@ private fun accountBalanceText(nature: String, value: Long): String =
     if (nature == PresetSeedData.ACCOUNT_LIABILITY) "-${formatCent(kotlin.math.abs(value))}" else formatCent(value)
 
 private fun formatCent(value: Long): String =
-    DecimalFormat("#,##0.00").format(value / 100.0)
+    DecimalFormat("#0.00").format(value / 100.0)

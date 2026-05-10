@@ -203,7 +203,7 @@ abstract class KeacsDatabase : RoomDatabase() {
                 "兼职" to ("coins" to "cyan"),
             ).forEach { (name, icon) ->
                 db.execSQL(
-                    "UPDATE categories SET iconKey = ?, colorKey = ? WHERE name = ?",
+                    "UPDATE categories SET iconKey = ?, colorKey = ? WHERE name = ? AND updatedAt = createdAt",
                     arrayOf(icon.first, icon.second, name),
                 )
             }
@@ -223,15 +223,15 @@ abstract class KeacsDatabase : RoomDatabase() {
                 "其他负债" to ("liability_more" to "gray"),
             ).forEach { (name, icon) ->
                 db.execSQL(
-                    "UPDATE categories SET iconKey = ?, colorKey = ? WHERE name = ?",
+                    "UPDATE categories SET iconKey = ?, colorKey = ? WHERE name = ? AND updatedAt = createdAt",
                     arrayOf(icon.first, icon.second, name),
                 )
             }
             db.execSQL(
-                "UPDATE categories SET iconKey = 'income_more', colorKey = 'gray' WHERE direction = 'INCOME' AND name = '其他'",
+                "UPDATE categories SET iconKey = 'income_more', colorKey = 'gray' WHERE direction = 'INCOME' AND name = '其他' AND updatedAt = createdAt",
             )
             db.execSQL(
-                "UPDATE categories SET iconKey = 'more', colorKey = 'gray' WHERE direction = 'EXPENSE' AND name = '其他'",
+                "UPDATE categories SET iconKey = 'more', colorKey = 'gray' WHERE direction = 'EXPENSE' AND name = '其他' AND updatedAt = createdAt",
             )
         }
 
@@ -252,7 +252,7 @@ abstract class KeacsDatabase : RoomDatabase() {
                 "其他负债" to ("liability_more" to "gray"),
             ).forEach { (name, icon) ->
                 db.execSQL(
-                    "UPDATE accounts SET iconKey = ?, colorKey = ? WHERE name = ?",
+                    "UPDATE accounts SET iconKey = ?, colorKey = ? WHERE name = ? AND updatedAt = createdAt",
                     arrayOf(icon.first, icon.second, name),
                 )
             }

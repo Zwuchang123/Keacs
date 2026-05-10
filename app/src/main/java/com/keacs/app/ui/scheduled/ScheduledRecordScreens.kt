@@ -4,9 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -24,6 +21,7 @@ import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.data.repository.ScheduledFrequency
 import com.keacs.app.data.repository.ScheduledRecordRepository
 import com.keacs.app.domain.model.RecordType
+import com.keacs.app.ui.components.ConfirmDialog
 import com.keacs.app.ui.components.SegmentedTabs
 import com.keacs.app.ui.record.AccountSelectorBottomSheet
 import com.keacs.app.ui.record.AmountKeyboardPanel
@@ -34,7 +32,6 @@ import com.keacs.app.ui.record.amountToCent
 import com.keacs.app.ui.record.centToInput
 import com.keacs.app.ui.record.nextAmount
 import com.keacs.app.ui.record.typeIndex
-import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 import kotlinx.coroutines.launch
 
@@ -251,24 +248,21 @@ fun ScheduledRecordEditScreen(
         )
     }
     if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("删除这个定时记账？") },
-            text = { Text("删除后不会影响已经生成的账目。") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                        scheduleId?.let { id ->
-                            scope.launch {
-                                scheduledRepository.deleteSchedule(id)
-                                onDone()
-                            }
-                        }
-                    },
-                ) { Text("删除", color = KeacsColors.Error) }
+        ConfirmDialog(
+            title = "删除这个定时记账？",
+            text = "删除后无法恢复。",
+            confirmText = "删除",
+            onConfirm = {
+                showDeleteDialog = false
+                scheduleId?.let { id ->
+                    scope.launch {
+                        scheduledRepository.deleteSchedule(id)
+                        onDone()
+                    }
+                }
             },
-            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("取消") } },
+            onDismiss = { showDeleteDialog = false },
+            isDestructive = true,
         )
     }
 }

@@ -151,7 +151,12 @@ private fun ScheduledNoteField(note: String, onNoteChange: (String) -> Unit) {
             .height(36.dp)
             .padding(horizontal = 12.dp),
     ) {
-        Icon(Icons.AutoMirrored.Rounded.Notes, contentDescription = null, tint = KeacsColors.TextSecondary)
+        Icon(
+            Icons.AutoMirrored.Rounded.Notes,
+            contentDescription = null,
+            tint = KeacsColors.TextSecondary,
+            modifier = Modifier.size(21.dp),
+        )
         Spacer(modifier = Modifier.width(10.dp))
         androidx.compose.foundation.text.BasicTextField(
             value = note,
@@ -188,7 +193,12 @@ private fun EnabledField(isEnabled: Boolean, onEnabledChange: (Boolean) -> Unit)
             modifier = Modifier.size(21.dp),
         )
         Spacer(modifier = Modifier.width(10.dp))
-        Text("是否启用", color = KeacsColors.TextPrimary, modifier = Modifier.weight(1f))
+        Text(
+            "是否启用",
+            color = KeacsColors.TextPrimary,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
         Switch(checked = isEnabled, onCheckedChange = onEnabledChange)
     }
 }
@@ -224,7 +234,7 @@ private fun scheduleTitle(
     }
 
 private fun signedAmountLabel(schedule: ScheduledRecordEntity): String {
-    val amount = DecimalFormat("#,##0.00").format(schedule.amountCent / 100.0)
+    val amount = DecimalFormat("#0.00").format(schedule.amountCent / 100.0)
     return when (schedule.type) {
         RecordType.INCOME -> "+$amount"
         RecordType.EXPENSE -> "-$amount"

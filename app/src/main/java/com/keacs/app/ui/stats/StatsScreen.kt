@@ -487,10 +487,12 @@ private fun CategoryStatRow(stat: CategoryStats) {
             Spacer(modifier = Modifier.width(8.dp))
 
             Text(
-                text = stat.categoryName,
+                text = "${stat.categoryName} ${StatsViewModel.formatPercentage(stat.percentage)}",
                 color = KeacsColors.TextPrimary,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
 
             Text(
@@ -498,14 +500,6 @@ private fun CategoryStatRow(stat: CategoryStats) {
                 color = KeacsColors.TextPrimary,
                 style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace,
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = StatsViewModel.formatPercentage(stat.percentage),
-                color = KeacsColors.TextSecondary,
-                style = MaterialTheme.typography.bodySmall,
             )
         }
         Box(
@@ -527,4 +521,4 @@ private fun CategoryStatRow(stat: CategoryStats) {
 }
 
 private fun formatCent(value: Long): String =
-    DecimalFormat("#,##0.00").format(value / 100.0)
+    DecimalFormat("#0.00").format(value / 100.0)
