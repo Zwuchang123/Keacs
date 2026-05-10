@@ -54,9 +54,9 @@ class MainActivitySmokeTest {
         composeRule.onNodeWithText("新增定时记账").performClick()
         assertScreenDisplayed("screen-scheduled-edit")
 
-        composeRule.onNodeWithText("记账时间").performClick()
+        composeRule.onAllNodesWithText("每月")[0].performClick()
         composeRule.onNodeWithText("每周").assertIsDisplayed()
-        composeRule.onNodeWithText("每月").assertIsDisplayed()
+        composeRule.onAllNodesWithText("每月")[1].assertIsDisplayed()
         composeRule.onNodeWithText("每年").assertIsDisplayed()
         composeRule.onAllNodesWithText("每天").assertCountEquals(0)
     }

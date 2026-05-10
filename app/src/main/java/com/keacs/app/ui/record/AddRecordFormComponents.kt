@@ -253,12 +253,11 @@ fun RecordSupplementaryRow(
         if (showAccount) {
             Row(
                 modifier = Modifier
-                    .weight(1f)
                     .clip(MaterialTheme.shapes.small)
                     .clickable(onClick = onAccountClick)
                     .padding(horizontal = 4.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.Start
             ) {
                 Icon(
                     imageVector = Icons.Rounded.AccountBalanceWallet,
@@ -284,7 +283,7 @@ fun RecordSupplementaryRow(
         
         Row(
             modifier = Modifier
-                .weight(1.5f)
+                .weight(1f)
                 .clip(MaterialTheme.shapes.small)
                 .padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,

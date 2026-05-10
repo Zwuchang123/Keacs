@@ -163,11 +163,8 @@ fun ScheduledRecordEditScreen(
         AmountKeyboardPanel(
             modifier = Modifier.padding(top = 8.dp),
             amount = amount,
-            message = error ?: when {
-                parsedAmount != null && recurrenceValues.isBlank() -> "请选择记账时间"
-                else -> scheduledValidationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, null)
-            },
-            saveEnabled = canSave && !isSaving,
+            message = error ?: scheduledValidationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, null),
+            saveEnabled = !isSaving,
             onKeyClick = { key ->
                 val next = nextAmount(amount, key)
                 if (!amountInputWouldOverflow(next)) {
@@ -180,6 +177,14 @@ fun ScheduledRecordEditScreen(
                     val cents = parsedAmount
                     if (cents == null) {
                         error = "金额大于0才可保存"
+                        return@launch
+                    }
+                    if (recurrenceValues.isBlank()) {
+                        error = "请选择记账时间"
+                        return@launch
+                    }
+                    if (!canSave) {
+                        error = scheduledValidationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, null)
                         return@launch
                     }
                     isSaving = true
@@ -203,7 +208,7 @@ fun ScheduledRecordEditScreen(
                 }
             },
             onDateClick = { showDateSelector = true },
-            dateText = recurrenceLabel(frequency, recurrenceValues, nextRunAt).ifBlank { "记账时间" },
+            dateText = shortRecurrenceLabel(frequency).ifBlank { "周期" },
             supplementaryContent = {
                 com.keacs.app.ui.record.RecordSupplementaryRow(
                     accounts = availableAccounts,

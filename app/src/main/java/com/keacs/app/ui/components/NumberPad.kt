@@ -12,6 +12,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CalendarToday
+import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -94,12 +100,11 @@ private fun DateKey(
         label = "keyScale"
     )
 
-    Box(
+    Row(
         modifier = modifier
             .scale(scale)
             .height(KeacsSize.MinTouch)
             .clip(MaterialTheme.shapes.medium)
-            .background(KeacsColors.SurfaceSubtle)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -108,8 +113,26 @@ private fun DateKey(
                     onClick()
                 }
             ),
-        contentAlignment = Alignment.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
     ) {
+        if (text == "今天" || text == "昨天" || text == "每周" || text == "每月" || text == "每年") {
+            Icon(
+                imageVector = Icons.Rounded.CalendarToday,
+                contentDescription = null,
+                tint = KeacsColors.TextPrimary,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+        } else if (text == "周期") {
+            Icon(
+                imageVector = Icons.Rounded.CalendarToday,
+                contentDescription = null,
+                tint = KeacsColors.TextPrimary,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+        }
         Text(
             text = text,
             color = KeacsColors.TextPrimary,
