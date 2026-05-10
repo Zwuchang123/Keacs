@@ -111,7 +111,8 @@ object PresetSeedData {
         "房贷" -> "mortgage"
         "宠物" -> "pet"
         "工资" -> "work"
-        "奖金", "礼金" -> "gift"
+        "奖金" -> "bonus"
+        "礼金" -> "gift"
         "报销" -> "receipt"
         "兼职" -> "coins"
         else -> "more"
@@ -141,7 +142,9 @@ object PresetSeedData {
         "花呗/白条" -> "credit_line"
         "公积金" -> "home"
         "投资账户" -> "chart"
-        "消费贷", "房贷/车贷", "亲友借款" -> "loan"
+        "消费贷" -> "loan"
+        "房贷/车贷" -> "mortgage"
+        "亲友借款" -> "request_account"
         else -> "more"
     }
 
@@ -154,7 +157,9 @@ object PresetSeedData {
         "花呗/白条" -> "yellow"
         "公积金" -> "purple"
         "投资账户" -> "pink"
-        "消费贷", "房贷/车贷", "亲友借款" -> "red"
+        "消费贷" -> "red"
+        "房贷/车贷" -> "blue"
+        "亲友借款" -> "green"
         else -> "gray"
     }
 

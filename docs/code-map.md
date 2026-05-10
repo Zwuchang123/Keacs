@@ -10,16 +10,19 @@
 | 统计       | `app/src/main/java/com/keacs/app/ui/stats`                               | 收入、支出、结余统计与图表            |
 | 发现       | `app/src/main/java/com/keacs/app/ui/discover`                            | 当月概览、资产负债概览和发现页提示        |
 | 管理       | `app/src/main/java/com/keacs/app/ui/management`                          | 分类管理、账户管理、图标与颜色映射        |
+| 定时记账     | `app/src/main/java/com/keacs/app/ui/scheduled`                           | 定时记账列表、编辑和启停              |
 | 设置       | `app/src/main/java/com/keacs/app/ui/settings`                            | 我的、设置、关于                 |
 | 通用组件     | `app/src/main/java/com/keacs/app/ui/components`                          | 卡片、底栏、数字键盘、弹窗等通用 UI      |
 | Domain 层 | `app/src/main/java/com/keacs/app/domain`                                 | 业务模型、UseCase、规则          |
 | 余额规则     | `app/src/main/java/com/keacs/app/domain/rule/RecordCalculations.kt`      | 余额、历史余额、收支汇总规则           |
 | Data 层   | `app/src/main/java/com/keacs/app/data`                                   | 本地存储、仓库、偏好、备份            |
 | 仓库入口     | `app/src/main/java/com/keacs/app/data/repository/LocalDataRepository.kt` | 分类、账户、记录、初始化、备份导入的核心入口   |
+| 定时记账仓库   | `app/src/main/java/com/keacs/app/data/repository/ScheduledRecordRepository.kt` | 定时记账模板保存和到期账目生成       |
 | 本地数据     | `app/src/main/java/com/keacs/app/data/local`                             | 数据库、DAO、Entity、预置数据、偏好设置 |
 | 预置数据     | `app/src/main/java/com/keacs/app/data/local/database/PresetSeedData.kt`  | 预置分类、预置账户、默认图标颜色         |
 | 偏好设置     | `app/src/main/java/com/keacs/app/data/local/PreferencesManager.kt`       | 欢迎页状态、默认记账账户、默认记账类型      |
 | 备份       | `app/src/main/java/com/keacs/app/data/backup/BackupService.kt`           | JSON 备份导出与导入             |
+| Excel 添加  | `app/src/main/java/com/keacs/app/data/importer/ExcelRecordImportService.kt` | 读取 XLSX 并添加收入、支出账目      |
 | 单元测试     | `app/src/test`                                                           | 单元测试                     |
 | 设备测试     | `app/src/androidTest`                                                    | Android 设备测试             |
 

@@ -78,6 +78,20 @@ class LocalDataRepository(
         database.categoryDao().deleteById(id)
     }
 
+    suspend fun reorderCategories(direction: String, orderedIds: List<Long>) {
+        val now = clock()
+        val ids = orderedIds.toSet()
+        require(orderedIds.size == ids.size) { "分类顺序不正确" }
+        database.withTransaction {
+            val existing = database.categoryDao().getAll().filter { it.direction == direction }
+            require(existing.map { it.id }.containsAll(ids)) { "分类不存在" }
+            val finalOrder = orderedIds + existing.map { it.id }.filterNot { it in ids }
+            finalOrder.forEachIndexed { index, id ->
+                database.categoryDao().updateSortOrder(id, index, now)
+            }
+        }
+    }
+
     suspend fun saveAccount(
         id: Long?,
         name: String,

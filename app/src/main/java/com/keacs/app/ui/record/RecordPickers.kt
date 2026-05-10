@@ -181,6 +181,7 @@ fun DateWheelPickerBottomSheet(
     title: String,
     selectedDate: Long,
     mode: DatePickerMode,
+    allowFuture: Boolean = false,
     onSelected: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -189,17 +190,20 @@ fun DateWheelPickerBottomSheet(
         Calendar.getInstance(Locale.getDefault()).apply { timeInMillis = nowMillis }
     }
     val calendar = remember(selectedDate, nowMillis) {
-        Calendar.getInstance(Locale.getDefault()).apply { timeInMillis = selectedDate.coerceAtMost(nowMillis) }
+        Calendar.getInstance(Locale.getDefault()).apply {
+            timeInMillis = if (allowFuture) selectedDate else selectedDate.coerceAtMost(nowMillis)
+        }
     }
     val thisYear = today.get(Calendar.YEAR)
     val startYear = thisYear - 10
-    val years = remember(thisYear) { (startYear..thisYear).map { "${it}年" } }
+    val endYear = if (allowFuture) thisYear + 10 else thisYear
+    val years = remember(thisYear, allowFuture) { (startYear..endYear).map { "${it}年" } }
 
     var yearIndex by remember(selectedDate, nowMillis) {
         mutableIntStateOf((calendar.get(Calendar.YEAR) - startYear).coerceIn(years.indices))
     }
     val selectedYear = startYear + yearIndex
-    val maxMonthIndex = if (selectedYear == thisYear) today.get(Calendar.MONTH) else 11
+    val maxMonthIndex = if (!allowFuture && selectedYear == thisYear) today.get(Calendar.MONTH) else 11
     val months = remember(maxMonthIndex) { (1..(maxMonthIndex + 1)).map { "${it}月" } }
     var monthIndex by remember(selectedDate, nowMillis) {
         mutableIntStateOf(calendar.get(Calendar.MONTH).coerceIn(months.indices))
@@ -212,7 +216,7 @@ fun DateWheelPickerBottomSheet(
     val maxDay = remember(selectedYear, safeMonthIndex, today) {
         val cal = Calendar.getInstance(Locale.getDefault())
         cal.set(selectedYear, safeMonthIndex, 1)
-        if (selectedYear == thisYear && safeMonthIndex == today.get(Calendar.MONTH)) {
+        if (!allowFuture && selectedYear == thisYear && safeMonthIndex == today.get(Calendar.MONTH)) {
             today.get(Calendar.DAY_OF_MONTH)
         } else {
             cal.getActualMaximum(Calendar.DAY_OF_MONTH)
@@ -246,7 +250,7 @@ fun DateWheelPickerBottomSheet(
                 0,
             )
             result.set(Calendar.MILLISECOND, 0)
-            onSelected(result.timeInMillis.coerceAtMost(nowMillis))
+            onSelected(if (allowFuture) result.timeInMillis else result.timeInMillis.coerceAtMost(nowMillis))
         },
     )
 }

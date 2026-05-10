@@ -12,7 +12,7 @@
 - 本地数据库：Room + SQLite
 - 偏好存储：DataStore
 - 异步：Kotlin Coroutines + Flow
-- 导入导出：JSON 文件
+- 导入导出：JSON 文件、XLSX 文件读取
 - 构建工具：Gradle
 
 ## 2. 分层结构
@@ -49,6 +49,7 @@ app/
     stats/
     settings/
     backup/
+    scheduled/
   domain/
     model/
     usecase/
@@ -61,6 +62,7 @@ app/
       PreferencesManager
     repository/
     backup/
+    importer/
   common/
 ```
 
@@ -105,6 +107,25 @@ app/
 - `createdAt`
 - `updatedAt`
 
+### ScheduledRecord
+
+- `id`
+- `type`
+- `amountCent`
+- `categoryId`
+- `fromAccountId`
+- `toAccountId`
+- `frequency`
+- `recurrenceMonth`
+- `recurrenceDay`
+- `recurrenceWeekday`
+- `recurrenceHour`
+- `nextRunAt`
+- `note`
+- `isEnabled`
+- `createdAt`
+- `updatedAt`
+
 ## 5. 数据库
 
 数据库名：
@@ -120,6 +141,7 @@ keacs.db
 - `records`
 - `account_adjustments`：历史兼容表，当前功能不再新增账户变动记录。
 - `app_meta`
+- `scheduled_records`
 
 偏好存储：
 
@@ -132,6 +154,7 @@ keacs.db
 - `records.categoryId`
 - `records.fromAccountId`
 - `records.toAccountId`
+- `scheduled_records.nextRunAt`
 
 ## 6. 核心服务
 
@@ -173,6 +196,19 @@ keacs.db
 - 备份版本校验
 - 导入事务处理
 
+### ExcelRecordImportService
+
+- 读取 `.xlsx` 第一张工作表
+- 校验日期、收支类型、金额
+- 按名称匹配分类和账户
+- 分类匹配不到时归到“其他”，并把原分类写入备注
+
+### ScheduledRecordRepository
+
+- 保存定时记账模板
+- 应用启动时生成到期账目
+- 生成后推进下次日期
+
 ### PreferencesManager
 
 - 读取本设备首次进入状态
@@ -189,6 +225,7 @@ keacs.db
 - `DeleteRecordUseCase`
 - `ImportBackupUseCase`
 - `ExportBackupUseCase`
+- `GenerateDueScheduledRecordsUseCase`
 
 ## 8. 余额计算
 
@@ -255,7 +292,7 @@ netAsset = totalAsset + totalLiability
 
 ## 10. 数据迁移
 
-- Room 数据库版本从 `1` 开始，当前版本为 `2`。
+- Room 数据库版本从 `1` 开始，当前版本为 `4`。
 - 结构变更必须提供 Migration。
 - 备份文件版本独立于数据库版本。
 

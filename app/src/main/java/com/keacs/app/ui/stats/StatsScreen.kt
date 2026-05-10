@@ -3,6 +3,7 @@ package com.keacs.app.ui.stats
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -159,7 +160,11 @@ private fun StatsTabSelector(
                     .height(32.dp)
                     .clip(MaterialTheme.shapes.extraLarge)
                     .background(if (selected) KeacsColors.Surface else Color.Transparent)
-                    .clickable { onTabSelected(tab) }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { onTabSelected(tab) },
+                    )
                     .padding(vertical = 7.dp),
                 color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
                 style = MaterialTheme.typography.labelMedium,

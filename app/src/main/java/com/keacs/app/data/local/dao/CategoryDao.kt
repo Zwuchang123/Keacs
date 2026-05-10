@@ -19,6 +19,9 @@ interface CategoryDao {
     @Update
     suspend fun update(category: CategoryEntity)
 
+    @Query("UPDATE categories SET sortOrder = :sortOrder, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateSortOrder(id: Long, sortOrder: Int, updatedAt: Long)
+
     @Query("SELECT * FROM categories ORDER BY direction ASC, sortOrder ASC, id ASC")
     fun observeAll(): Flow<List<CategoryEntity>>
 

@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import com.keacs.app.data.importer.ExcelRecordImportService
 import com.keacs.app.domain.usecase.ExportBackupUseCase
 import com.keacs.app.domain.usecase.ImportBackupUseCase
 import kotlinx.coroutines.Dispatchers
@@ -13,7 +14,8 @@ import kotlinx.coroutines.withContext
 
 class BackupViewModel(
     private val exportBackupUseCase: ExportBackupUseCase,
-    private val importBackupUseCase: ImportBackupUseCase
+    private val importBackupUseCase: ImportBackupUseCase,
+    private val excelRecordImportService: ExcelRecordImportService,
 ) : ViewModel() {
 
     var message by mutableStateOf<String?>(null)
@@ -53,6 +55,25 @@ class BackupViewModel(
             isError = false
         } catch (e: Exception) {
             message = "导入失败: ${e.message}"
+            isError = true
+        }
+    }
+
+    suspend fun importExcelRecords(context: Context, uri: Uri) {
+        try {
+            val result = withContext(Dispatchers.IO) {
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    excelRecordImportService.import(inputStream)
+                } ?: throw IllegalStateException("无法读取选中的文件")
+            }
+            message = buildString {
+                append("已添加${result.createdRows}条")
+                if (result.skippedRows > 0) append("，${result.skippedRows}条未处理")
+                if (result.fallbackCategoryRows > 0) append("，${result.fallbackCategoryRows}条已归到其他")
+            }
+            isError = result.createdRows == 0 && result.skippedRows > 0
+        } catch (e: Exception) {
+            message = "添加失败: ${e.message}"
             isError = true
         }
     }

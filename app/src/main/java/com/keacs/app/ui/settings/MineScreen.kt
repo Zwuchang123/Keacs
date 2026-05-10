@@ -15,6 +15,8 @@ import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.TableChart
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -42,6 +44,7 @@ fun MineScreen(
     backupViewModel: BackupViewModel,
     onCategoryClick: () -> Unit,
     onAccountClick: () -> Unit,
+    onScheduledClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
     onSwipeRight: () -> Unit = {},
@@ -65,6 +68,16 @@ fun MineScreen(
     ) { uri ->
         if (uri != null) {
             showImportConfirm = uri
+        }
+    }
+
+    val excelLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                backupViewModel.importExcelRecords(context, uri)
+            }
         }
     }
 
@@ -95,6 +108,8 @@ fun MineScreen(
             MenuRow(Icons.Rounded.Category, "分类管理", KeacsColors.Primary, onClick = onCategoryClick)
             MenuDivider()
             MenuRow(Icons.Rounded.AccountBalanceWallet, "账户管理", KeacsColors.Income, onClick = onAccountClick)
+            MenuDivider()
+            MenuRow(Icons.Rounded.Schedule, "定时记账", KeacsColors.Warning, onClick = onScheduledClick)
         }
         DividedMenuCard {
             MenuRow(
@@ -113,6 +128,20 @@ fun MineScreen(
                 KeacsColors.Primary,
                 onClick = {
                     importLauncher.launch(arrayOf("application/json", "*/*"))
+                }
+            )
+            MenuDivider()
+            MenuRow(
+                Icons.Rounded.TableChart,
+                "Excel 添加账目",
+                KeacsColors.Income,
+                onClick = {
+                    excelLauncher.launch(
+                        arrayOf(
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            "*/*",
+                        ),
+                    )
                 }
             )
         }
