@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,7 +23,6 @@ import com.keacs.app.domain.model.RecordType
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.EmptyState
 import com.keacs.app.ui.components.MenuDivider
-import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 
 @Composable
@@ -47,10 +45,14 @@ fun ScheduledRecordListScreen(
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
         if (sortedSchedules.isEmpty()) {
-            EmptyState(
-                title = "暂无定时记账",
-                modifier = Modifier.weight(1f)
-            )
+            KeacsCard(modifier = Modifier.weight(1f)) {
+                EmptyState(
+                    title = "暂无定时记账",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(it),
+                )
+            }
         } else {
             KeacsCard(contentPadding = PaddingValues(0.dp), modifier = Modifier.weight(1f)) {
                 LazyColumn(modifier = Modifier.padding(it)) {

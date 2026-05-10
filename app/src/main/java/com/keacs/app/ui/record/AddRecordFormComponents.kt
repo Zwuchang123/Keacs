@@ -21,8 +21,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.material.icons.rounded.AccountBalanceWallet
-import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -241,6 +239,7 @@ fun RecordSupplementaryRow(
     onNoteChange: (String) -> Unit,
 ) {
     val selectedAccount = accounts.firstOrNull { it.id == accountId }
+    val accountIconOption = accountIconOptionFor(selectedAccount, accountCategories)
 
     Row(
         modifier = Modifier
@@ -259,11 +258,10 @@ fun RecordSupplementaryRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Start
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.AccountBalanceWallet,
-                    contentDescription = null,
-                    tint = KeacsColors.TextSecondary,
-                    modifier = Modifier.size(16.dp)
+                CategoryIcon(
+                    icon = accountIconOption.icon,
+                    backgroundColor = colorFor(accountIconOption.colorKey),
+                    modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(

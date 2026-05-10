@@ -231,7 +231,7 @@ fun RecurrencePickerBottomSheet(
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
                 TextButton(
@@ -240,7 +240,6 @@ fun RecurrencePickerBottomSheet(
                 ) {
                     Text("取消")
                 }
-                Spacer(modifier = Modifier.weight(1f))
                 Button(
                     onClick = {
                         val values = selectedValues()

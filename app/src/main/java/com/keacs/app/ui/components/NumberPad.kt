@@ -47,7 +47,7 @@ fun NumberPad(
         listOf("1", "2", "3", "DATE"),
         listOf("4", "5", "6", "+"),
         listOf("7", "8", "9", "-"),
-        listOf("⌫", "0", ".", "保存"),
+        listOf(".", "0", "⌫", "保存"),
     )
     Column(
         modifier = modifier.fillMaxWidth(),
