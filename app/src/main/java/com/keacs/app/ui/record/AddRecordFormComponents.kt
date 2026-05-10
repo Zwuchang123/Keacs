@@ -19,6 +19,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Notes
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -233,24 +235,33 @@ fun RecordSupplementaryRow(
     onNoteChange: (String) -> Unit,
 ) {
     val selectedAccount = accounts.firstOrNull { it.id == accountId }
+    val selectedAccountIcon = accountIconOptionFor(selectedAccount, accountCategories)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 4.dp),
+            .height(IntrinsicSize.Min)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (showAccount) {
-            Box(
+            Row(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(CircleShape)
-                    .background(KeacsColors.SurfaceSubtle)
+                    .clip(MaterialTheme.shapes.small)
                     .clickable(onClick = onAccountClick)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center
+                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
+                Icon(
+                    imageVector = selectedAccountIcon.icon,
+                    contentDescription = null,
+                    tint = KeacsColors.TextSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = selectedAccount?.name ?: "选择账户",
                     color = KeacsColors.TextSecondary,
@@ -259,16 +270,29 @@ fun RecordSupplementaryRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+            VerticalDivider(
+                modifier = Modifier.padding(vertical = 6.dp),
+                thickness = 0.5.dp,
+                color = KeacsColors.Border
+            )
         }
-        Box(
+        
+        Row(
             modifier = Modifier
                 .weight(1f)
-                .clip(CircleShape)
-                .background(KeacsColors.SurfaceSubtle)
+                .clip(MaterialTheme.shapes.small)
                 .clickable(onClick = onDateClick)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            contentAlignment = Alignment.Center
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
+            Icon(
+                imageVector = Icons.Rounded.CalendarToday,
+                contentDescription = null,
+                tint = KeacsColors.TextSecondary,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = dateText,
                 color = KeacsColors.TextSecondary,
@@ -277,14 +301,27 @@ fun RecordSupplementaryRow(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        Box(
+        
+        VerticalDivider(
+            modifier = Modifier.padding(vertical = 6.dp),
+            thickness = 0.5.dp,
+            color = KeacsColors.Border
+        )
+        
+        Row(
             modifier = Modifier
                 .weight(1.5f)
-                .clip(CircleShape)
-                .background(KeacsColors.SurfaceSubtle)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            contentAlignment = Alignment.CenterStart
+                .clip(MaterialTheme.shapes.small)
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Rounded.Notes,
+                contentDescription = null,
+                tint = KeacsColors.TextSecondary,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
             BasicTextField(
                 value = note,
                 onValueChange = onNoteChange,

@@ -108,6 +108,24 @@ fun WheelPickerBottomSheet(
 }
 
 @Composable
+fun WheelPickerRow(
+    columns: List<WheelPickerColumn>,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        columns.forEach { column ->
+            WheelColumn(
+                column = column,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
 private fun WheelColumn(
     column: WheelPickerColumn,
     modifier: Modifier = Modifier,

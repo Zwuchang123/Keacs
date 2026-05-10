@@ -45,6 +45,9 @@ import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 import java.util.Calendar
 import java.util.Locale
+import androidx.compose.runtime.mutableIntStateOf
+import com.keacs.app.ui.components.WheelPickerRow
+import com.keacs.app.ui.components.WheelPickerColumn
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -88,20 +91,20 @@ fun RecurrencePickerBottomSheet(
             }
             ?: emptyList()
     }
-    var selectedYearMonths by remember(initialYearlyValues) {
-        mutableStateOf(initialYearlyValues.map { it.month }.toSet())
+    var selectedYearlyValues by remember(initialYearlyValues) {
+        mutableStateOf(initialYearlyValues.toSet())
     }
-    var selectedYearDays by remember(initialYearlyValues) {
-        mutableStateOf(initialYearlyValues.map { it.day }.toSet())
-    }
+
+    var pickerMonthIndex by remember { mutableIntStateOf(0) }
+    var pickerDayIndex by remember { mutableIntStateOf(0) }
 
     fun selectedValues(): String = when (selectedFrequency) {
         ScheduledFrequency.WEEKLY -> selectedWeekdays
             .sortedWith(compareBy { weekdayValues.indexOf(it).takeIf { index -> index >= 0 } ?: Int.MAX_VALUE })
             .joinToString(",")
-        ScheduledFrequency.YEARLY -> selectedYearMonths.sorted().flatMap { month ->
-            selectedYearDays.sorted().map { day -> "$month-$day" }
-        }.joinToString(",")
+        ScheduledFrequency.YEARLY -> selectedYearlyValues
+            .sortedWith(compareBy<YearlyValue> { it.month }.thenBy { it.day })
+            .joinToString(",") { "${it.month}-${it.day}" }
         else -> selectedMonthDays.sorted().joinToString(",")
     }
 
@@ -161,18 +164,55 @@ fun RecurrencePickerBottomSheet(
                         onToggle = { value -> selectedWeekdays = selectedWeekdays.toggle(value) },
                     )
                     ScheduledFrequency.YEARLY -> {
-                        MultiChoiceGroup(
-                            title = "选择月份",
-                            options = (1..12).map { it to "${it}月" },
-                            selectedValues = selectedYearMonths,
-                            onToggle = { value -> selectedYearMonths = selectedYearMonths.toggle(value) },
-                        )
-                        MultiChoiceGroup(
-                            title = "选择日期",
-                            options = (1..31).map { it to "${it}日" },
-                            selectedValues = selectedYearDays,
-                            onToggle = { value -> selectedYearDays = selectedYearDays.toggle(value) },
-                        )
+                        if (selectedYearlyValues.isNotEmpty()) {
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                            ) {
+                                selectedYearlyValues.sortedWith(compareBy<YearlyValue> { it.month }.thenBy { it.day }).forEach { yearly ->
+                                    val text = "${yearly.month}月${yearly.day}日"
+                                    GridChoiceChip(
+                                        label = text,
+                                        selected = true,
+                                        onClick = {
+                                            selectedYearlyValues = selectedYearlyValues - yearly
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        ) {
+                            WheelPickerRow(
+                                columns = listOf(
+                                    WheelPickerColumn(
+                                        items = (1..12).map { "${it}月" },
+                                        selectedIndex = pickerMonthIndex,
+                                        onSelected = { pickerMonthIndex = it }
+                                    ),
+                                    WheelPickerColumn(
+                                        items = (1..31).map { "${it}日" },
+                                        selectedIndex = pickerDayIndex,
+                                        onSelected = { pickerDayIndex = it }
+                                    )
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                            Button(
+                                onClick = {
+                                    val month = pickerMonthIndex + 1
+                                    val day = pickerDayIndex + 1
+                                    selectedYearlyValues = selectedYearlyValues + YearlyValue(month, day)
+                                },
+                                modifier = Modifier.padding(top = 16.dp)
+                            ) {
+                                Text("添加")
+                            }
+                        }
                     }
                     else -> MultiChoiceGroup(
                         title = "选择日期",
@@ -193,13 +233,7 @@ fun RecurrencePickerBottomSheet(
                 ) {
                     Text("取消")
                 }
-                Text(
-                    text = "默认 09:00 生成",
-                    color = KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.Center,
-                )
+                Spacer(modifier = Modifier.weight(1f))
                 Button(
                     onClick = {
                         val values = selectedValues()

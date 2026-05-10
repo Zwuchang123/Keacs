@@ -216,9 +216,7 @@ fun CategoryEditScreen(
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
         ) {
             ManagementTextField("分类名称", name, {
@@ -231,12 +229,16 @@ fun CategoryEditScreen(
                     direction = PresetSeedData.accountCategoryDirectionFor(it)
                 }
             }
-            IconSelector(direction, iconKey) {
-                iconKey = it.key
-                colorKey = it.colorKey
-            }
             SwitchCard(isEnabled, onCheckedChange = { isEnabled = it })
             ErrorText(error)
+        }
+        IconSelector(
+            direction = direction, 
+            selectedKey = iconKey,
+            modifier = Modifier.weight(1f)
+        ) {
+            iconKey = it.key
+            colorKey = it.colorKey
         }
         ActionButtons(
             deleteText = "删除分类",
@@ -276,83 +278,84 @@ private fun DirectionSelector(
     direction: String,
     onSelected: (String) -> Unit,
 ) {
-    KeacsCard {
-        Column(Modifier.padding(it)) {
-            Text("分类方向", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                OptionChip("支出", direction == PresetSeedData.CATEGORY_EXPENSE, Modifier.weight(1f)) {
-                    onSelected(PresetSeedData.CATEGORY_EXPENSE)
-                }
-                OptionChip("收入", direction == PresetSeedData.CATEGORY_INCOME, Modifier.weight(1f)) {
-                    onSelected(PresetSeedData.CATEGORY_INCOME)
-                }
-                OptionChip("账户", PresetSeedData.isAccountCategoryDirection(direction), Modifier.weight(1f)) {
-                    onSelected(PresetSeedData.CATEGORY_ACCOUNT_ASSET)
-                }
-            }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        OptionChip("支出", direction == PresetSeedData.CATEGORY_EXPENSE, Modifier.weight(1f)) {
+            onSelected(PresetSeedData.CATEGORY_EXPENSE)
+        }
+        OptionChip("收入", direction == PresetSeedData.CATEGORY_INCOME, Modifier.weight(1f)) {
+            onSelected(PresetSeedData.CATEGORY_INCOME)
+        }
+        OptionChip("账户", PresetSeedData.isAccountCategoryDirection(direction), Modifier.weight(1f)) {
+            onSelected(PresetSeedData.CATEGORY_ACCOUNT_ASSET)
         }
     }
 }
 
 @Composable
-private fun IconSelector(direction: String, selectedKey: String, onSelected: (IconOption) -> Unit) {
-    KeacsCard {
+fun NatureSelector(nature: String, onSelected: (String) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        OptionChip("资产账户", nature == PresetSeedData.ACCOUNT_ASSET, Modifier.weight(1f)) {
+            onSelected(PresetSeedData.ACCOUNT_ASSET)
+        }
+        OptionChip("负债账户", nature == PresetSeedData.ACCOUNT_LIABILITY, Modifier.weight(1f)) {
+            onSelected(PresetSeedData.ACCOUNT_LIABILITY)
+        }
+    }
+}
+
+@Composable
+private fun IconSelector(
+    direction: String, 
+    selectedKey: String, 
+    modifier: Modifier = Modifier,
+    onSelected: (IconOption) -> Unit
+) {
+    KeacsCard(modifier = modifier) {
         Column(Modifier.padding(it)) {
             Text("选择图标", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-            Column(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(5),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .weight(1f)
                     .padding(top = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val options = categoryOptions(direction)
-                val chunkedOptions = options.chunked(5)
-                chunkedOptions.forEach { rowOptions ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start
+                items(categoryOptions(direction), key = { option -> option.key }) { option ->
+                    val selected = selectedKey == option.key
+                    Column(
+                        modifier = Modifier
+                            .height(52.dp)
+                            .shadow(
+                                elevation = if (selected) 10.dp else 0.dp,
+                                shape = MaterialTheme.shapes.medium,
+                                ambientColor = KeacsColors.Primary.copy(alpha = 0.22f),
+                                spotColor = KeacsColors.Primary.copy(alpha = 0.22f),
+                            )
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(if (selected) KeacsColors.PrimaryLight else Color.Transparent)
+                            .clickable { onSelected(option) },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
                     ) {
-                        rowOptions.forEach { option ->
-                            val selected = selectedKey == option.key
-                            Box(modifier = Modifier.weight(1f)) {
-                                Column(
-                                    modifier = Modifier
-                                        .height(52.dp)
-                                        .shadow(
-                                            elevation = if (selected) 10.dp else 0.dp,
-                                            shape = MaterialTheme.shapes.medium,
-                                            ambientColor = KeacsColors.Primary.copy(alpha = 0.22f),
-                                            spotColor = KeacsColors.Primary.copy(alpha = 0.22f),
-                                        )
-                                        .clip(MaterialTheme.shapes.medium)
-                                        .background(if (selected) KeacsColors.PrimaryLight else Color.Transparent)
-                                        .clickable { onSelected(option) },
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center,
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(38.dp)
-                                            .clip(CircleShape)
-                                            .background(if (selected) KeacsColors.PrimaryLight else KeacsColors.Surface)
-                                            .border(
-                                                BorderStroke(if (selected) 1.5.dp else 0.dp, KeacsColors.Primary),
-                                                CircleShape,
-                                            ),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        CategoryIcon(
-                                            icon = option.icon,
-                                            backgroundColor = if (selected) KeacsColors.Primary else colorFor(option.colorKey),
-                                            modifier = Modifier.size(32.dp),
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        // Add empty weights if row is not full
-                        repeat(5 - rowOptions.size) {
-                            Spacer(modifier = Modifier.weight(1f))
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(if (selected) KeacsColors.PrimaryLight else KeacsColors.Surface)
+                                .border(
+                                    BorderStroke(if (selected) 1.5.dp else 0.dp, KeacsColors.Primary),
+                                    CircleShape,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CategoryIcon(
+                                icon = option.icon,
+                                backgroundColor = if (selected) KeacsColors.Primary else colorFor(option.colorKey),
+                                modifier = Modifier.size(32.dp),
+                            )
                         }
                     }
                 }

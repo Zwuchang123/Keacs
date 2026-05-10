@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keacs.app.ui.components.CategoryIcon
@@ -121,45 +122,53 @@ fun ListDivider() {
 
 @Composable
 fun ManagementTextField(
-    label: String,
+    placeholder: String,
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     error: String? = null,
 ) {
-    KeacsCard(
-        modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-    ) {
-        Column(modifier = Modifier.padding(it)) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            textStyle = MaterialTheme.typography.headlineSmall.copy(
+                color = KeacsColors.TextPrimary,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            ),
+            cursorBrush = SolidColor(KeacsColors.Primary),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .height(48.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .background(KeacsColors.Surface)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            decorationBox = { inner ->
+                Box(contentAlignment = Alignment.Center) {
+                    if (value.isBlank()) {
+                        Text(
+                            text = placeholder,
+                            color = KeacsColors.TextTertiary,
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+                    inner()
+                }
+            }
+        )
+        if (error != null) {
             Text(
-                text = label,
-                color = KeacsColors.TextSecondary,
+                text = error,
+                color = KeacsColors.Error,
                 style = MaterialTheme.typography.bodySmall,
-            )
-            BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                textStyle = MaterialTheme.typography.titleMedium.copy(color = KeacsColors.TextPrimary),
-                cursorBrush = SolidColor(KeacsColors.Primary),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
-                    .height(42.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(KeacsColors.SurfaceSubtle)
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .padding(top = 4.dp)
+                    .align(Alignment.CenterHorizontally),
             )
         }
-    }
-    if (error != null) {
-        Text(
-            text = error,
-            color = KeacsColors.Error,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(top = 4.dp, start = 4.dp),
-        )
     }
 }
 
@@ -204,22 +213,22 @@ fun SwitchCard(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
-    KeacsCard(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(it),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (checked) "已启用" else "已停用",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = KeacsColors.TextPrimary,
-                )
-            }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .background(KeacsColors.Surface)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = if (checked) "已启用" else "已停用",
+                style = MaterialTheme.typography.bodyMedium,
+                color = KeacsColors.TextPrimary,
+            )
         }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

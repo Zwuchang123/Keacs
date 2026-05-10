@@ -154,22 +154,22 @@ fun AccountEditScreen(
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
-        ) {
-            ManagementTextField("账户名称", name, { name = it; error = null }, error = error)
-            NatureSelector(nature) { nature = it }
-            AccountTypeSelector(typeOptions, type) { option ->
+        ManagementTextField(
+            placeholder = "账户名称",
+            value = name,
+            onValueChange = { name = it; error = null },
+            error = error
+        )
+        AccountTypeSelector(
+            options = typeOptions,
+            selectedType = type,
+            modifier = Modifier.weight(1f),
+            onSelected = { option ->
                 type = option.label
                 iconKey = option.key
                 colorKey = option.colorKey
             }
-            SwitchCard(isEnabled, onCheckedChange = { isEnabled = it })
-            ErrorText(error)
-        }
+        )
         AccountBalanceKeyboardPanel(
             balance = balance,
             error = balanceError(balance),
@@ -196,6 +196,14 @@ fun AccountEditScreen(
                         .onFailure { error = it.message ?: "保存失败，请稍后重试" }
                 }
             },
+            supplementaryContent = {
+                AccountSupplementaryRow(
+                    nature = nature,
+                    onNatureToggle = { nature = it },
+                    isEnabled = isEnabled,
+                    onEnabledToggle = { isEnabled = it }
+                )
+            }
         )
     }
 

@@ -384,6 +384,7 @@ class ScheduledRecordRepository(
                 setTimeParts(hour)
             }
             if (candidate.timeInMillis <= base.timeInMillis) {
+                candidate.set(Calendar.DAY_OF_MONTH, 1) // Prevent month rollover
                 candidate.add(Calendar.MONTH, 1)
                 candidate.set(Calendar.DAY_OF_MONTH, day.coerceAtMost(candidate.getActualMaximum(Calendar.DAY_OF_MONTH)))
                 candidate.setTimeParts(hour)
@@ -393,12 +394,14 @@ class ScheduledRecordRepository(
 
         private fun yearlyOccurrence(base: Calendar, month: Int, day: Int, hour: Int): Long {
             val candidate = (base.clone() as Calendar).apply {
+                set(Calendar.DAY_OF_MONTH, 1) // Prevent month rollover
                 set(Calendar.MONTH, (month - 1).coerceIn(0, 11))
                 set(Calendar.DAY_OF_MONTH, day.coerceAtMost(getActualMaximum(Calendar.DAY_OF_MONTH)))
                 setTimeParts(hour)
             }
             if (candidate.timeInMillis <= base.timeInMillis) {
                 candidate.add(Calendar.YEAR, 1)
+                candidate.set(Calendar.DAY_OF_MONTH, 1)
                 candidate.set(Calendar.MONTH, (month - 1).coerceIn(0, 11))
                 candidate.set(Calendar.DAY_OF_MONTH, day.coerceAtMost(candidate.getActualMaximum(Calendar.DAY_OF_MONTH)))
                 candidate.setTimeParts(hour)

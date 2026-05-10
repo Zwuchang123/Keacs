@@ -59,7 +59,6 @@ class MainActivitySmokeTest {
         composeRule.onNodeWithText("每月").assertIsDisplayed()
         composeRule.onNodeWithText("每年").assertIsDisplayed()
         composeRule.onAllNodesWithText("每天").assertCountEquals(0)
-        composeRule.onNodeWithText("默认 09:00 生成").assertIsDisplayed()
     }
 
     private fun enterMainIfWelcomeShown() {
