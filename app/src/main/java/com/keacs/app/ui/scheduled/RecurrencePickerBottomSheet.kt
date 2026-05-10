@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -126,7 +127,7 @@ fun RecurrencePickerBottomSheet(
             ) {
                 Spacer(modifier = Modifier.width(48.dp))
                 Text(
-                    text = "生成时间",
+                    text = "记账时间",
                     color = KeacsColors.TextPrimary,
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
@@ -183,7 +184,8 @@ fun RecurrencePickerBottomSheet(
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
                 TextButton(
                     onClick = onDismiss,
@@ -191,6 +193,13 @@ fun RecurrencePickerBottomSheet(
                 ) {
                     Text("取消")
                 }
+                Text(
+                    text = "默认 09:00 生成",
+                    color = KeacsColors.TextTertiary,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                )
                 Button(
                     onClick = {
                         val values = selectedValues()
@@ -231,38 +240,100 @@ private fun MultiChoiceGroup(
         ) {
             Text(title, color = KeacsColors.TextPrimary, style = MaterialTheme.typography.bodyMedium)
         }
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp),
-        ) {
-            options.forEach { (value, label) ->
-                ChoiceChip(
-                    label = label,
-                    selected = value in selectedValues,
-                    onClick = { onToggle(value) },
-                )
+        
+        if (options.size > 12) {
+            // For 31 days, use a 7-column grid layout using rows
+            val chunkedOptions = options.chunked(7)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                chunkedOptions.forEach { rowOptions ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowOptions.forEach { (value, label) ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                GridChoiceChip(
+                                    label = label,
+                                    selected = value in selectedValues,
+                                    onClick = { onToggle(value) }
+                                )
+                            }
+                        }
+                        // Fill remaining space if row is not full
+                        repeat(7 - rowOptions.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        } else if (options.size == 12) {
+            // For 12 months, use a 4-column grid layout
+            val chunkedOptions = options.chunked(4)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                chunkedOptions.forEach { rowOptions ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowOptions.forEach { (value, label) ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                GridChoiceChip(
+                                    label = label,
+                                    selected = value in selectedValues,
+                                    onClick = { onToggle(value) }
+                                )
+                            }
+                        }
+                        repeat(4 - rowOptions.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        } else {
+            // For 7 weekdays or fewer, use FlowRow
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                options.forEach { (value, label) ->
+                    Box(modifier = Modifier.weight(1f, fill = false)) {
+                        GridChoiceChip(
+                            label = label,
+                            selected = value in selectedValues,
+                            onClick = { onToggle(value) }
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ChoiceChip(
+private fun GridChoiceChip(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    Text(
-        text = label,
+    val displayLabel = if (label.startsWith("周")) label else label.replace("日", "").replace("月", "")
+    Box(
         modifier = Modifier
-            .clip(MaterialTheme.shapes.extraLarge)
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
             .background(if (selected) KeacsColors.Primary else KeacsColors.SurfaceSubtle)
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 7.dp),
-        color = if (selected) KeacsColors.Surface else KeacsColors.TextPrimary,
-        style = MaterialTheme.typography.bodySmall,
-        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-    )
+            .padding(vertical = 10.dp),
+        contentAlignment = androidx.compose.ui.Alignment.Center
+    ) {
+        Text(
+            text = displayLabel,
+            color = if (selected) KeacsColors.Surface else KeacsColors.TextPrimary,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        )
+    }
 }
 
 private fun Set<Int>.toggle(value: Int): Set<Int> =

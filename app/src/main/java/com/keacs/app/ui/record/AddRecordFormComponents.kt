@@ -138,6 +138,7 @@ fun AmountKeyboardPanel(
     onKeyClick: (String) -> Unit,
     onSaveClick: () -> Unit,
     modifier: Modifier = Modifier,
+    supplementaryContent: (@Composable () -> Unit)? = null,
 ) {
     KeacsCard(
         modifier = modifier,
@@ -150,6 +151,9 @@ fun AmountKeyboardPanel(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
+            if (supplementaryContent != null) {
+                supplementaryContent()
+            }
             AmountText(amount = amount.ifBlank { "0" })
             Text(
                 text = message ?: if (parsedAmount == null) "金额大于0才可保存" else " ",
@@ -179,67 +183,7 @@ fun RecordErrorText(message: String?) {
     }
 }
 
-@Composable
-fun FormArea(
-    accounts: List<AccountEntity>,
-    accountCategories: List<CategoryEntity>,
-    accountId: Long?,
-    showAccount: Boolean,
-    occurredAt: Long,
-    note: String,
-    onAccountSelected: (Long?) -> Unit,
-    onDateSelected: (Long) -> Unit,
-    onNoteChange: (String) -> Unit,
-) {
-    var showAccountSelector by remember { mutableStateOf(false) }
-    var showDateSelector by remember { mutableStateOf(false) }
-    val selectedAccount = accounts.firstOrNull { it.id == accountId }
-    val selectedAccountIcon = accountIconOptionFor(selectedAccount, accountCategories)
 
-    KeacsCard(contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
-        Column(Modifier.padding(it), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (showAccount) {
-                FormFieldRow(
-                    selectedAccountIcon.icon,
-                    "账户",
-                    selectedAccount?.name ?: "未选择",
-                    modifier = Modifier.clickable { showAccountSelector = true },
-                )
-            }
-            FormFieldRow(
-                Icons.Rounded.CalendarToday,
-                "日期",
-                dateLabel(occurredAt),
-                modifier = Modifier.clickable { showDateSelector = true },
-            )
-            NoteField(note, onNoteChange)
-        }
-    }
-
-    if (showAccountSelector) {
-        AccountSelectorBottomSheet(
-            accounts = accounts,
-            accountCategories = accountCategories,
-            selectedId = accountId,
-            title = "选择账户",
-            includeNone = false,
-            onSelected = onAccountSelected,
-            onDismiss = { showAccountSelector = false },
-        )
-    }
-    if (showDateSelector) {
-        DateWheelPickerBottomSheet(
-            title = "选择日期",
-            selectedDate = occurredAt,
-            mode = DatePickerMode.DAY,
-            onSelected = {
-                onDateSelected(it)
-                showDateSelector = false
-            },
-            onDismiss = { showDateSelector = false },
-        )
-    }
-}
 
 @Composable
 private fun TransferAccountBox(
@@ -274,29 +218,95 @@ private fun TransferAccountBox(
     }
 }
 
+
+
 @Composable
-private fun NoteField(note: String, onNoteChange: (String) -> Unit) {
+fun RecordSupplementaryRow(
+    accounts: List<AccountEntity>,
+    accountCategories: List<CategoryEntity>,
+    accountId: Long?,
+    showAccount: Boolean,
+    dateText: String,
+    note: String,
+    onAccountClick: () -> Unit,
+    onDateClick: () -> Unit,
+    onNoteChange: (String) -> Unit,
+) {
+    val selectedAccount = accounts.firstOrNull { it.id == accountId }
+
     Row(
-        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .height(36.dp)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(Icons.AutoMirrored.Rounded.Notes, contentDescription = null, tint = KeacsColors.TextSecondary)
-        Spacer(modifier = Modifier.width(10.dp))
-        BasicTextField(
-            value = note,
-            onValueChange = onNoteChange,
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodyMedium.copy(color = KeacsColors.TextPrimary),
-            cursorBrush = SolidColor(KeacsColors.Primary),
-            modifier = Modifier.weight(1f),
-            decorationBox = { inner ->
-                if (note.isBlank()) Text("添加备注", color = KeacsColors.TextTertiary, style = MaterialTheme.typography.bodyMedium)
-                inner()
-            },
-        )
+        if (showAccount) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(CircleShape)
+                    .background(KeacsColors.SurfaceSubtle)
+                    .clickable(onClick = onAccountClick)
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = selectedAccount?.name ?: "选择账户",
+                    color = KeacsColors.TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .clip(CircleShape)
+                .background(KeacsColors.SurfaceSubtle)
+                .clickable(onClick = onDateClick)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = dateText,
+                color = KeacsColors.TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Box(
+            modifier = Modifier
+                .weight(1.5f)
+                .clip(CircleShape)
+                .background(KeacsColors.SurfaceSubtle)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            BasicTextField(
+                value = note,
+                onValueChange = onNoteChange,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodySmall.copy(
+                    color = KeacsColors.TextPrimary,
+                    textAlign = TextAlign.Start
+                ),
+                cursorBrush = SolidColor(KeacsColors.Primary),
+                modifier = Modifier.fillMaxWidth(),
+                decorationBox = { inner ->
+                    if (note.isBlank()) {
+                        Text(
+                            "添加备注...", 
+                            color = KeacsColors.TextTertiary, 
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                    inner()
+                }
+            )
+        }
     }
 }
 

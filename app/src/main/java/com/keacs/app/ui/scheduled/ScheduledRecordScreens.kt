@@ -156,29 +156,16 @@ fun ScheduledRecordEditScreen(
                     onSelected = { categoryId = it },
                 )
             }
-            ScheduledFormArea(
-                type = type,
-                accounts = availableAccounts,
-                accountCategories = categories,
-                fromAccountId = fromAccountId,
-                toAccountId = toAccountId,
-                frequency = frequency,
-                recurrenceValues = recurrenceValues,
-                nextRunAt = nextRunAt,
-                note = note,
-                isEnabled = isEnabled,
-                onAccountClick = { showAccountSelector = true },
-                onTimeClick = { showDateSelector = true },
-                onNoteChange = { note = it },
-                onEnabledChange = { isEnabled = it },
-            )
+            if (scheduleId != null) {
+                EnabledField(isEnabled = isEnabled, onEnabledChange = { isEnabled = it })
+            }
         }
         AmountKeyboardPanel(
             modifier = Modifier.padding(top = 8.dp),
             amount = amount,
             parsedAmount = parsedAmount,
             message = error ?: when {
-                parsedAmount != null && recurrenceValues.isBlank() -> "请选择生成时间"
+                parsedAmount != null && recurrenceValues.isBlank() -> "请选择记账时间"
                 else -> scheduledValidationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, null)
             },
             saveEnabled = canSave && !isSaving,
@@ -216,6 +203,19 @@ fun ScheduledRecordEditScreen(
                     isSaving = false
                 }
             },
+            supplementaryContent = {
+                com.keacs.app.ui.record.RecordSupplementaryRow(
+                    accounts = availableAccounts,
+                    accountCategories = categories,
+                    accountId = if (type == RecordType.INCOME) toAccountId else fromAccountId,
+                    showAccount = type != RecordType.TRANSFER,
+                    dateText = recurrenceLabel(frequency, recurrenceValues, nextRunAt).ifBlank { "记账时间" },
+                    note = note,
+                    onAccountClick = { showAccountSelector = true },
+                    onDateClick = { showDateSelector = true },
+                    onNoteChange = { note = it }
+                )
+            }
         )
     }
 

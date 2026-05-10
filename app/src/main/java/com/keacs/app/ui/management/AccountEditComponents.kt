@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -45,58 +46,67 @@ fun AccountTypeSelector(
     KeacsCard {
         Column(Modifier.padding(it), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("账户类型", color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(5),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(228.dp),
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(options, key = { option -> option.key + option.label }) { option ->
-                    val selected = normalizedAccountCategoryName(selectedType) == normalizedAccountCategoryName(option.label)
-                    Column(
-                        modifier = Modifier
-                            .height(68.dp)
-                            .shadow(
-                                elevation = if (selected) 10.dp else 0.dp,
-                                shape = MaterialTheme.shapes.medium,
-                                ambientColor = KeacsColors.Primary.copy(alpha = 0.22f),
-                                spotColor = KeacsColors.Primary.copy(alpha = 0.22f),
-                            )
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(if (selected) KeacsColors.PrimaryLight else Color.Transparent)
-                            .clickable { onSelected(option) },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
+                val chunkedOptions = options.chunked(5)
+                chunkedOptions.forEach { rowOptions ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(if (selected) KeacsColors.PrimaryLight else KeacsColors.Surface)
-                                .border(
-                                    BorderStroke(if (selected) 1.5.dp else 0.dp, KeacsColors.Primary),
-                                    CircleShape,
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CategoryIcon(
-                                icon = option.icon,
-                                backgroundColor = if (selected) KeacsColors.Primary else colorFor(option.colorKey),
-                                modifier = Modifier.size(32.dp),
-                            )
+                        rowOptions.forEach { option ->
+                            val selected = normalizedAccountCategoryName(selectedType) == normalizedAccountCategoryName(option.label)
+                            Box(modifier = Modifier.weight(1f)) {
+                                Column(
+                                    modifier = Modifier
+                                        .height(68.dp)
+                                        .shadow(
+                                            elevation = if (selected) 10.dp else 0.dp,
+                                            shape = MaterialTheme.shapes.medium,
+                                            ambientColor = KeacsColors.Primary.copy(alpha = 0.22f),
+                                            spotColor = KeacsColors.Primary.copy(alpha = 0.22f),
+                                        )
+                                        .clip(MaterialTheme.shapes.medium)
+                                        .background(if (selected) KeacsColors.PrimaryLight else Color.Transparent)
+                                        .clickable { onSelected(option) },
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(if (selected) KeacsColors.PrimaryLight else KeacsColors.Surface)
+                                            .border(
+                                                BorderStroke(if (selected) 1.5.dp else 0.dp, KeacsColors.Primary),
+                                                CircleShape,
+                                            ),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        CategoryIcon(
+                                            icon = option.icon,
+                                            backgroundColor = if (selected) KeacsColors.Primary else colorFor(option.colorKey),
+                                            modifier = Modifier.size(32.dp),
+                                        )
+                                    }
+                                    Text(
+                                        text = option.label,
+                                        color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                            }
                         }
-                        Text(
-                            text = option.label,
-                            color = if (selected) KeacsColors.Primary else KeacsColors.TextSecondary,
-                            style = MaterialTheme.typography.labelSmall,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                        // Add empty weights if row is not full
+                        repeat(5 - rowOptions.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
