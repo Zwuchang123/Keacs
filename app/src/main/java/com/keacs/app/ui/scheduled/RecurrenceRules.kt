@@ -51,6 +51,15 @@ fun recurrenceLabel(frequency: String, recurrenceValues: String?, nextRunAt: Lon
     }
 }
 
+fun shortRecurrenceLabel(frequency: String): String {
+    val normalizedFrequency = ScheduledRecordRepository.normalizeFrequency(frequency)
+    return when (normalizedFrequency) {
+        ScheduledFrequency.WEEKLY -> "每周"
+        ScheduledFrequency.YEARLY -> "每年"
+        else -> "每月"
+    }
+}
+
 internal fun parseWeekdays(values: String?, fallback: Int): List<Int> =
     parseIntValues(values, fallback)
         .filter { it in Calendar.SUNDAY..Calendar.SATURDAY }

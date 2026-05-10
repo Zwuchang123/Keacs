@@ -171,14 +171,17 @@ fun nextBalanceAmount(current: String, key: String): String {
     if (key == "-") return if (current.startsWith("-")) current.removePrefix("-") else "-$current"
     if (key == "+") return current.removePrefix("-")
     if (key == "⌫") return current.dropLast(1).ifBlank { "0" }
-    if (key == "." && current.contains(".")) return current
+    if (key == ".") {
+        if (current.contains(".")) return current
+        if (current.isBlank() || current == "-") return current + "0."
+    }
     val negative = current.startsWith("-")
     val raw = current.removePrefix("-")
     val base = if (raw == "0.00" || raw == "0") "" else raw
     val next = if (key == "." && base.isBlank()) "0." else base + key
     if (next.substringAfter('.', "").length > 2) return current
     val normalized = if (next.startsWith("0.")) next else next.trimStart('0').ifBlank { "0" }
-    return if (negative) "-$normalized" else normalized
+    return if (negative && normalized != "0") "-$normalized" else normalized
 }
 
 fun balanceInputWouldOverflow(next: String): Boolean {

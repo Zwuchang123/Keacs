@@ -100,83 +100,10 @@ internal fun ScheduledRow(
     }
 }
 
-@Composable
-internal fun ScheduledFormArea(
-    type: String,
-    accounts: List<AccountEntity>,
-    accountCategories: List<CategoryEntity>,
-    fromAccountId: Long?,
-    toAccountId: Long?,
-    frequency: String,
-    recurrenceValues: String,
-    nextRunAt: Long,
-    note: String,
-    isEnabled: Boolean,
-    onAccountClick: () -> Unit,
-    onTimeClick: () -> Unit,
-    onNoteChange: (String) -> Unit,
-    onEnabledChange: (Boolean) -> Unit,
-) {
-    val selectedAccountId = if (type == RecordType.INCOME) toAccountId else fromAccountId
-    val selectedAccount = accounts.firstOrNull { it.id == selectedAccountId }
-    val selectedAccountIcon = accountIconOptionFor(selectedAccount, accountCategories)
-    KeacsCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
-        Column(Modifier.padding(it), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)) {
-            if (type != RecordType.TRANSFER) {
-                FormFieldRow(
-                    icon = selectedAccountIcon.icon,
-                    title = "账户",
-                    value = selectedAccount?.name ?: "未选择",
-                    modifier = Modifier.clickable(onClick = onAccountClick),
-                )
-            }
-            FormFieldRow(
-                icon = Icons.Rounded.CalendarToday,
-                title = "生成时间",
-                value = recurrenceLabel(frequency, recurrenceValues, nextRunAt).ifBlank { "选择生成时间" },
-                modifier = Modifier.clickable(onClick = onTimeClick),
-            )
-            ScheduledNoteField(note = note, onNoteChange = onNoteChange)
-            EnabledField(isEnabled = isEnabled, onEnabledChange = onEnabledChange)
-        }
-    }
-}
+
 
 @Composable
-private fun ScheduledNoteField(note: String, onNoteChange: (String) -> Unit) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(36.dp)
-            .padding(horizontal = 12.dp),
-    ) {
-        Icon(
-            Icons.AutoMirrored.Rounded.Notes,
-            contentDescription = null,
-            tint = KeacsColors.TextSecondary,
-            modifier = Modifier.size(21.dp),
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        androidx.compose.foundation.text.BasicTextField(
-            value = note,
-            onValueChange = onNoteChange,
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodyMedium.copy(color = KeacsColors.TextPrimary),
-            cursorBrush = SolidColor(KeacsColors.Primary),
-            modifier = Modifier.weight(1f),
-            decorationBox = { inner ->
-                if (note.isBlank()) {
-                    Text("添加备注", color = KeacsColors.TextTertiary, style = MaterialTheme.typography.bodyMedium)
-                }
-                inner()
-            },
-        )
-    }
-}
-
-@Composable
-private fun EnabledField(isEnabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
+internal fun EnabledField(isEnabled: Boolean, onEnabledChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

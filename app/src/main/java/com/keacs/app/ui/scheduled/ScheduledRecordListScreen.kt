@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -22,8 +21,8 @@ import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.data.repository.ScheduledRecordRepository
 import com.keacs.app.domain.model.RecordType
 import com.keacs.app.ui.components.KeacsCard
+import com.keacs.app.ui.components.EmptyState
 import com.keacs.app.ui.components.MenuDivider
-import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 
 @Composable
@@ -45,26 +44,27 @@ fun ScheduledRecordListScreen(
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
-        KeacsCard(contentPadding = PaddingValues(0.dp), modifier = Modifier.weight(1f)) {
-            LazyColumn(modifier = Modifier.padding(it)) {
-                if (sortedSchedules.isEmpty()) {
-                    item {
-                        Text(
-                            text = "还没有定时记账",
-                            color = KeacsColors.TextSecondary,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(16.dp),
+        if (sortedSchedules.isEmpty()) {
+            KeacsCard(modifier = Modifier.weight(1f)) {
+                EmptyState(
+                    title = "暂无定时记账",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(it),
+                )
+            }
+        } else {
+            KeacsCard(contentPadding = PaddingValues(0.dp), modifier = Modifier.weight(1f)) {
+                LazyColumn(modifier = Modifier.padding(it)) {
+                    itemsIndexed(sortedSchedules, key = { _, item -> item.id }) { index, schedule ->
+                        ScheduledRow(
+                            schedule = schedule,
+                            category = categories.firstOrNull { it.id == schedule.categoryId },
+                            accountNames = accountNames,
+                            onClick = { onEditSchedule(schedule.id) },
                         )
+                        if (index != sortedSchedules.lastIndex) MenuDivider()
                     }
-                }
-                itemsIndexed(sortedSchedules, key = { _, item -> item.id }) { index, schedule ->
-                    ScheduledRow(
-                        schedule = schedule,
-                        category = categories.firstOrNull { it.id == schedule.categoryId },
-                        accountNames = accountNames,
-                        onClick = { onEditSchedule(schedule.id) },
-                    )
-                    if (index != sortedSchedules.lastIndex) MenuDivider()
                 }
             }
         }

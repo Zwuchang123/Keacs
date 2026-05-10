@@ -169,22 +169,13 @@ fun AddRecordScreen(
                     onSelected = { categoryId = it },
                 )
             }
-            FormArea(
-                accounts = availableAccounts,
-                accountCategories = categories,
-                accountId = accountId,
-                showAccount = type != RecordType.TRANSFER,
-                occurredAt = occurredAt,
-                note = note,
-                onAccountSelected = { accountId = it },
-                onDateSelected = { occurredAt = it },
-                onNoteChange = { note = it },
-            )
         }
+        var showAccountSelector by rememberSaveable { mutableStateOf(false) }
+        var showDateSelector by rememberSaveable { mutableStateOf(false) }
+
         AmountKeyboardPanel(
             modifier = Modifier.padding(top = 8.dp),
             amount = amount,
-            parsedAmount = parsedAmount,
             message = validationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, error),
             saveEnabled = canSave && !isSaving,
             onKeyClick = { key ->
@@ -207,7 +198,47 @@ fun AddRecordScreen(
                     isSaving = false
                 }
             },
+            onDateClick = { showDateSelector = true },
+            dateText = dateLabel(occurredAt),
+            supplementaryContent = {
+                RecordSupplementaryRow(
+                    accounts = availableAccounts,
+                    accountCategories = categories,
+                    accountId = accountId,
+                    showAccount = type != RecordType.TRANSFER,
+                    note = note,
+                    onAccountClick = { showAccountSelector = true },
+                    onNoteChange = { note = it },
+                )
+            }
         )
+
+        if (showAccountSelector) {
+            AccountSelectorBottomSheet(
+                accounts = availableAccounts,
+                accountCategories = categories,
+                selectedId = accountId,
+                title = "选择账户",
+                includeNone = false,
+                onSelected = {
+                    accountId = it
+                    showAccountSelector = false
+                },
+                onDismiss = { showAccountSelector = false },
+            )
+        }
+        if (showDateSelector) {
+            DateWheelPickerBottomSheet(
+                title = "选择日期",
+                selectedDate = occurredAt,
+                mode = DatePickerMode.DAY,
+                onSelected = {
+                    occurredAt = it
+                    showDateSelector = false
+                },
+                onDismiss = { showDateSelector = false },
+            )
+        }
     }
 
     amountLimitMessage?.let { message ->

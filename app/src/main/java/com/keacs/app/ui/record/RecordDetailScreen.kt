@@ -239,7 +239,7 @@ private fun RecordInfoCard(
                     val fromIcon = accountIconOptionFor(fromAccount, categories)
                     val toIcon = accountIconOptionFor(toAccount, categories)
                     InfoRow(
-                        icon = fromIcon.icon,
+                        icon = Icons.Rounded.AccountBalanceWallet,
                         label = "转出账户",
                         value = fromAccount?.name ?: "未选择",
                         valueColor = KeacsColors.Expense,
@@ -250,7 +250,7 @@ private fun RecordInfoCard(
                         color = KeacsColors.Border,
                     )
                     InfoRow(
-                        icon = toIcon.icon,
+                        icon = Icons.Rounded.AccountBalanceWallet,
                         label = "转入账户",
                         value = toAccount?.name ?: "未选择",
                         valueColor = KeacsColors.Income,
@@ -261,7 +261,7 @@ private fun RecordInfoCard(
                     val account = if (record.type == RecordType.INCOME) toAccount else fromAccount
                     val accountIcon = accountIconOptionFor(account, categories)
                     InfoRow(
-                        icon = accountIcon.icon,
+                        icon = Icons.Rounded.AccountBalanceWallet,
                         label = accountLabel,
                         value = account?.name ?: "未选择",
                     )

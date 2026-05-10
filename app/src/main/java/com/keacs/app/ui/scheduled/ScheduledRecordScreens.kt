@@ -156,32 +156,15 @@ fun ScheduledRecordEditScreen(
                     onSelected = { categoryId = it },
                 )
             }
-            ScheduledFormArea(
-                type = type,
-                accounts = availableAccounts,
-                accountCategories = categories,
-                fromAccountId = fromAccountId,
-                toAccountId = toAccountId,
-                frequency = frequency,
-                recurrenceValues = recurrenceValues,
-                nextRunAt = nextRunAt,
-                note = note,
-                isEnabled = isEnabled,
-                onAccountClick = { showAccountSelector = true },
-                onTimeClick = { showDateSelector = true },
-                onNoteChange = { note = it },
-                onEnabledChange = { isEnabled = it },
-            )
+            if (scheduleId != null) {
+                EnabledField(isEnabled = isEnabled, onEnabledChange = { isEnabled = it })
+            }
         }
         AmountKeyboardPanel(
             modifier = Modifier.padding(top = 8.dp),
             amount = amount,
-            parsedAmount = parsedAmount,
-            message = error ?: when {
-                parsedAmount != null && recurrenceValues.isBlank() -> "请选择生成时间"
-                else -> scheduledValidationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, null)
-            },
-            saveEnabled = canSave && !isSaving,
+            message = error ?: scheduledValidationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, null),
+            saveEnabled = !isSaving,
             onKeyClick = { key ->
                 val next = nextAmount(amount, key)
                 if (!amountInputWouldOverflow(next)) {
@@ -194,6 +177,14 @@ fun ScheduledRecordEditScreen(
                     val cents = parsedAmount
                     if (cents == null) {
                         error = "金额大于0才可保存"
+                        return@launch
+                    }
+                    if (recurrenceValues.isBlank()) {
+                        error = "请选择记账时间"
+                        return@launch
+                    }
+                    if (!canSave) {
+                        error = scheduledValidationText(type, parsedAmount, categoryId, fromAccountId, toAccountId, null)
                         return@launch
                     }
                     isSaving = true
@@ -216,6 +207,19 @@ fun ScheduledRecordEditScreen(
                     isSaving = false
                 }
             },
+            onDateClick = { showDateSelector = true },
+            dateText = shortRecurrenceLabel(frequency).ifBlank { "周期" },
+            supplementaryContent = {
+                com.keacs.app.ui.record.RecordSupplementaryRow(
+                    accounts = availableAccounts,
+                    accountCategories = categories,
+                    accountId = if (type == RecordType.INCOME) toAccountId else fromAccountId,
+                    showAccount = type != RecordType.TRANSFER,
+                    note = note,
+                    onAccountClick = { showAccountSelector = true },
+                    onNoteChange = { note = it }
+                )
+            }
         )
     }
 
