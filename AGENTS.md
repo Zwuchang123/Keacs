@@ -134,7 +134,26 @@ git push gitee vX.Y.Z
 
 ## 常用命令
 
+### 腾讯云服务器
+
 - PowerShell 读取中文前先执行：`chcp 65001 > $null; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8`
+- 连接腾讯云服务器：`ssh keacs-prod`
+- 查看服务器身份信息：`ssh keacs-prod "whoami && hostname && pwd"`
+- 查看 CPU、内存、磁盘：`ssh keacs-prod "top -bn1 | head -20 && free -h && df -h"`
+- 查看 Docker 容器：`ssh keacs-prod "docker ps -a"`
+- 查看 Docker 日志：`ssh keacs-prod "docker logs --tail 200 容器名"`
+- 重启 Docker 容器：`ssh keacs-prod "docker restart 容器名"`
+- 查看 systemd 服务状态：`ssh keacs-prod "systemctl status 服务名 --no-pager"`
+- 重启 systemd 服务：`ssh keacs-prod "sudo systemctl restart 服务名"`
+- 查看最近 200 行服务日志：`ssh keacs-prod "journalctl -u 服务名 -n 200 --no-pager"`
+- 实时查看服务日志：`ssh keacs-prod "journalctl -u 服务名 -f"`
+- 查看 Nginx 状态：`ssh keacs-prod "sudo systemctl status nginx --no-pager"`
+- 测试 Nginx 配置并重载：`ssh keacs-prod "sudo nginx -t && sudo systemctl reload nginx"`
+- 上传文件到服务器：`scp 本地文件 keacs-prod:/目标目录/`
+- 从服务器下载文件：`scp keacs-prod:/远程文件 本地目录`
+
+### Android 本地开发
+
 - 完整自测：`.\gradlew.bat :app:compileDebugKotlin :app:assembleDebug :app:lintDebug :app:testDebugUnitTest :app:connectedDebugAndroidTest`
 - 查看设备：`adb devices`
 - 设置 Android SDK 路径：`$env:ANDROID_HOME="$env:LOCALAPPDATA\Android\Sdk"; $env:ANDROID_SDK_ROOT=$env:ANDROID_HOME`
@@ -145,4 +164,3 @@ git push gitee vX.Y.Z
 - 启动应用：`adb shell am start -n com.keacs.app/.MainActivity`
 - 检查联网权限：`Select-String -Path "app\src\main\AndroidManifest.xml" -Pattern "INTERNET|ACCESS_NETWORK_STATE|uses-permission" -SimpleMatch`
 - 提交前查看：`git status --short`
-
