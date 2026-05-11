@@ -1,6 +1,9 @@
 package com.keacs.app.data.local
 
 import android.content.Context
+import com.keacs.app.BuildConfig
+import com.keacs.app.domain.agent.AgentSettings
+import com.keacs.app.domain.agent.AgentModelServiceMode
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -26,6 +29,22 @@ class PreferencesManager private constructor(context: Context) {
         preferences[KEY_DEFAULT_RECORD_TYPE] ?: DEFAULT_RECORD_TYPE
     }
 
+    val agentSettings: Flow<AgentSettings> = dataStore.data.map { preferences ->
+        AgentSettings(
+            enabled = preferences[KEY_AGENT_ENABLED] ?: false,
+            serviceMode = AgentModelServiceMode.fromStorageValue(
+                preferences[KEY_AGENT_MODEL_SERVICE_MODE],
+            ),
+            officialServiceUrl = preferences[KEY_AGENT_OFFICIAL_SERVICE_URL]
+                ?: BuildConfig.AGENT_OFFICIAL_SERVICE_URL,
+            customBaseUrl = preferences[KEY_AGENT_CUSTOM_BASE_URL].orEmpty(),
+            customApiKey = preferences[KEY_AGENT_CUSTOM_API_KEY].orEmpty(),
+            customModelName = preferences[KEY_AGENT_CUSTOM_MODEL_NAME].orEmpty(),
+            deviceId = preferences[KEY_AGENT_DEVICE_ID].orEmpty(),
+            dataScope = preferences[KEY_AGENT_DATA_SCOPE] ?: DEFAULT_AGENT_DATA_SCOPE,
+        )
+    }
+
     suspend fun setHasWelcomed() {
         dataStore.edit { preferences ->
             preferences[KEY_HAS_WELCOMED] = true
@@ -48,11 +67,50 @@ class PreferencesManager private constructor(context: Context) {
         }
     }
 
+    suspend fun setAgentEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[KEY_AGENT_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setAgentModelServiceMode(mode: AgentModelServiceMode) {
+        dataStore.edit { preferences ->
+            preferences[KEY_AGENT_MODEL_SERVICE_MODE] = mode.storageValue
+        }
+    }
+
+    suspend fun setAgentCustomBaseUrl(baseUrl: String) {
+        dataStore.edit { preferences ->
+            preferences[KEY_AGENT_CUSTOM_BASE_URL] = baseUrl.trim()
+        }
+    }
+
+    suspend fun setAgentCustomApiKey(apiKey: String) {
+        dataStore.edit { preferences ->
+            preferences[KEY_AGENT_CUSTOM_API_KEY] = apiKey.trim()
+        }
+    }
+
+    suspend fun setAgentCustomModelName(modelName: String) {
+        dataStore.edit { preferences ->
+            preferences[KEY_AGENT_CUSTOM_MODEL_NAME] = modelName.trim()
+        }
+    }
+
     companion object {
         private val KEY_HAS_WELCOMED = booleanPreferencesKey("has_welcomed")
         private val KEY_DEFAULT_RECORD_ACCOUNT_ID = longPreferencesKey("default_record_account_id")
         private val KEY_DEFAULT_RECORD_TYPE = stringPreferencesKey("default_record_type")
+        private val KEY_AGENT_ENABLED = booleanPreferencesKey("agent_enabled")
+        private val KEY_AGENT_MODEL_SERVICE_MODE = stringPreferencesKey("agent_model_service_mode")
+        private val KEY_AGENT_OFFICIAL_SERVICE_URL = stringPreferencesKey("agent_official_service_url")
+        private val KEY_AGENT_CUSTOM_BASE_URL = stringPreferencesKey("agent_custom_base_url")
+        private val KEY_AGENT_CUSTOM_API_KEY = stringPreferencesKey("agent_custom_api_key")
+        private val KEY_AGENT_CUSTOM_MODEL_NAME = stringPreferencesKey("agent_custom_model_name")
+        private val KEY_AGENT_DEVICE_ID = stringPreferencesKey("agent_device_id")
+        private val KEY_AGENT_DATA_SCOPE = stringPreferencesKey("agent_data_scope")
         private const val DEFAULT_RECORD_TYPE = "EXPENSE"
+        private const val DEFAULT_AGENT_DATA_SCOPE = "minimal"
 
         @Volatile
         private var instance: PreferencesManager? = null

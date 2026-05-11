@@ -43,6 +43,11 @@ android {
             "UPDATE_URL",
             "\"https://gitee.com/zwuc/keacs/releases\"",
         )
+        buildConfigField(
+            "String",
+            "AGENT_OFFICIAL_SERVICE_URL",
+            "\"\"",
+        )
     }
 
     signingConfigs {
