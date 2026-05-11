@@ -30,6 +30,9 @@ class AgentRepository(
         if (message.isBlank()) {
             return AgentCallResult.ConfigurationRequired("请输入要发送的内容。")
         }
+        if (message.isHighRiskAdvice()) {
+            return AgentCallResult.Success(boundaryResponse())
+        }
 
         val request = AgentChatRequest(
             clientRequestId = java.util.UUID.randomUUID().toString(),
@@ -111,3 +114,21 @@ internal fun AgentSettings.chatUrl(): String {
         AgentModelServiceMode.CUSTOM -> "$baseUrl/chat/completions"
     }
 }
+
+private fun String.isHighRiskAdvice(): Boolean {
+    val highRiskTerms = listOf("股票", "基金", "理财", "投资", "贷款", "借钱", "借贷", "保险", "收益", "税", "法律", "医疗")
+    val decisionTerms = listOf("建议", "推荐", "该不该", "能不能买", "买什么", "投什么", "收益率", "预测", "划算吗")
+    return highRiskTerms.any { contains(it) } && decisionTerms.any { contains(it) }
+}
+
+private fun boundaryResponse(): AgentChatResponse =
+    AgentChatResponse(
+        reply = "这个问题超出了记账助手范围，我不能给投资、借贷或保险等决策建议。可以帮你回顾账本记录、支出结构和消费习惯。",
+        actions = listOf(
+            AgentActionPreview(
+                type = "answer_only",
+                title = "边界提示",
+                description = "仅说明助手能力边界，不执行任何写入。",
+            ),
+        ),
+    )

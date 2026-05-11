@@ -26,6 +26,6 @@
 | Excel 添加  | `app/src/main/java/com/keacs/app/data/importer/ExcelRecordImportService.kt` | 读取 XLSX 并添加收入、支出账目      |
 | 单元测试     | `app/src/test`                                                           | 单元测试                     |
 | 设备测试     | `app/src/androidTest`                                                    | Android 设备测试             |
-| Agent 后端  | `server/app`                                                             | FastAPI 服务、健康检查、官方助手接口、限流、日志和模型通路 |
+| Agent 后端  | `server/app`                                                             | FastAPI 服务、健康检查、官方助手接口、限流、日志、模型通路和安全提示词 |
 | Agent 后端测试 | `server/tests`                                                           | 后端健康检查、mock 模型、限流和日志安全测试 |
 

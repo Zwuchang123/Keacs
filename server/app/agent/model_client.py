@@ -3,6 +3,7 @@ import json
 
 import httpx
 
+from app.agent.prompts import SYSTEM_PROMPT
 from app.agent.schemas import AgentChatRequest
 from app.config import Settings
 
@@ -47,10 +48,7 @@ class ModelProviderClient:
         payload = {
             "model": self.settings.model_name,
             "messages": [
-                {
-                    "role": "system",
-                    "content": "你是 Keacs 记账助手。查询类问题只根据本地上下文回答，写入类问题只生成待确认预览。只返回 JSON。",
-                },
+                {"role": "system", "content": SYSTEM_PROMPT},
                 {
                     "role": "user",
                     "content": f"用户问题：{request.message}\n本地上下文：{local_context}",

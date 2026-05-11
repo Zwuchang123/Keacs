@@ -8,6 +8,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
 
 class HttpUrlConnectionAgentClient : AgentNetworkClient {
@@ -40,9 +41,11 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
             connection.disconnect()
 
             if (status !in 200..299) {
-                return@withContext AgentCallResult.NetworkFailure(status.toUserMessage())
+                return@withContext AgentCallResult.NetworkFailure(status.toUserMessage(responseBody))
             }
             parseResponse(settings.serviceMode, responseBody)
+        } catch (_: SocketTimeoutException) {
+            AgentCallResult.NetworkFailure("助手响应超时，请稍后再试。")
         } catch (_: IOException) {
             AgentCallResult.NetworkFailure("服务器暂时无法连接，请稍后再试。")
         } catch (_: RuntimeException) {
@@ -100,7 +103,10 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
                         .put(
                             JSONObject()
                                 .put("role", "system")
-                                .put("content", "你是 Keacs 记账助手，请根据本地上下文回答。查询类问题只回答，不要要求写入。"),
+                                .put(
+                                    "content",
+                                    "你是 Keacs 记账助手，只处理记账、查账、消费复盘和轻量建议。不要提供投资、借贷、保险、税务、法律或医疗决策建议。写入类操作只返回待确认预览。",
+                                ),
                         )
                         .put(
                             JSONObject()
@@ -211,12 +217,20 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
             }
         }
 
-    private fun Int.toUserMessage(): String = when (this) {
+    private fun Int.toUserMessage(body: String): String {
+        val detail = runCatching {
+            JSONObject(body).optString("detail")
+        }.getOrNull().orEmpty().trim()
+        if (detail.isNotBlank()) {
+            return detail
+        }
+        return when (this) {
         401, 403 -> "模型服务拒绝访问，请检查配置。"
         404 -> "模型服务地址不可用，请检查访问地址。"
         429 -> "请求过于频繁，请稍后再试。"
         in 500..599 -> "服务器暂时不可用，请稍后再试。"
         else -> "助手请求失败，请检查网络或配置。"
+        }
     }
 
     private companion object {

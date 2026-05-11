@@ -87,3 +87,14 @@ def test_audit_log_does_not_store_message_or_api_key(tmp_path):
     assert "/api/agent/chat" in stored_text
     assert "昨天午饭" not in stored_text
     assert "secret-key" not in stored_text
+
+
+def test_high_risk_financial_advice_returns_boundary_message(tmp_path):
+    client = _client(tmp_path)
+
+    response = client.post("/api/agent/chat", json=_payload("我该不该买股票，推荐哪只收益高？"))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "不能给投资" in body["reply"]
+    assert body["actions"][0]["type"] == "answer_only"

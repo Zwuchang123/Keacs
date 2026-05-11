@@ -45,6 +45,28 @@ class AgentRepositoryTest {
         assertEquals("这个月花了多少", client.lastMessage)
     }
 
+    @Test
+    fun highRiskAdviceReturnsBoundaryWithoutNetwork() = runTest {
+        val client = FakeAgentNetworkClient()
+        val repository = AgentRepository(
+            settingsProvider = {
+                AgentSettings(
+                    enabled = true,
+                    serviceMode = AgentModelServiceMode.CUSTOM,
+                    customBaseUrl = "https://api.example.com/v1",
+                    customApiKey = "key",
+                )
+            },
+            client = client,
+        )
+
+        val result = repository.sendMessage("推荐一只收益高的股票")
+
+        assertTrue(result is AgentCallResult.Success)
+        assertFalse(client.called)
+        assertTrue((result as AgentCallResult.Success).response.reply.contains("不能给投资"))
+    }
+
     private class FakeAgentNetworkClient : AgentNetworkClient {
         var called = false
         var lastMessage = ""
