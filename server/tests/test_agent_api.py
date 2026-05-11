@@ -4,7 +4,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from app.config import Settings
-from app.agent.model_client import _parse_model_content, _timeout_response
+from app.agent.model_client import _parse_model_content, _timeout_response, _upstream_limited_response
 from app.main import create_app
 
 
@@ -122,6 +122,13 @@ def test_model_content_falls_back_to_reply_text():
     assert payload["actions"] == []
 
 
+def test_model_content_extracts_json_after_think_block():
+    payload = _parse_model_content("<think>分析过程</think>\n\n{\"reply\":\"ok\"}")
+
+    assert payload["reply"] == "ok"
+    assert payload["needsMoreContext"] is False
+
+
 def test_model_timeout_returns_fast_user_message():
     payload = _timeout_response()
 
@@ -129,3 +136,11 @@ def test_model_timeout_returns_fast_user_message():
     assert payload["needsMoreContext"] is False
     assert payload["actions"] == []
     assert payload["warnings"]
+
+
+def test_model_limit_returns_clear_user_message():
+    payload = _upstream_limited_response()
+
+    assert "请求受限" in payload["reply"]
+    assert payload["needsMoreContext"] is False
+    assert payload["actions"] == []

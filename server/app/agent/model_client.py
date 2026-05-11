@@ -1,5 +1,6 @@
 from typing import Any
 import json
+import re
 
 import httpx
 
@@ -21,6 +22,10 @@ class ModelProviderClient:
             return await self._call_openai_compatible(request)
         except httpx.TimeoutException:
             return _timeout_response()
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 429:
+                return _upstream_limited_response()
+            raise
 
     def _mock_response(self, request: AgentChatRequest) -> dict[str, Any]:
         return {
@@ -81,15 +86,28 @@ def _parse_model_content(content: str) -> dict[str, Any]:
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
         normalized = "\n".join(lines).strip()
+    normalized = re.sub(r"<think>.*?</think>", "", normalized, flags=re.DOTALL).strip()
     try:
         payload = json.loads(normalized)
     except json.JSONDecodeError:
-        payload = {"reply": normalized}
+        payload = _parse_json_fragment(normalized) or {"reply": normalized}
     payload.setdefault("needsMoreContext", False)
     payload.setdefault("contextRequests", [])
     payload.setdefault("actions", [])
     payload.setdefault("warnings", [])
     return payload
+
+
+def _parse_json_fragment(content: str) -> dict[str, Any] | None:
+    start = content.find("{")
+    end = content.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    try:
+        payload = json.loads(content[start : end + 1])
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
 
 
 def _timeout_response() -> dict[str, Any]:
@@ -99,4 +117,14 @@ def _timeout_response() -> dict[str, Any]:
         "contextRequests": [],
         "actions": [],
         "warnings": ["模型响应超过 8 秒，已自动停止等待。"],
+    }
+
+
+def _upstream_limited_response() -> dict[str, Any]:
+    return {
+        "reply": "官方模型服务当前请求受限，请稍后再试。",
+        "needsMoreContext": False,
+        "contextRequests": [],
+        "actions": [],
+        "warnings": ["模型服务返回限流提示。"],
     }
