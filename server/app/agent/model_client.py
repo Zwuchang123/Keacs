@@ -65,4 +65,21 @@ class ModelProviderClient:
             response.raise_for_status()
         data = response.json()
         content = data["choices"][0]["message"]["content"]
-        return httpx.Response(200, content=content).json()
+        return _parse_model_content(content)
+
+
+def _parse_model_content(content: str) -> dict[str, Any]:
+    normalized = content.strip()
+    if normalized.startswith("```"):
+        lines = normalized.splitlines()
+        if lines and lines[0].strip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        normalized = "\n".join(lines).strip()
+    payload = json.loads(normalized)
+    payload.setdefault("needsMoreContext", False)
+    payload.setdefault("contextRequests", [])
+    payload.setdefault("actions", [])
+    payload.setdefault("warnings", [])
+    return payload

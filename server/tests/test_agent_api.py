@@ -4,6 +4,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from app.config import Settings
+from app.agent.model_client import _parse_model_content
 from app.main import create_app
 
 
@@ -98,3 +99,16 @@ def test_high_risk_financial_advice_returns_boundary_message(tmp_path):
     body = response.json()
     assert "不能给投资" in body["reply"]
     assert body["actions"][0]["type"] == "answer_only"
+
+
+def test_model_content_accepts_json_code_block():
+    payload = _parse_model_content(
+        """```json
+{"reply":"ok","actions":[]}
+```"""
+    )
+
+    assert payload["reply"] == "ok"
+    assert payload["needsMoreContext"] is False
+    assert payload["contextRequests"] == []
+    assert payload["warnings"] == []
