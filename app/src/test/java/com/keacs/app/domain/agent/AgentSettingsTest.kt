@@ -51,4 +51,15 @@ class AgentSettingsTest {
         assertTrue(https.canRequest)
         assertTrue(local.canRequest)
     }
+
+    @Test
+    fun officialSettingsAllowTemporaryServerHttpUrl() {
+        val validation = AgentSettings(
+            enabled = true,
+            serviceMode = AgentModelServiceMode.OFFICIAL,
+            officialServiceUrl = "http://43.138.174.171",
+        ).validateForRequest()
+
+        assertTrue(validation.canRequest)
+    }
 }

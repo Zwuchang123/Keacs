@@ -52,10 +52,10 @@ private fun AgentSettings.validateOfficial(): AgentSettingsValidation {
             message = "官方服务地址未配置，暂时无法使用在线助手。",
         )
     }
-    if (!officialServiceUrl.isHttpsUrl()) {
+    if (!officialServiceUrl.isHttpsUrl() && !officialServiceUrl.isTemporaryOfficialHttpUrl()) {
         return AgentSettingsValidation(
             canRequest = false,
-            message = "官方服务需要使用 HTTPS 地址。",
+            message = "官方服务需要使用 HTTPS 地址，当前服务器临时 HTTP 地址除外。",
         )
     }
     return AgentSettingsValidation(canRequest = true, message = null)
@@ -92,3 +92,6 @@ private fun String.isLocalHttpUrl(): Boolean {
         value.startsWith("http://localhost") ||
         value.startsWith("http://127.0.0.1")
 }
+
+private fun String.isTemporaryOfficialHttpUrl(): Boolean =
+    trim().lowercase().removeSuffix("/") == "http://43.138.174.171"

@@ -31,7 +31,7 @@ android {
     ).all { !it.isNullOrBlank() }
     val agentOfficialServiceUrl = providers.environmentVariable("KEACS_AGENT_OFFICIAL_SERVICE_URL")
         .orElse(providers.gradleProperty("keacs.agent.officialServiceUrl"))
-        .orElse("")
+        .orElse("http://43.138.174.171")
         .get()
 
     defaultConfig {
