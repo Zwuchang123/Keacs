@@ -17,7 +17,10 @@ class ModelProviderClient:
             return self._mock_response(request)
         if not self.settings.model_base_url or not self.settings.model_api_key:
             raise RuntimeError("model_provider_missing_config")
-        return await self._call_openai_compatible(request)
+        try:
+            return await self._call_openai_compatible(request)
+        except httpx.TimeoutException:
+            return _timeout_response()
 
     def _mock_response(self, request: AgentChatRequest) -> dict[str, Any]:
         return {
@@ -55,12 +58,13 @@ class ModelProviderClient:
                 },
             ],
             "temperature": 0.2,
+            "max_completion_tokens": 256,
             "response_format": {"type": "json_object"},
         }
         if self.settings.model_reasoning_split:
             payload["reasoning_split"] = True
         headers = {"Authorization": f"Bearer {self.settings.model_api_key}"}
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(timeout=8) as client:
             response = await client.post(url, json=payload, headers=headers)
             response.raise_for_status()
         data = response.json()
@@ -77,9 +81,22 @@ def _parse_model_content(content: str) -> dict[str, Any]:
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
         normalized = "\n".join(lines).strip()
-    payload = json.loads(normalized)
+    try:
+        payload = json.loads(normalized)
+    except json.JSONDecodeError:
+        payload = {"reply": normalized}
     payload.setdefault("needsMoreContext", False)
     payload.setdefault("contextRequests", [])
     payload.setdefault("actions", [])
     payload.setdefault("warnings", [])
     return payload
+
+
+def _timeout_response() -> dict[str, Any]:
+    return {
+        "reply": "模型响应较慢，这次先不继续等待。请稍后再试，或缩短问题内容。",
+        "needsMoreContext": False,
+        "contextRequests": [],
+        "actions": [],
+        "warnings": ["模型响应超过 8 秒，已自动停止等待。"],
+    }

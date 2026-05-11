@@ -4,7 +4,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 
 from app.config import Settings
-from app.agent.model_client import _parse_model_content
+from app.agent.model_client import _parse_model_content, _timeout_response
 from app.main import create_app
 
 
@@ -112,3 +112,20 @@ def test_model_content_accepts_json_code_block():
     assert payload["needsMoreContext"] is False
     assert payload["contextRequests"] == []
     assert payload["warnings"] == []
+
+
+def test_model_content_falls_back_to_reply_text():
+    payload = _parse_model_content("可以，我来帮你看看本月支出。")
+
+    assert payload["reply"] == "可以，我来帮你看看本月支出。"
+    assert payload["needsMoreContext"] is False
+    assert payload["actions"] == []
+
+
+def test_model_timeout_returns_fast_user_message():
+    payload = _timeout_response()
+
+    assert "响应较慢" in payload["reply"]
+    assert payload["needsMoreContext"] is False
+    assert payload["actions"] == []
+    assert payload["warnings"]

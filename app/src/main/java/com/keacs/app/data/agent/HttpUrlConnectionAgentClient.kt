@@ -266,6 +266,6 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
     }
 
     private companion object {
-        const val TIMEOUT_MILLIS = 15_000
+        const val TIMEOUT_MILLIS = 60_000
     }
 }
