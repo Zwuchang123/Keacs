@@ -27,7 +27,7 @@
 | 小功能优化              | 先看 `docs\code-map.md`，再读相关代码                                       | 只改当前功能相关代码；有需求变化时同步 `docs\prd.md` 对应章节                                                                        |
 | BUG 修复             | 先看 `docs\code-map.md`，再读缺陷相关代码                                     | 先复现，再修复，不扩大范围                                                                                                 |
 | 大功能迭代              | 读取 `docs\prd.md`、`docs\arc.md`、`docs\design.md`、`docs\code-map.md` | 进入计划模式，并调用 Codex 已安装的 Superpowers 插件。先使用Superpowers: Brainstorming技能对需求进行详细分析，与用户沟通不清晰的内容；然后确认方案；再更新文档和代码     |
-| Keacs Agent 助手开发任务 | 读取`docs\prd.md`、`docs\arc.md`对应章节，严格按照`docs\agents-plan.md`开发阶段执行。 | 在一个单独的分支中执行Keacs Agent 助手全部开发任务。前端须遵守现有组件风格和设计规范，前端开发需使用 `.agents\skills\impeccable`。每个阶段都要按“测试要求”识别改动范围执行自测。 |
+| Keacs Agent 助手开发任务 | 读取`docs\prd.md`、`docs\arc.md`对应章节，严格按照`docs\agents-plan.md`开发阶段执行。 | 在Keacs-agent分支中执行Keacs Agent 助手全部开发任务。前端须遵守现有组件风格和设计规范，前端开发需使用 `.agents\skills\impeccable`。每个阶段都要按“测试要求”识别改动范围执行自测。 |
 
 <br />
 
@@ -45,7 +45,7 @@
 | BUG 修复，需要立刻给用户更新   | 发补丁版本   | 发版准备完成后合并                     | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md`     |
 | 小功能优化，确认上线         | 发补丁或小版本 | 发版准备完成后合并                     | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md`     |
 | 大功能迭代              | 默认发版    | 发版准备完成后合并                     | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md`     |
-| Keacs Agent 助手开发任务 | 不发版     | 在一个单独分支中完成全部开发任务，验收通过，等用户要求合并 | 需用户要求删除 | 每个阶段完成都需要更新`docs\agents-plan.md` |
+| Keacs Agent 助手开发任务 | 不发版     | 在分支Keacs-agent分支中完成全部开发任务，全部验收通过，等用户要求合并 | 需用户要求删除 | 每个阶段完成都需要更新`docs\agents-plan.md` |
 
 不发版路径：自测通过 -> 业务验收通过 -> 更新必要文档和 `docs\releases\next.md` -> 提交 -> 合并到 `master` -> 删除短分支。
 
