@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.ui.backup.BackupViewModel
 import com.keacs.app.ui.components.ConfirmDialog
 import com.keacs.app.ui.components.DividedMenuCard
@@ -41,6 +42,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MineScreen(
+    repository: LocalDataRepository,
     backupViewModel: BackupViewModel,
     onCategoryClick: () -> Unit,
     onAccountClick: () -> Unit,
@@ -105,6 +107,7 @@ fun MineScreen(
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
+        MineOverviewSection(repository = repository)
         DividedMenuCard {
             MenuRow(Icons.Rounded.Category, "分类管理", KeacsColors.Primary, onClick = onCategoryClick)
             MenuDivider()

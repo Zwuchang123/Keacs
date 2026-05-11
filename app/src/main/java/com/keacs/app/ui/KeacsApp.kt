@@ -30,7 +30,9 @@ import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.data.repository.ScheduledRecordRepository
 import com.keacs.app.ui.components.KeacsBottomBar
 import com.keacs.app.ui.components.KeacsScaffold
-import com.keacs.app.ui.discover.DiscoverScreen
+import com.keacs.app.ui.agent.AgentScreen
+import com.keacs.app.ui.agent.AgentViewModel
+import com.keacs.app.ui.agent.AgentViewModelFactory
 import com.keacs.app.ui.home.HomeScreen
 import com.keacs.app.ui.home.HomeViewModel
 import com.keacs.app.ui.management.AccountEditScreen
@@ -229,27 +231,34 @@ fun KeacsApp(
                 route == KeacsDestination.Stats.route -> StatsScreen(
                     repository = repository,
                     onSwipeBeyondStart = { navigateTo(KeacsDestination.Home.route) },
-                    onSwipeBeyondEnd = { navigateTo(KeacsDestination.Discover.route) },
+                    onSwipeBeyondEnd = { navigateTo(KeacsDestination.Agent.route) },
                 )
 
-                route == KeacsDestination.Discover.route -> DiscoverScreen(
-                    repository = repository,
-                    onSwipeLeft = { navigateTo(KeacsDestination.Mine.route) },
-                    onSwipeRight = { navigateTo(KeacsDestination.Stats.route) },
-                )
+                route == KeacsDestination.Agent.route -> {
+                    val agentViewModel: AgentViewModel = viewModel(
+                        factory = AgentViewModelFactory(preferencesManager),
+                    )
+                    AgentScreen(
+                        viewModel = agentViewModel,
+                        onOpenSettings = { navigateForward(ROUTE_SETTINGS) },
+                        onSwipeLeft = { navigateTo(KeacsDestination.Mine.route) },
+                        onSwipeRight = { navigateTo(KeacsDestination.Stats.route) },
+                    )
+                }
 
                 route == KeacsDestination.Mine.route -> {
                     val backupViewModel: BackupViewModel = viewModel(
                         factory = KeacsViewModelFactory(repository)
                     )
                     MineScreen(
+                        repository = repository,
                         backupViewModel = backupViewModel,
                         onCategoryClick = { navigateForward(ROUTE_CATEGORY_LIST) },
                         onAccountClick = { navigateForward(ROUTE_ACCOUNT_LIST) },
                         onScheduledClick = { navigateForward(ROUTE_SCHEDULED_LIST) },
                         onSettingsClick = { navigateForward(ROUTE_SETTINGS) },
                         onAboutClick = { navigateForward(ROUTE_ABOUT) },
-                        onSwipeRight = { navigateTo(KeacsDestination.Discover.route) },
+                        onSwipeRight = { navigateTo(KeacsDestination.Agent.route) },
                     )
                 }
 
@@ -352,7 +361,7 @@ private fun navigationAnimationIndex(route: String): Int = when (route) {
     KeacsDestination.Home.route -> 0
     KeacsDestination.Stats.route -> 1
     KeacsDestination.Add.route -> 2
-    KeacsDestination.Discover.route -> 3
+    KeacsDestination.Agent.route -> 3
     KeacsDestination.Mine.route -> 4
     else -> 5
 }

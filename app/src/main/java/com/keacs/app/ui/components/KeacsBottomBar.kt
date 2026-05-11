@@ -110,7 +110,7 @@ fun KeacsBottomBar(
 private val bottomSwipeDestinations = listOf(
     KeacsDestination.Home,
     KeacsDestination.Stats,
-    KeacsDestination.Discover,
+    KeacsDestination.Agent,
     KeacsDestination.Mine,
 )
 

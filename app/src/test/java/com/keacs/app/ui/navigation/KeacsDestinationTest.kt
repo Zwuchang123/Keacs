@@ -11,7 +11,7 @@ class KeacsDestinationTest {
                 KeacsDestination.Home,
                 KeacsDestination.Stats,
                 KeacsDestination.Add,
-                KeacsDestination.Discover,
+                KeacsDestination.Agent,
                 KeacsDestination.Mine,
             ),
             bottomDestinations,

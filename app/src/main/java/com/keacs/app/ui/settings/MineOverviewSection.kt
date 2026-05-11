@@ -1,19 +1,15 @@
-package com.keacs.app.ui.discover
+package com.keacs.app.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
@@ -33,8 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,18 +44,13 @@ import com.keacs.app.ui.components.formatGroupedCent
 import com.keacs.app.ui.record.DatePickerMode
 import com.keacs.app.ui.record.DateWheelPickerBottomSheet
 import com.keacs.app.ui.theme.KeacsColors
-import com.keacs.app.ui.theme.KeacsSpacing
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
 @Composable
-fun DiscoverScreen(
-    repository: LocalDataRepository,
-    onSwipeLeft: () -> Unit = {},
-    onSwipeRight: () -> Unit = {},
-) {
+fun MineOverviewSection(repository: LocalDataRepository) {
     val records by repository.observeRecords().collectAsState(initial = emptyList())
     val accounts by repository.observeAccounts().collectAsState(initial = emptyList())
     var selectedMonth by remember { mutableStateOf(currentMonthStart()) }
@@ -78,43 +67,18 @@ fun DiscoverScreen(
         .filter { it.nature == PresetSeedData.ACCOUNT_LIABILITY && it.isEnabled }
         .sumOf { balanceFor(it, records) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag("screen-discover")
-            .pointerInput(Unit) {
-                var totalDrag = 0f
-                detectHorizontalDragGestures(
-                    onHorizontalDrag = { change, dragAmount ->
-                        totalDrag += dragAmount
-                        change.consume()
-                    },
-                    onDragEnd = {
-                        when {
-                            totalDrag <= -60f -> onSwipeLeft()
-                            totalDrag >= 60f -> onSwipeRight()
-                        }
-                        totalDrag = 0f
-                    },
-                )
-            }
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
-        verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
-    ) {
-        MonthOverviewCard(
-            selectedMonth = selectedMonth,
-            income = income,
-            expense = expense,
-            balance = income - expense,
-            onMonthClick = { showMonthPicker = true },
-        )
-        AssetDebtCard(
-            asset = asset,
-            liability = liability,
-            netAsset = asset + liability,
-        )
-    }
+    MonthOverviewCard(
+        selectedMonth = selectedMonth,
+        income = income,
+        expense = expense,
+        balance = income - expense,
+        onMonthClick = { showMonthPicker = true },
+    )
+    AssetDebtCard(
+        asset = asset,
+        liability = liability,
+        netAsset = asset + liability,
+    )
 
     if (showMonthPicker) {
         DateWheelPickerBottomSheet(

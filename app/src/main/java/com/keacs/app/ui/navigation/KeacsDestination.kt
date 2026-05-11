@@ -23,10 +23,10 @@ enum class KeacsDestination(
         titleRes = R.string.nav_add,
         contentDescriptionRes = R.string.nav_to_add,
     ),
-    Discover(
-        route = "discover",
-        titleRes = R.string.nav_discover,
-        contentDescriptionRes = R.string.nav_to_discover,
+    Agent(
+        route = "agent",
+        titleRes = R.string.nav_agent,
+        contentDescriptionRes = R.string.nav_to_agent,
     ),
     Mine(
         route = "mine",
@@ -39,7 +39,7 @@ val bottomDestinations = listOf(
     KeacsDestination.Home,
     KeacsDestination.Stats,
     KeacsDestination.Add,
-    KeacsDestination.Discover,
+    KeacsDestination.Agent,
     KeacsDestination.Mine,
 )
 
