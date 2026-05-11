@@ -13,8 +13,8 @@ class Settings:
     model_reasoning_split: bool = False
     request_per_minute_limit: int = 20
     request_per_day_limit: int = 200
-    max_message_length: int = 1000
-    max_context_items: int = 200
+    max_message_length: int = 1500
+    max_context_items: int = 260
     audit_db_path: str = "server/data/audit.sqlite3"
 
     @classmethod
@@ -27,8 +27,8 @@ class Settings:
             model_reasoning_split=_read_bool("KEACS_MODEL_REASONING_SPLIT", False),
             request_per_minute_limit=_read_int("KEACS_RATE_LIMIT_PER_MINUTE", 20),
             request_per_day_limit=_read_int("KEACS_RATE_LIMIT_PER_DAY", 200),
-            max_message_length=_read_int("KEACS_MAX_MESSAGE_LENGTH", 1000),
-            max_context_items=_read_int("KEACS_MAX_CONTEXT_ITEMS", 200),
+            max_message_length=_read_int("KEACS_MAX_MESSAGE_LENGTH", 1500),
+            max_context_items=_read_int("KEACS_MAX_CONTEXT_ITEMS", 260),
             audit_db_path=os.getenv("KEACS_AUDIT_DB_PATH", "server/data/audit.sqlite3").strip()
             or "server/data/audit.sqlite3",
         )

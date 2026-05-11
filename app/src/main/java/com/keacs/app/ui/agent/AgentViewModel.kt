@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.keacs.app.data.agent.AgentActionExecutor
 import com.keacs.app.data.agent.AgentActionPreview
 import com.keacs.app.data.agent.AgentCallResult
+import com.keacs.app.data.agent.AgentConversationTurn
 import com.keacs.app.data.agent.AgentContextProvider
 import com.keacs.app.data.agent.AgentExecutionResult
 import com.keacs.app.data.agent.AgentRepository
@@ -17,6 +18,7 @@ import com.keacs.app.domain.agent.AgentSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -25,8 +27,8 @@ data class AgentUiState(
     val input: String = "",
     val messages: List<AgentMessage> = emptyList(),
     val isSending: Boolean = false,
-    val pendingConfirmation: AgentActionPreview? = null,
     val lastClientRequestId: String = "",
+    val sendingStartedAtMillis: Long? = null,
 )
 
 data class AgentMessage(
@@ -35,6 +37,7 @@ data class AgentMessage(
     val text: String,
     val actions: List<AgentActionPreview> = emptyList(),
     val warnings: List<String> = emptyList(),
+    val elapsedMillis: Long? = null,
 )
 
 enum class AgentMessageRole {
@@ -48,7 +51,7 @@ class AgentViewModel(
     private val agentRepository: AgentRepository,
     private val contextProvider: AgentContextProvider,
     private val actionExecutor: AgentActionExecutor,
-    preferencesManager: PreferencesManager,
+    private val preferencesManager: PreferencesManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AgentUiState())
     val uiState: StateFlow<AgentUiState> = _uiState.asStateFlow()
@@ -58,6 +61,14 @@ class AgentViewModel(
         viewModelScope.launch {
             preferencesManager.agentSettings.collect { settings ->
                 _uiState.update { it.copy(settings = settings) }
+            }
+        }
+        viewModelScope.launch {
+            val savedMessages = decodeAgentMessages(preferencesManager.agentConversationSnapshot.first())
+                .takeLast(MAX_STORED_MESSAGES)
+            if (savedMessages.isNotEmpty()) {
+                nextMessageId = savedMessages.maxOf { it.id } + 1
+                _uiState.update { it.copy(messages = savedMessages) }
             }
         }
     }
@@ -82,31 +93,39 @@ class AgentViewModel(
             return
         }
 
+        val startedAt = System.currentTimeMillis()
+        val history = state.messages.toConversationTurns()
         _uiState.update {
             it.copy(
                 input = "",
                 isSending = true,
-                messages = it.messages + AgentMessage(nextMessageId++, AgentMessageRole.USER, message),
+                sendingStartedAtMillis = startedAt,
+                messages = (it.messages + AgentMessage(nextMessageId++, AgentMessageRole.USER, message))
+                    .takeLast(MAX_STORED_MESSAGES),
             )
         }
+        persistConversation()
 
         viewModelScope.launch {
             val localContext = contextProvider.buildForMessage(message)
-            when (val result = agentRepository.sendMessage(message, localContext)) {
+            when (val result = agentRepository.sendMessage(message, localContext, history)) {
                 is AgentCallResult.Success -> {
                     _uiState.update {
                         it.copy(
                             isSending = false,
+                            sendingStartedAtMillis = null,
                             lastClientRequestId = result.response.clientRequestId,
-                            messages = it.messages + AgentMessage(
+                            messages = (it.messages + AgentMessage(
                                 id = nextMessageId++,
                                 role = AgentMessageRole.ASSISTANT,
                                 text = result.response.reply,
                                 actions = result.response.actions,
                                 warnings = result.response.warnings,
-                            ),
+                                elapsedMillis = System.currentTimeMillis() - startedAt,
+                            )).takeLast(MAX_STORED_MESSAGES),
                         )
                     }
+                    persistConversation()
                 }
                 is AgentCallResult.ConfigurationRequired -> keepInputAndShowError(message, result.message)
                 is AgentCallResult.NetworkFailure -> keepInputAndShowError(message, result.message)
@@ -115,40 +134,17 @@ class AgentViewModel(
         }
     }
 
-    fun requestConfirmation(action: AgentActionPreview) {
+    fun confirmAction(action: AgentActionPreview) {
         if (!action.requiresConfirmation()) return
-        _uiState.update { it.copy(pendingConfirmation = action) }
-    }
-
-    fun cancelPendingAction() {
-        val action = _uiState.value.pendingConfirmation ?: return
-        addCancelledMessage(action, clearPending = true)
-    }
-
-    fun cancelAction(action: AgentActionPreview) {
-        addCancelledMessage(action, clearPending = false)
-    }
-
-    private fun addCancelledMessage(
-        action: AgentActionPreview,
-        clearPending: Boolean,
-    ) {
         _uiState.update {
             it.copy(
-                pendingConfirmation = if (clearPending) null else it.pendingConfirmation,
-                messages = it.messages + AgentMessage(
-                    id = nextMessageId++,
-                    role = AgentMessageRole.RESULT,
-                    text = "已取消：${action.title}",
-                ),
+                isSending = true,
+                sendingStartedAtMillis = System.currentTimeMillis(),
+                messages = it.messages.removeAction(action),
             )
         }
-        sendActionFeedback(action, "cancelled")
-    }
-
-    fun confirmPendingAction() {
-        val action = _uiState.value.pendingConfirmation ?: return
-        _uiState.update { it.copy(pendingConfirmation = null, isSending = true) }
+        persistConversation()
+        val startedAt = System.currentTimeMillis()
         viewModelScope.launch {
             when (val result = actionExecutor.execute(action)) {
                 is AgentExecutionResult.Success -> {
@@ -156,19 +152,45 @@ class AgentViewModel(
                     _uiState.update {
                         it.copy(
                             isSending = false,
-                            messages = it.messages + AgentMessage(
+                            sendingStartedAtMillis = null,
+                            messages = (it.messages + AgentMessage(
                                 id = nextMessageId++,
                                 role = AgentMessageRole.RESULT,
-                                text = result.message,
-                            ),
+                                text = "**操作已完成**\n\n${result.message}",
+                                elapsedMillis = System.currentTimeMillis() - startedAt,
+                            )).takeLast(MAX_STORED_MESSAGES),
                         )
                     }
+                    persistConversation()
                 }
                 is AgentExecutionResult.Failure -> {
                     sendActionFeedback(action, "failed", "local_execution_failed")
-                    keepInputAndShowError(_uiState.value.input, result.message)
+                    keepInputAndShowError(_uiState.value.input, result.message, startedAt)
                 }
             }
+        }
+    }
+
+    fun cancelAction(action: AgentActionPreview) {
+        _uiState.update {
+            it.copy(
+                messages = (it.messages.removeAction(action) + AgentMessage(
+                    id = nextMessageId++,
+                    role = AgentMessageRole.RESULT,
+                    text = "**已取消**\n\n${action.title}",
+                )).takeLast(MAX_STORED_MESSAGES),
+            )
+        }
+        persistConversation()
+        sendActionFeedback(action, "cancelled")
+    }
+
+    fun clearConversation() {
+        _uiState.update {
+            it.copy(input = "", messages = emptyList(), isSending = false, sendingStartedAtMillis = null)
+        }
+        viewModelScope.launch {
+            preferencesManager.clearAgentConversationSnapshot()
         }
     }
 
@@ -189,18 +211,57 @@ class AgentViewModel(
         }
     }
 
-    private fun keepInputAndShowError(input: String, message: String) {
+    private fun keepInputAndShowError(
+        input: String,
+        message: String,
+        startedAt: Long? = _uiState.value.sendingStartedAtMillis,
+    ) {
         _uiState.update {
             it.copy(
                 input = input,
                 isSending = false,
-                messages = it.messages + AgentMessage(nextMessageId++, AgentMessageRole.ERROR, message),
+                sendingStartedAtMillis = null,
+                messages = (it.messages + AgentMessage(
+                    id = nextMessageId++,
+                    role = AgentMessageRole.ERROR,
+                    text = message,
+                    elapsedMillis = startedAt?.let { start -> System.currentTimeMillis() - start },
+                )).takeLast(MAX_STORED_MESSAGES),
             )
+        }
+        persistConversation()
+    }
+
+    private fun persistConversation() {
+        val snapshot = encodeAgentMessages(_uiState.value.messages.takeLast(MAX_STORED_MESSAGES))
+        viewModelScope.launch {
+            preferencesManager.setAgentConversationSnapshot(snapshot)
         }
     }
 
-    private companion object {
-        const val MAX_INPUT_LENGTH = 500
+    private fun List<AgentMessage>.toConversationTurns(): List<AgentConversationTurn> =
+        filter { it.role == AgentMessageRole.USER || it.role == AgentMessageRole.ASSISTANT }
+            .map {
+                AgentConversationTurn(
+                    role = if (it.role == AgentMessageRole.ASSISTANT) "assistant" else "user",
+                    content = it.text,
+                )
+            }
+
+    private fun List<AgentMessage>.removeAction(action: AgentActionPreview): List<AgentMessage> {
+        val key = action.stableKey()
+        return map { message ->
+            message.copy(actions = message.actions.filterNot { it.stableKey() == key })
+        }
+    }
+
+    private fun AgentActionPreview.stableKey(): String =
+        listOf(type, title, description, records.toString(), scheduledRecords.toString()).joinToString("|")
+
+    companion object {
+        const val CLEANUP_WARNING_THRESHOLD = 60
+        const val MAX_INPUT_LENGTH = 1200
+        private const val MAX_STORED_MESSAGES = 80
     }
 }
 

@@ -54,6 +54,33 @@ def test_chat_uses_mock_model_and_returns_structured_result(tmp_path):
     assert body["actions"][0]["type"] == "answer_only"
 
 
+def test_chat_accepts_conversation_history(tmp_path):
+    client = _client(tmp_path)
+    payload = _payload("继续分析")
+    payload["conversationHistory"] = [
+        {"role": "user", "content": "这个月花了多少"},
+        {"role": "assistant", "content": "本月支出 18 元"},
+    ]
+
+    response = client.post("/api/agent/chat", json=payload)
+
+    assert response.status_code == 200
+    assert "已结合上下文" in response.json()["reply"]
+
+
+def test_model_failure_returns_readable_fallback(tmp_path):
+    settings = Settings(
+        model_provider="openai_compatible",
+        audit_db_path=str(tmp_path / "audit.sqlite3"),
+    )
+    client = TestClient(create_app(settings))
+
+    response = client.post("/api/agent/chat", json=_payload("昨天午饭 18 微信"))
+
+    assert response.status_code == 200
+    assert "没有拿到稳定的模型结果" in response.json()["reply"]
+
+
 def test_chat_rejects_empty_message(tmp_path):
     client = _client(tmp_path)
 

@@ -16,8 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.union
 import androidx.compose.ui.platform.testTag
 import com.keacs.app.ui.theme.KeacsColors
 
@@ -40,7 +38,7 @@ fun KeacsScaffold(
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = KeacsColors.Background,
-        contentWindowInsets = WindowInsets.systemBars.union(WindowInsets.ime),
+        contentWindowInsets = WindowInsets.systemBars,
         snackbarHost = snackbarHost,
         topBar = {
             CenterAlignedTopAppBar(

@@ -47,6 +47,10 @@ class PreferencesManager private constructor(context: Context) {
         )
     }
 
+    val agentConversationSnapshot: Flow<String> = dataStore.data.map { preferences ->
+        preferences[KEY_AGENT_CONVERSATION_SNAPSHOT].orEmpty()
+    }
+
     suspend fun setHasWelcomed() {
         dataStore.edit { preferences ->
             preferences[KEY_HAS_WELCOMED] = true
@@ -99,6 +103,22 @@ class PreferencesManager private constructor(context: Context) {
         }
     }
 
+    suspend fun setAgentConversationSnapshot(snapshot: String) {
+        dataStore.edit { preferences ->
+            if (snapshot.isBlank()) {
+                preferences.remove(KEY_AGENT_CONVERSATION_SNAPSHOT)
+            } else {
+                preferences[KEY_AGENT_CONVERSATION_SNAPSHOT] = snapshot
+            }
+        }
+    }
+
+    suspend fun clearAgentConversationSnapshot() {
+        dataStore.edit { preferences ->
+            preferences.remove(KEY_AGENT_CONVERSATION_SNAPSHOT)
+        }
+    }
+
     suspend fun ensureAgentDeviceId() {
         dataStore.edit { preferences ->
             if (preferences[KEY_AGENT_DEVICE_ID].isNullOrBlank()) {
@@ -119,6 +139,7 @@ class PreferencesManager private constructor(context: Context) {
         private val KEY_AGENT_CUSTOM_MODEL_NAME = stringPreferencesKey("agent_custom_model_name")
         private val KEY_AGENT_DEVICE_ID = stringPreferencesKey("agent_device_id")
         private val KEY_AGENT_DATA_SCOPE = stringPreferencesKey("agent_data_scope")
+        private val KEY_AGENT_CONVERSATION_SNAPSHOT = stringPreferencesKey("agent_conversation_snapshot")
         private const val DEFAULT_RECORD_TYPE = "EXPENSE"
         private const val DEFAULT_AGENT_DATA_SCOPE = "minimal"
 
