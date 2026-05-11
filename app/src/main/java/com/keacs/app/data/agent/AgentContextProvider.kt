@@ -203,8 +203,8 @@ class AgentContextProvider(
     )
 
     private companion object {
-        const val MAX_RECORD_CANDIDATES = 30
-        const val MAX_SCHEDULES = 20
+        const val MAX_RECORD_CANDIDATES = 60
+        const val MAX_SCHEDULES = 30
         const val DAY_MILLIS = 24L * 60L * 60L * 1000L
         val accountOrRecordDirections = setOf(
             PresetSeedData.CATEGORY_INCOME,

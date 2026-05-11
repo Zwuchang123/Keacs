@@ -8,14 +8,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -39,9 +39,10 @@ fun AgentInputBar(
     isSending: Boolean,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .background(KeacsColors.Surface)
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = 10.dp),
@@ -55,17 +56,18 @@ fun AgentInputBar(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(48.dp)
+                    .heightIn(min = 48.dp, max = 128.dp)
                     .clip(MaterialTheme.shapes.medium)
                     .background(KeacsColors.SurfaceSubtle)
-                    .padding(horizontal = 12.dp),
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 BasicTextField(
                     value = input,
                     onValueChange = onInputChange,
                     enabled = enabled,
-                    singleLine = true,
+                    singleLine = false,
+                    maxLines = 5,
                     textStyle = MaterialTheme.typography.bodyMedium.copy(color = KeacsColors.TextPrimary),
                     cursorBrush = SolidColor(KeacsColors.Primary),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -99,7 +101,7 @@ fun AgentInputBar(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Rounded.Send,
+                        imageVector = Icons.AutoMirrored.Rounded.Send,
                         contentDescription = "发送",
                     )
                 }

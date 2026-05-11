@@ -19,6 +19,7 @@ class AgentChatRequest(BaseModel):
     device_id_hash: str = Field(alias="deviceIdHash", min_length=16, max_length=128)
     message: str = Field(min_length=1)
     local_context: LocalContext = Field(alias="localContext")
+    conversation_history: list["AgentConversationTurn"] = Field(default_factory=list, alias="conversationHistory")
     timezone: str = Field(min_length=1, max_length=64)
     app_version: str = Field(alias="appVersion", min_length=1, max_length=32)
 
@@ -29,6 +30,11 @@ class AgentChatRequest(BaseModel):
         if not trimmed:
             raise ValueError("输入不能为空")
         return trimmed
+
+
+class AgentConversationTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=800)
 
 
 class AgentContextRequest(BaseModel):

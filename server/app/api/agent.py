@@ -40,9 +40,12 @@ def create_agent_router(settings: Settings, audit_log: AuditLog) -> APIRouter:
             raise exc
         except Exception:
             error_type = "model_call_failed"
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="模型服务暂时不可用，请稍后再试。",
+            return AgentChatResponse(
+                reply="**这次没有拿到稳定的模型结果**\n\n我不会写入账本。你可以继续补充金额、日期、分类或账户，我会结合本机上下文重新判断。",
+                needs_more_context=False,
+                context_requests=[],
+                actions=[],
+                warnings=["模型响应较慢或格式异常，已保留本次问题。"],
             )
         finally:
             audit_log.record(
@@ -91,6 +94,9 @@ def _validate_chat_request(payload: AgentChatRequest, settings: Settings) -> Non
         raise HTTPException(status_code=400, detail="输入内容过长，请缩短后再发送。")
     if count_context_items(payload.local_context) > settings.max_context_items:
         raise HTTPException(status_code=400, detail="本次上下文过大，请缩小查询范围后再试。")
+    history_chars = sum(len(item.content) for item in payload.conversation_history)
+    if len(payload.conversation_history) > 40 or history_chars > 12_000:
+        raise HTTPException(status_code=400, detail="对话内容过长，请先清空对话后再继续。")
 
 
 def _http_error_type(status_code: int) -> str:

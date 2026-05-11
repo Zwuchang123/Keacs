@@ -28,8 +28,9 @@ class ModelProviderClient:
             raise
 
     def _mock_response(self, request: AgentChatRequest) -> dict[str, Any]:
+        history_note = "，已结合上下文" if request.conversation_history else ""
         return {
-            "reply": f"已收到：{request.message[:40]}",
+            "reply": f"已收到{history_note}：{request.message[:40]}",
             "needsMoreContext": False,
             "contextRequests": [],
             "actions": [
@@ -57,19 +58,28 @@ class ModelProviderClient:
             "model": self.settings.model_name,
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {
-                    "role": "user",
-                    "content": f"用户问题：{request.message}\n本地上下文：{local_context}",
-                },
             ],
             "temperature": 0.2,
             "max_completion_tokens": 256,
             "response_format": {"type": "json_object"},
         }
+        for turn in request.conversation_history[-24:]:
+            payload["messages"].append(
+                {
+                    "role": turn.role,
+                    "content": turn.content,
+                }
+            )
+        payload["messages"].append(
+            {
+                "role": "user",
+                "content": f"用户问题：{request.message}\n本地上下文：{local_context}",
+            }
+        )
         if self.settings.model_reasoning_split:
             payload["reasoning_split"] = True
         headers = {"Authorization": f"Bearer {self.settings.model_api_key}"}
-        async with httpx.AsyncClient(timeout=8) as client:
+        async with httpx.AsyncClient(timeout=90) as client:
             response = await client.post(url, json=payload, headers=headers)
             response.raise_for_status()
         data = response.json()
@@ -91,6 +101,11 @@ def _parse_model_content(content: str) -> dict[str, Any]:
         payload = json.loads(normalized)
     except json.JSONDecodeError:
         payload = _parse_json_fragment(normalized) or {"reply": normalized}
+    if not isinstance(payload, dict):
+        payload = {
+            "reply": "模型结果格式不清晰，请换个说法再试。",
+            "warnings": ["模型返回内容不是对象结构。"],
+        }
     payload.setdefault("needsMoreContext", False)
     payload.setdefault("contextRequests", [])
     payload.setdefault("actions", [])
@@ -112,11 +127,11 @@ def _parse_json_fragment(content: str) -> dict[str, Any] | None:
 
 def _timeout_response() -> dict[str, Any]:
     return {
-        "reply": "模型响应较慢，这次先不继续等待。请稍后再试，或缩短问题内容。",
+        "reply": "模型响应较慢，这次没有拿到稳定结果。请继续补充金额、日期、分类或账户，我会结合本机上下文重新判断。",
         "needsMoreContext": False,
         "contextRequests": [],
         "actions": [],
-        "warnings": ["模型响应超过 8 秒，已自动停止等待。"],
+        "warnings": ["模型响应超过 90 秒，已自动停止等待。"],
     }
 
 

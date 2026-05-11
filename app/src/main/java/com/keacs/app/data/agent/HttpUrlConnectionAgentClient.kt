@@ -19,8 +19,8 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
         try {
             val connection = (URL(settings.chatUrl()).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
-                connectTimeout = TIMEOUT_MILLIS
-                readTimeout = TIMEOUT_MILLIS
+                connectTimeout = CONNECT_TIMEOUT_MILLIS
+                readTimeout = CHAT_READ_TIMEOUT_MILLIS
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 if (settings.serviceMode == AgentModelServiceMode.CUSTOM) {
@@ -63,8 +63,8 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
         runCatching {
             val connection = (URL(settings.feedbackUrl()).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
-                connectTimeout = TIMEOUT_MILLIS
-                readTimeout = TIMEOUT_MILLIS
+                connectTimeout = CONNECT_TIMEOUT_MILLIS
+                readTimeout = FEEDBACK_READ_TIMEOUT_MILLIS
                 doOutput = true
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
             }
@@ -109,6 +109,7 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
                 .put("deviceIdHash", deviceIdHash)
                 .put("message", message)
                 .put("localContext", localContext.toJson())
+                .put("conversationHistory", conversationHistory.toConversationJsonArray())
                 .put("timezone", timezone)
                 .put("appVersion", appVersion)
         } else {
@@ -132,6 +133,15 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
                                     "你是 Keacs 记账助手，只处理记账、查账、消费复盘和轻量建议。不要提供投资、借贷、保险、税务、法律或医疗决策建议。写入类操作只返回待确认预览。",
                                 ),
                         )
+                        .also { messages ->
+                            conversationHistory.forEach { turn ->
+                                messages.put(
+                                    JSONObject()
+                                        .put("role", turn.role.normalizedRole())
+                                        .put("content", turn.content),
+                                )
+                            }
+                        }
                         .put(
                             JSONObject()
                                 .put("role", "user")
@@ -162,6 +172,20 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
             forEach { item -> array.put(JSONObject(item)) }
         }
 
+    private fun List<AgentConversationTurn>.toConversationJsonArray(): JSONArray =
+        JSONArray().also { array ->
+            forEach { turn ->
+                array.put(
+                    JSONObject()
+                        .put("role", turn.role.normalizedRole())
+                        .put("content", turn.content),
+                )
+            }
+        }
+
+    private fun String.normalizedRole(): String =
+        if (equals("assistant", ignoreCase = true)) "assistant" else "user"
+
     private fun JSONArray?.toStringList(): List<String> {
         if (this == null) {
             return emptyList()
@@ -184,14 +208,31 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
             .removeSuffix("```")
             .trim()
 
-    private fun JSONObject.toAgentChatResponse(fallbackReply: String = ""): AgentChatResponse =
-        AgentChatResponse(
-            reply = optString("reply").ifBlank { fallbackReply },
+    private fun JSONObject.toAgentChatResponse(fallbackReply: String = ""): AgentChatResponse {
+        val actions = optJSONArray("actions").toActionPreviews()
+        val reply = optString("reply")
+            .ifBlank { readableReplyFor(actions, fallbackReply) }
+        return AgentChatResponse(
+            reply = reply,
             needsMoreContext = optBoolean("needsMoreContext", false),
             contextRequests = optJSONArray("contextRequests").toContextRequests(),
-            actions = optJSONArray("actions").toActionPreviews(),
+            actions = actions,
             warnings = optJSONArray("warnings").toStringList(),
         )
+    }
+
+    private fun readableReplyFor(
+        actions: List<AgentActionPreview>,
+        fallbackReply: String,
+    ): String {
+        if (actions.any { it.requiresConfirmation() }) {
+            return "**我整理好了待确认内容**\n\n请查看下面的预览，确认后才会写入本机账本。"
+        }
+        if (fallbackReply.trim().startsWith("{")) {
+            return "我收到模型结果，但内容不够清晰。请换个说法再试。"
+        }
+        return fallbackReply
+    }
 
     private fun JSONArray?.toContextRequests(): List<AgentContextRequest> {
         if (this == null) return emptyList()
@@ -266,6 +307,8 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
     }
 
     private companion object {
-        const val TIMEOUT_MILLIS = 60_000
+        const val CONNECT_TIMEOUT_MILLIS = 15_000
+        const val CHAT_READ_TIMEOUT_MILLIS = 90_000
+        const val FEEDBACK_READ_TIMEOUT_MILLIS = 10_000
     }
 }

@@ -3,6 +3,7 @@ package com.keacs.app.ui.agent
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -47,8 +48,9 @@ fun AgentScreen(
             settingsMessage = validation.message,
             onExampleClick = viewModel::useExample,
             onOpenSettings = onOpenSettings,
-            onActionConfirm = viewModel::requestConfirmation,
+            onActionConfirm = viewModel::confirmAction,
             onActionCancel = viewModel::cancelAction,
+            onClearConversation = viewModel::clearConversation,
             modifier = Modifier.weight(1f),
         )
         AgentInputBar(
@@ -57,17 +59,7 @@ fun AgentScreen(
             isSending = state.isSending,
             onInputChange = viewModel::onInputChange,
             onSend = viewModel::send,
-        )
-    }
-
-    state.pendingConfirmation?.let { action ->
-        com.keacs.app.ui.components.ConfirmDialog(
-            title = "确认执行",
-            text = action.description.ifBlank { "确认后会写入本地账本。" },
-            confirmText = "确认",
-            onConfirm = viewModel::confirmPendingAction,
-            onDismiss = viewModel::cancelPendingAction,
-            isDestructive = action.type == "delete_record",
+            modifier = Modifier.imePadding(),
         )
     }
 }
