@@ -41,12 +41,40 @@ class AgentRepository(
             localContext = localContext,
             appVersion = com.keacs.app.BuildConfig.VERSION_NAME,
         )
-        return client.chat(settings, request)
+        return when (val result = client.chat(settings, request)) {
+            is AgentCallResult.Success -> AgentCallResult.Success(
+                response = result.response.copy(clientRequestId = request.clientRequestId),
+            )
+            else -> result
+        }
+    }
+
+    suspend fun sendFeedback(
+        clientRequestId: String,
+        result: String,
+        actionTypes: List<String>,
+        errorType: String = "",
+    ): Boolean {
+        if (clientRequestId.isBlank()) return false
+        val settings = settingsProvider()
+        if (settings.serviceMode != AgentModelServiceMode.OFFICIAL) return true
+        if (settings.deviceId.isBlank()) return false
+        return client.feedback(
+            settings = settings,
+            request = AgentFeedbackRequest(
+                clientRequestId = clientRequestId,
+                deviceIdHash = settings.deviceId,
+                result = result,
+                actionTypes = actionTypes,
+                errorType = errorType,
+            ),
+        )
     }
 }
 
 interface AgentNetworkClient {
     suspend fun chat(settings: AgentSettings, request: AgentChatRequest): AgentCallResult
+    suspend fun feedback(settings: AgentSettings, request: AgentFeedbackRequest): Boolean = true
 }
 
 data class AgentChatRequest(
@@ -67,11 +95,20 @@ data class AgentLocalContext(
 )
 
 data class AgentChatResponse(
+    val clientRequestId: String = "",
     val reply: String,
     val needsMoreContext: Boolean = false,
     val contextRequests: List<AgentContextRequest> = emptyList(),
     val actions: List<AgentActionPreview> = emptyList(),
     val warnings: List<String> = emptyList(),
+)
+
+data class AgentFeedbackRequest(
+    val clientRequestId: String,
+    val deviceIdHash: String,
+    val result: String,
+    val actionTypes: List<String>,
+    val errorType: String = "",
 )
 
 data class AgentContextRequest(
@@ -114,6 +151,9 @@ internal fun AgentSettings.chatUrl(): String {
         AgentModelServiceMode.CUSTOM -> "$baseUrl/chat/completions"
     }
 }
+
+internal fun AgentSettings.feedbackUrl(): String =
+    "${endpointBaseUrl}/api/agent/feedback"
 
 private fun String.isHighRiskAdvice(): Boolean {
     val highRiskTerms = listOf("股票", "基金", "理财", "投资", "贷款", "借钱", "借贷", "保险", "收益", "税", "法律", "医疗")

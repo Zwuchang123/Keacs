@@ -549,6 +549,21 @@ server/
 - 返回 App 可展示的回答、追问或操作预览。
 - 保存不含账本内容的元信息日志。
 
+部署配置：
+
+- `server/Dockerfile`：构建 FastAPI 后端镜像。
+- `server/docker-compose.yml`：启动后端和 Caddy HTTPS 反向代理。
+- `server/Caddyfile`：按 `KEACS_AGENT_DOMAIN` 自动申请 HTTPS 证书并反向代理到后端。
+- `server/.env.example`：列出部署所需环境变量，真实 API Key 只放在服务器环境变量或 `server/.env`，不入库。
+
+官方模型默认部署参数：
+
+- `KEACS_MODEL_PROVIDER=openai_compatible`
+- `KEACS_MODEL_BASE_URL=https://api.minimax.io/v1`
+- `KEACS_MODEL_NAME=MiniMax-M2.7`
+- `KEACS_MODEL_REASONING_SPLIT=true`
+- `KEACS_MODEL_API_KEY` 由服务器环境变量提供，后续可直接调整。
+
 后端不负责：
 
 - 保存完整账本。

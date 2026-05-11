@@ -10,6 +10,7 @@ class Settings:
     model_base_url: str = ""
     model_api_key: str = ""
     model_name: str = "keacs-agent-mock"
+    model_reasoning_split: bool = False
     request_per_minute_limit: int = 20
     request_per_day_limit: int = 200
     max_message_length: int = 1000
@@ -23,6 +24,7 @@ class Settings:
             model_base_url=os.getenv("KEACS_MODEL_BASE_URL", "").strip(),
             model_api_key=os.getenv("KEACS_MODEL_API_KEY", "").strip(),
             model_name=os.getenv("KEACS_MODEL_NAME", "keacs-agent-mock").strip() or "keacs-agent-mock",
+            model_reasoning_split=_read_bool("KEACS_MODEL_REASONING_SPLIT", False),
             request_per_minute_limit=_read_int("KEACS_RATE_LIMIT_PER_MINUTE", 20),
             request_per_day_limit=_read_int("KEACS_RATE_LIMIT_PER_DAY", 200),
             max_message_length=_read_int("KEACS_MAX_MESSAGE_LENGTH", 1000),
@@ -44,3 +46,10 @@ def _read_int(name: str, default: int) -> int:
     except ValueError:
         return default
     return value if value > 0 else default
+
+
+def _read_bool(name: str, default: bool) -> bool:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    return raw_value.strip().lower() in {"1", "true", "yes", "on"}

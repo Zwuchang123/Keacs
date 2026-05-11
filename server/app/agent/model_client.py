@@ -57,6 +57,8 @@ class ModelProviderClient:
             "temperature": 0.2,
             "response_format": {"type": "json_object"},
         }
+        if self.settings.model_reasoning_split:
+            payload["reasoning_split"] = True
         headers = {"Authorization": f"Bearer {self.settings.model_api_key}"}
         async with httpx.AsyncClient(timeout=30) as client:
             response = await client.post(url, json=payload, headers=headers)

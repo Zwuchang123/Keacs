@@ -10,3 +10,4 @@ replay_pid*.log
 __pycache__/
 *.pyc
 /server/data/
+/server/.env

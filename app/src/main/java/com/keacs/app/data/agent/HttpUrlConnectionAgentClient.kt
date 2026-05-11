@@ -53,6 +53,30 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
         }
     }
 
+    override suspend fun feedback(
+        settings: AgentSettings,
+        request: AgentFeedbackRequest,
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (settings.serviceMode != AgentModelServiceMode.OFFICIAL) {
+            return@withContext true
+        }
+        runCatching {
+            val connection = (URL(settings.feedbackUrl()).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = TIMEOUT_MILLIS
+                readTimeout = TIMEOUT_MILLIS
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            }
+            connection.outputStream.use { output ->
+                output.write(request.toJson().toString().toByteArray(Charsets.UTF_8))
+            }
+            val status = connection.responseCode
+            connection.disconnect()
+            status in 200..299
+        }.getOrDefault(false)
+    }
+
     private fun parseResponse(
         serviceMode: AgentModelServiceMode,
         body: String,
@@ -124,6 +148,14 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
             .put("records", records.toJsonArray())
             .put("stats", JSONObject(stats))
             .put("scheduledRecords", scheduledRecords.toJsonArray())
+
+    private fun AgentFeedbackRequest.toJson(): JSONObject =
+        JSONObject()
+            .put("clientRequestId", clientRequestId)
+            .put("deviceIdHash", deviceIdHash)
+            .put("result", result)
+            .put("actionTypes", JSONArray(actionTypes))
+            .put("errorType", errorType)
 
     private fun List<Map<String, Any?>>.toJsonArray(): JSONArray =
         JSONArray().also { array ->

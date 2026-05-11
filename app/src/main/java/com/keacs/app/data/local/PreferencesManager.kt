@@ -11,6 +11,8 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.security.MessageDigest
+import java.util.UUID
 
 private val Context.keacsDataStore by preferencesDataStore(name = "keacs_preferences")
 
@@ -97,6 +99,14 @@ class PreferencesManager private constructor(context: Context) {
         }
     }
 
+    suspend fun ensureAgentDeviceId() {
+        dataStore.edit { preferences ->
+            if (preferences[KEY_AGENT_DEVICE_ID].isNullOrBlank()) {
+                preferences[KEY_AGENT_DEVICE_ID] = sha256(UUID.randomUUID().toString())
+            }
+        }
+    }
+
     companion object {
         private val KEY_HAS_WELCOMED = booleanPreferencesKey("has_welcomed")
         private val KEY_DEFAULT_RECORD_ACCOUNT_ID = longPreferencesKey("default_record_account_id")
@@ -119,5 +129,10 @@ class PreferencesManager private constructor(context: Context) {
             instance ?: synchronized(this) {
                 instance ?: PreferencesManager(context).also { instance = it }
             }
+
+        private fun sha256(value: String): String {
+            val bytes = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+            return bytes.joinToString("") { "%02x".format(it) }
+        }
     }
 }

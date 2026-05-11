@@ -26,6 +26,7 @@ data class AgentUiState(
     val messages: List<AgentMessage> = emptyList(),
     val isSending: Boolean = false,
     val pendingConfirmation: AgentActionPreview? = null,
+    val lastClientRequestId: String = "",
     val errorMessage: String? = null,
 )
 
@@ -100,6 +101,7 @@ class AgentViewModel(
                     _uiState.update {
                         it.copy(
                             isSending = false,
+                            lastClientRequestId = result.response.clientRequestId,
                             messages = it.messages + AgentMessage(
                                 id = nextMessageId++,
                                 role = AgentMessageRole.ASSISTANT,
@@ -145,6 +147,7 @@ class AgentViewModel(
                 ),
             )
         }
+        sendActionFeedback(action, "cancelled")
     }
 
     fun confirmPendingAction() {
@@ -153,6 +156,7 @@ class AgentViewModel(
         viewModelScope.launch {
             when (val result = actionExecutor.execute(action)) {
                 is AgentExecutionResult.Success -> {
+                    sendActionFeedback(action, "confirmed")
                     _uiState.update {
                         it.copy(
                             isSending = false,
@@ -164,8 +168,28 @@ class AgentViewModel(
                         )
                     }
                 }
-                is AgentExecutionResult.Failure -> keepInputAndShowError(_uiState.value.input, result.message)
+                is AgentExecutionResult.Failure -> {
+                    sendActionFeedback(action, "failed", "local_execution_failed")
+                    keepInputAndShowError(_uiState.value.input, result.message)
+                }
             }
+        }
+    }
+
+    private fun sendActionFeedback(
+        action: AgentActionPreview,
+        result: String,
+        errorType: String = "",
+    ) {
+        val clientRequestId = _uiState.value.lastClientRequestId
+        if (clientRequestId.isBlank()) return
+        viewModelScope.launch {
+            agentRepository.sendFeedback(
+                clientRequestId = clientRequestId,
+                result = result,
+                actionTypes = listOf(action.type),
+                errorType = errorType,
+            )
         }
     }
 

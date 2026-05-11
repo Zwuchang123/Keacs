@@ -1,0 +1,3 @@
+{$KEACS_AGENT_DOMAIN} {
+    reverse_proxy keacs-agent:8000
+}

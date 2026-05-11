@@ -29,6 +29,10 @@ android {
         releaseKeyAlias,
         releaseKeyPassword,
     ).all { !it.isNullOrBlank() }
+    val agentOfficialServiceUrl = providers.environmentVariable("KEACS_AGENT_OFFICIAL_SERVICE_URL")
+        .orElse(providers.gradleProperty("keacs.agent.officialServiceUrl"))
+        .orElse("")
+        .get()
 
     defaultConfig {
         applicationId = "com.keacs.app"
@@ -46,7 +50,7 @@ android {
         buildConfigField(
             "String",
             "AGENT_OFFICIAL_SERVICE_URL",
-            "\"\"",
+            "\"$agentOfficialServiceUrl\"",
         )
     }
 

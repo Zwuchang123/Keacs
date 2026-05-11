@@ -27,5 +27,6 @@
 | 单元测试     | `app/src/test`                                                           | 单元测试                     |
 | 设备测试     | `app/src/androidTest`                                                    | Android 设备测试             |
 | Agent 后端  | `server/app`                                                             | FastAPI 服务、健康检查、官方助手接口、限流、日志、模型通路和安全提示词 |
+| Agent 部署  | `server/Dockerfile`、`server/docker-compose.yml`、`server/Caddyfile`       | 官方助手后端容器化部署和 HTTPS 反向代理配置 |
 | Agent 后端测试 | `server/tests`                                                           | 后端健康检查、mock 模型、限流和日志安全测试 |
 
