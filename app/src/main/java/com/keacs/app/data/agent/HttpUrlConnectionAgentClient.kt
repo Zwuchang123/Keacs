@@ -89,15 +89,28 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
                 .put("timezone", timezone)
                 .put("appVersion", appVersion)
         } else {
+            val userContent = """
+                用户问题：
+                ${message}
+
+                本地上下文：
+                ${localContext.toJson()}
+            """.trimIndent()
             JSONObject()
                 .put("model", settings.customModelName.ifBlank { "default" })
                 .put(
                     "messages",
-                    JSONArray().put(
-                        JSONObject()
-                            .put("role", "user")
-                            .put("content", message),
-                    ),
+                    JSONArray()
+                        .put(
+                            JSONObject()
+                                .put("role", "system")
+                                .put("content", "你是 Keacs 记账助手，请根据本地上下文回答。查询类问题只回答，不要要求写入。"),
+                        )
+                        .put(
+                            JSONObject()
+                                .put("role", "user")
+                                .put("content", userContent),
+                        ),
                 )
                 .put("stream", false)
         }

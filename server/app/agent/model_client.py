@@ -1,4 +1,5 @@
 from typing import Any
+import json
 
 import httpx
 
@@ -38,11 +39,22 @@ class ModelProviderClient:
 
     async def _call_openai_compatible(self, request: AgentChatRequest) -> dict[str, Any]:
         url = self.settings.model_base_url.rstrip("/") + "/chat/completions"
+        local_context = json.dumps(
+            request.local_context.model_dump(by_alias=True),
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
         payload = {
             "model": self.settings.model_name,
             "messages": [
-                {"role": "system", "content": "你是 Keacs 记账助手，只返回 JSON 结构化结果。"},
-                {"role": "user", "content": request.message},
+                {
+                    "role": "system",
+                    "content": "你是 Keacs 记账助手。查询类问题只根据本地上下文回答，写入类问题只生成待确认预览。只返回 JSON。",
+                },
+                {
+                    "role": "user",
+                    "content": f"用户问题：{request.message}\n本地上下文：{local_context}",
+                },
             ],
             "temperature": 0.2,
             "response_format": {"type": "json_object"},

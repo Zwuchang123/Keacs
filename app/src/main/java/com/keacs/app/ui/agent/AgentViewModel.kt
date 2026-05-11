@@ -4,8 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.keacs.app.data.agent.AgentCallResult
+import com.keacs.app.data.agent.AgentContextProvider
 import com.keacs.app.data.agent.AgentRepository
 import com.keacs.app.data.local.PreferencesManager
+import com.keacs.app.data.repository.LocalDataRepository
+import com.keacs.app.data.repository.ScheduledRecordRepository
 import com.keacs.app.domain.agent.AgentSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,6 +39,7 @@ enum class AgentMessageRole {
 
 class AgentViewModel(
     private val agentRepository: AgentRepository,
+    private val contextProvider: AgentContextProvider,
     preferencesManager: PreferencesManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AgentUiState())
@@ -82,7 +86,8 @@ class AgentViewModel(
         }
 
         viewModelScope.launch {
-            when (val result = agentRepository.sendMessage(message)) {
+            val localContext = contextProvider.buildForMessage(message)
+            when (val result = agentRepository.sendMessage(message, localContext)) {
                 is AgentCallResult.Success -> {
                     _uiState.update {
                         it.copy(
@@ -121,12 +126,15 @@ class AgentViewModel(
 
 class AgentViewModelFactory(
     private val preferencesManager: PreferencesManager,
+    private val repository: LocalDataRepository,
+    private val scheduledRepository: ScheduledRecordRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AgentViewModel::class.java)) {
             return AgentViewModel(
                 agentRepository = AgentRepository(preferencesManager),
+                contextProvider = AgentContextProvider(repository, scheduledRepository),
                 preferencesManager = preferencesManager,
             ) as T
         }

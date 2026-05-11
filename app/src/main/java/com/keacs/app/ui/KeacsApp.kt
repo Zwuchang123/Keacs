@@ -236,7 +236,11 @@ fun KeacsApp(
 
                 route == KeacsDestination.Agent.route -> {
                     val agentViewModel: AgentViewModel = viewModel(
-                        factory = AgentViewModelFactory(preferencesManager),
+                        factory = AgentViewModelFactory(
+                            preferencesManager = preferencesManager,
+                            repository = repository,
+                            scheduledRepository = scheduledRepository,
+                        ),
                     )
                     AgentScreen(
                         viewModel = agentViewModel,
