@@ -98,7 +98,7 @@ ssh keacs-prod "cd /opt/keacs && git clone <仓库地址> ."
 KEACS_AGENT_DOMAIN=<正式域名>
 KEACS_MODEL_PROVIDER=openai_compatible
 KEACS_MODEL_BASE_URL=https://api.minimax.io/v1
-KEACS_MODEL_NAME=MiniMax-M2.7
+KEACS_MODEL_NAME=MiniMax-M2.5-highspeed
 KEACS_MODEL_REASONING_SPLIT=true
 KEACS_MODEL_API_KEY=<服务器上的真实模型 API Key>
 ```
