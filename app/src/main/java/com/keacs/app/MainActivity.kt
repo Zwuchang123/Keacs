@@ -66,6 +66,7 @@ private fun AppContent(
         hasWelcomed = preferencesManager.hasWelcomed.first()
         InitializeLocalDataUseCase(repository)()
         GenerateDueScheduledRecordsUseCase(scheduledRepository)()
+        preferencesManager.ensureAgentDeviceId()
         localDataReady = true
     }
 

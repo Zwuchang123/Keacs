@@ -68,11 +68,13 @@ fun SettingsScreen(
     val categories by repository.observeCategories().collectAsState(initial = emptyList())
     val defaultAccountId by preferencesManager.defaultRecordAccountId.collectAsState(initial = null)
     val defaultRecordType by preferencesManager.defaultRecordType.collectAsState(initial = RecordType.EXPENSE)
+    val agentSettings by preferencesManager.agentSettings.collectAsState(initial = null)
     val enabledAccounts = accounts.filter { it.isEnabled }
 
     var showClearCacheConfirm by remember { mutableStateOf(false) }
     var showAccountSelector by remember { mutableStateOf(false) }
     var showTypeSelector by remember { mutableStateOf(false) }
+    var showAgentModeSelector by remember { mutableStateOf(false) }
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
 
     val defaultAccountLabel = enabledAccounts.firstOrNull { it.id == defaultAccountId }?.name ?: "不默认带出"
@@ -116,6 +118,39 @@ fun SettingsScreen(
                 iconColor = KeacsColors.Primary,
                 value = "2位",
                 onClick = { snackbarMessage = "暂不支持配置" },
+            )
+        }
+        agentSettings?.let { settings ->
+            AgentSettingsSection(
+                settings = settings,
+                showModeSelector = showAgentModeSelector,
+                onEnabledChange = { enabled ->
+                    scope.launch {
+                        preferencesManager.setAgentEnabled(enabled)
+                    }
+                },
+                onModeClick = { showAgentModeSelector = true },
+                onModeSelected = { mode ->
+                    scope.launch {
+                        preferencesManager.setAgentModelServiceMode(mode)
+                    }
+                },
+                onModeDismiss = { showAgentModeSelector = false },
+                onCustomBaseUrlChange = { baseUrl ->
+                    scope.launch {
+                        preferencesManager.setAgentCustomBaseUrl(baseUrl)
+                    }
+                },
+                onCustomApiKeyChange = { apiKey ->
+                    scope.launch {
+                        preferencesManager.setAgentCustomApiKey(apiKey)
+                    }
+                },
+                onCustomModelNameChange = { modelName ->
+                    scope.launch {
+                        preferencesManager.setAgentCustomModelName(modelName)
+                    }
+                },
             )
         }
         DividedMenuCard {

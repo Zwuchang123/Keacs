@@ -36,8 +36,8 @@ class MainActivitySmokeTest {
         composeRule.onNodeWithContentDescription("返回").performClick()
         assertScreenDisplayed("screen-stats")
 
-        composeRule.onNodeWithContentDescription("切换到发现").performClick()
-        assertScreenDisplayed("screen-discover")
+        composeRule.onNodeWithContentDescription("切换到助手").performClick()
+        assertScreenDisplayed("screen-agent")
 
         composeRule.onNodeWithContentDescription("切换到我的").performClick()
         assertScreenDisplayed("screen-mine")

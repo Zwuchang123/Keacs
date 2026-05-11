@@ -11,7 +11,7 @@
 - 技术路线：`docs\arc.md`。
 - 设计规范：`docs\design.md`。
 - 代码映射：`docs\code-map.md`。
-- Keacs Agent 助手开发计划：`docs\agents-plan.md`。
+- 部署与发版：`docs\deploy.md`。
 
 ## 工作流程
 
@@ -21,35 +21,21 @@
 
 不要假设用户一定是对的，运用第一性原理，主动考虑影响范围，思考更合理的方案并让用户确认。
 
-| 任务类型               | 读取范围                                                               | 执行范围                                                                                                          |
-| ------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
-| 非代码开发任务            | 只读任务相关文档                                                           | 不改代码                                                                                                          |
-| 小功能优化              | 先看 `docs\code-map.md`，再读相关代码                                       | 只改当前功能相关代码；有需求变化时同步 `docs\prd.md` 对应章节                                                                        |
-| BUG 修复             | 先看 `docs\code-map.md`，再读缺陷相关代码                                     | 先复现，再修复，不扩大范围                                                                                                 |
-| 大功能迭代              | 读取 `docs\prd.md`、`docs\arc.md`、`docs\design.md`、`docs\code-map.md` | 进入计划模式，并调用 Codex 已安装的 Superpowers 插件。先使用Superpowers: Brainstorming技能对需求进行详细分析，与用户沟通不清晰的内容；然后确认方案；再更新文档和代码     |
-| Keacs Agent 助手开发任务 | 读取`docs\prd.md`、`docs\arc.md`对应章节，严格按照`docs\agents-plan.md`开发阶段执行。 | 在一个单独的分支中执行Keacs Agent 助手全部开发任务。前端须遵守现有组件风格和设计规范，前端开发需使用 `.agents\skills\impeccable`。每个阶段都要按“测试要求”识别改动范围执行自测。 |
+| 任务类型               | 读取范围                                                               | 执行范围                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 非代码开发任务            | 只读任务相关文档                                                           | 不改代码                                                                                                                                                         |
+| 小功能优化              | 先看 `docs\code-map.md`，再读相关代码                                       | 只改当前功能相关代码；有需求变化时同步 `docs\prd.md` 对应章节                                                                                                                       |
+| BUG 修复             | 先看 `docs\code-map.md`，再读缺陷相关代码                                     | 先复现，再修复，不扩大范围                                                                                                                                                |
+| 大功能迭代              | 读取 `docs\prd.md`、`docs\arc.md`、`docs\design.md`、`docs\code-map.md` | 进入计划模式，并调用 Codex 已安装的 Superpowers 插件。先使用Superpowers: Brainstorming技能对需求进行详细分析，与用户沟通不清晰的内容；然后确认方案；再更新文档和代码                                                    |
+| Keacs Agent 助手开发任务 | 读取`docs\prd.md`、`docs\arc.md`对应章节。 | 在Keacs-agent分支中执行Keacs Agent 助手全部开发任务，每个阶段完成后需主动更新`docs\code-map.md`，并在分支内执行提交。前端须遵守现有组件风格和设计规范，前端开发需使用 `.agents\skills\impeccable`。每个阶段都要按“测试要求”识别改动范围执行自测。 |
 
 <br />
 
 <br />
 
-## 交付与发版决策
+## 部署与发版索引
 
-核心规则：验收失败不合并、不发版；验收通过后合并到 `master` 并删除短分支；是否发版只看是否要发布 APK。
-
-| 场景                 | 发版      | 合并 `master`                   | 删除短分支   | 必做记录                             |
-| ------------------ | ------- | ----------------------------- | ------- | -------------------------------- |
-| 非代码开发任务            | 不发版     | 验收通过后合并                       | 合并后删除   | 按需更新相关文档                         |
-| 小功能优化，暂不上线         | 不发版     | 验收通过后合并                       | 合并后删除   | 写入 `docs\releases\next.md`       |
-| BUG 修复，可等待发版       | 不发版     | 验收通过后合并                       | 合并后删除   | 写入 `docs\releases\next.md`       |
-| BUG 修复，需要立刻给用户更新   | 发补丁版本   | 发版准备完成后合并                     | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md`     |
-| 小功能优化，确认上线         | 发补丁或小版本 | 发版准备完成后合并                     | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md`     |
-| 大功能迭代              | 默认发版    | 发版准备完成后合并                     | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md`     |
-| Keacs Agent 助手开发任务 | 不发版     | 在一个单独分支中完成全部开发任务，验收通过，等用户要求合并 | 需用户要求删除 | 每个阶段完成都需要更新`docs\agents-plan.md` |
-
-不发版路径：自测通过 -> 业务验收通过 -> 更新必要文档和 `docs\releases\next.md` -> 提交 -> 合并到 `master` -> 删除短分支。
-
-发版路径：自测通过 -> 安装应用并业务验收通过 -> 汇总 `docs\releases\next.md` 和本次变化 -> 更新版本号和正式版本说明 -> 提交 -> 合并到 `master` -> 打标签并推送 -> 删除短分支。
+交付、合并、版本号、发版记录、APK 发布、后端部署和服务器运维流程统一查看 `docs\deploy.md`，不要在其他文档重复维护同一套流程。
 
 ## 开发边界
 
@@ -72,7 +58,7 @@
 - 保持向后兼容，覆盖边界条件、异常输入和失败场景。
 - 禁止静默失败、吞异常或暴露敏感信息。
 - 代码注释使用中文，但不要写冗余注释。
-- 单文件默认不超过 300 行；确实需要超过时必须说明原因，任何情况下严禁超过 400 行。
+- 单文件尽量控制在 300 行以内；超过400行必须评估是否拆分；超过600行一般视为需要重构。
 
 ## 测试要求
 
@@ -95,21 +81,10 @@
 - 有失败项时，先修复，再重新完成受影响范围内的自测。
 - 只有涉及 UI 改动、布局适配、交互状态，或任务明确要求 UI 测试时，才执行 UI 自检。自检时确认不存在文案错误、样式不统一、间距失衡、按钮无反馈、组件状态异常、缺少必要状态提示、内容遮挡溢出、视觉噪音明显，且整体与已有组件样式一致。
 
-## 文档、分支和版本记录
+## 文档管理
 
-- 分支：非代码任务不拉取临时分支，每个任务从 `master` 建短分支，功能用 `feature/`，修复用 `fix/`；不使用长期 `develop`。
-- 状态：`master` 表示已验收、可随时发版；`v*` 标签表示已正式发布。
-- 待发版记录：未立即发版的用户可感知变化写入 `docs\releases\next.md`；文件不存在时先创建；正式发版后清空。
-- 项目文档：`prd.md` 只写需求和产品规则变化；`arc.md` 只写技术路线、架构、存储、构建和发版机制变化；`code-map.md` 只写模块、入口或路径变化。
-- 版本号：只在发布 APK 时更新 `app\build.gradle.kts`；`versionName` 为 `X.Y.Z`，标签必须一致；`versionCode` 每次发版加 1。
-- 版本递增：修复、小优化、应用内文案改 `PATCH`；新页面、新入口、新能力改 `MINOR`；数据不兼容或重大规则变化改 `MAJOR`。
-- 自动发版：在 `master` 推送 `vX.Y.Z` 标签后，由 `.github\workflows\release.yml` 构建和发布；APK 命名为 `keacs-v*.apk`，APK 不入库。
-
-```powershell
-git tag vX.Y.Z
-git push origin vX.Y.Z
-git push gitee vX.Y.Z
-```
+- 项目文档：`prd.md` 只写需求和产品规则变化；`arc.md` 只写技术路线、架构、存储和构建机制变化；`code-map.md` 只写模块、入口或路径变化；`deploy.md` 只写交付、发版、部署和运维流程。
+- 分支、版本号、发版记录和部署说明统一维护在 `docs\deploy.md`。
 
 ## 提交要求
 
@@ -134,23 +109,9 @@ git push gitee vX.Y.Z
 
 ## 常用命令
 
-### 腾讯云服务器
+### 服务器部署
 
-- PowerShell 读取中文前先执行：`chcp 65001 > $null; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8`
-- 连接腾讯云服务器：`ssh keacs-prod`
-- 查看服务器身份信息：`ssh keacs-prod "whoami && hostname && pwd"`
-- 查看 CPU、内存、磁盘：`ssh keacs-prod "top -bn1 | head -20 && free -h && df -h"`
-- 查看 Docker 容器：`ssh keacs-prod "docker ps -a"`
-- 查看 Docker 日志：`ssh keacs-prod "docker logs --tail 200 容器名"`
-- 重启 Docker 容器：`ssh keacs-prod "docker restart 容器名"`
-- 查看 systemd 服务状态：`ssh keacs-prod "systemctl status 服务名 --no-pager"`
-- 重启 systemd 服务：`ssh keacs-prod "sudo systemctl restart 服务名"`
-- 查看最近 200 行服务日志：`ssh keacs-prod "journalctl -u 服务名 -n 200 --no-pager"`
-- 实时查看服务日志：`ssh keacs-prod "journalctl -u 服务名 -f"`
-- 查看 Nginx 状态：`ssh keacs-prod "sudo systemctl status nginx --no-pager"`
-- 测试 Nginx 配置并重载：`ssh keacs-prod "sudo nginx -t && sudo systemctl reload nginx"`
-- 上传文件到服务器：`scp 本地文件 keacs-prod:/目标目录/`
-- 从服务器下载文件：`scp keacs-prod:/远程文件 本地目录`
+腾讯云服务器部署、发版和运维命令统一查看 `docs\deploy.md`。
 
 ### Android 本地开发
 

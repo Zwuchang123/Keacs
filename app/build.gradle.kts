@@ -29,19 +29,28 @@ android {
         releaseKeyAlias,
         releaseKeyPassword,
     ).all { !it.isNullOrBlank() }
+    val agentOfficialServiceUrl = providers.environmentVariable("KEACS_AGENT_OFFICIAL_SERVICE_URL")
+        .orElse(providers.gradleProperty("keacs.agent.officialServiceUrl"))
+        .orElse("http://43.138.174.171")
+        .get()
 
     defaultConfig {
         applicationId = "com.keacs.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "1.2.2"
+        versionCode = 12
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField(
             "String",
             "UPDATE_URL",
             "\"https://gitee.com/zwuc/keacs/releases\"",
+        )
+        buildConfigField(
+            "String",
+            "AGENT_OFFICIAL_SERVICE_URL",
+            "\"$agentOfficialServiceUrl\"",
         )
     }
 

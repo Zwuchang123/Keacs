@@ -1,0 +1,40 @@
+services:
+  keacs-agent:
+    build:
+      context: .
+    restart: unless-stopped
+    environment:
+      KEACS_MODEL_PROVIDER: ${KEACS_MODEL_PROVIDER:-openai_compatible}
+      KEACS_MODEL_BASE_URL: ${KEACS_MODEL_BASE_URL:-https://api.minimax.io/v1}
+      KEACS_MODEL_API_KEY: ${KEACS_MODEL_API_KEY}
+      KEACS_MODEL_NAME: ${KEACS_MODEL_NAME:-MiniMax-M2.7}
+      KEACS_MODEL_REASONING_SPLIT: ${KEACS_MODEL_REASONING_SPLIT:-true}
+      KEACS_AUDIT_DB_PATH: /data/audit.sqlite3
+      KEACS_RATE_LIMIT_PER_MINUTE: ${KEACS_RATE_LIMIT_PER_MINUTE:-20}
+      KEACS_RATE_LIMIT_PER_DAY: ${KEACS_RATE_LIMIT_PER_DAY:-200}
+      KEACS_MAX_MESSAGE_LENGTH: ${KEACS_MAX_MESSAGE_LENGTH:-1000}
+      KEACS_MAX_CONTEXT_ITEMS: ${KEACS_MAX_CONTEXT_ITEMS:-200}
+    volumes:
+      - keacs-agent-data:/data
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - keacs-agent
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      KEACS_AGENT_DOMAIN: ${KEACS_AGENT_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  keacs-agent-data:
+  caddy-data:
+  caddy-config:
