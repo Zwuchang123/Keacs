@@ -37,25 +37,16 @@ fun AgentInputBar(
     input: String,
     enabled: Boolean,
     isSending: Boolean,
-    errorMessage: String?,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .imePadding()
             .background(KeacsColors.Surface)
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        errorMessage?.let {
-            Text(
-                text = it,
-                color = KeacsColors.Error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),

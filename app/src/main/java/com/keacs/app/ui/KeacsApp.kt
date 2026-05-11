@@ -10,6 +10,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -76,6 +78,7 @@ class KeacsViewModelFactory(
     }
 }
 
+@kotlin.OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun KeacsApp(
     repository: LocalDataRepository,
@@ -162,7 +165,8 @@ fun KeacsApp(
             currentDestination?.let { TopActions(destination = it) }
         },
         bottomBar = {
-            if (currentDestination != null && currentDestination != KeacsDestination.Add) {
+            val imeVisible = WindowInsets.isImeVisible
+            if (currentDestination != null && currentDestination != KeacsDestination.Add && !imeVisible) {
                 KeacsBottomBar(
                     currentDestination = currentDestination,
                     onDestinationSelected = {

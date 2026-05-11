@@ -55,7 +55,6 @@ fun AgentScreen(
             input = state.input,
             enabled = !state.isSending,
             isSending = state.isSending,
-            errorMessage = state.errorMessage,
             onInputChange = viewModel::onInputChange,
             onSend = viewModel::send,
         )

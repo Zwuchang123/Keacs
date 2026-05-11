@@ -27,7 +27,6 @@ data class AgentUiState(
     val isSending: Boolean = false,
     val pendingConfirmation: AgentActionPreview? = null,
     val lastClientRequestId: String = "",
-    val errorMessage: String? = null,
 )
 
 data class AgentMessage(
@@ -67,7 +66,6 @@ class AgentViewModel(
         _uiState.update {
             it.copy(
                 input = value.take(MAX_INPUT_LENGTH),
-                errorMessage = null,
             )
         }
     }
@@ -81,7 +79,6 @@ class AgentViewModel(
         if (state.isSending) return
         val message = state.input.trim()
         if (message.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "请输入要发送的内容。") }
             return
         }
 
@@ -89,7 +86,6 @@ class AgentViewModel(
             it.copy(
                 input = "",
                 isSending = true,
-                errorMessage = null,
                 messages = it.messages + AgentMessage(nextMessageId++, AgentMessageRole.USER, message),
             )
         }
@@ -198,7 +194,6 @@ class AgentViewModel(
             it.copy(
                 input = input,
                 isSending = false,
-                errorMessage = message,
                 messages = it.messages + AgentMessage(nextMessageId++, AgentMessageRole.ERROR, message),
             )
         }
