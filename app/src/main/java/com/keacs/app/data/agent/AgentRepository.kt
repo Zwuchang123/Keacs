@@ -66,7 +66,24 @@ data class AgentLocalContext(
 data class AgentChatResponse(
     val reply: String,
     val needsMoreContext: Boolean = false,
+    val contextRequests: List<AgentContextRequest> = emptyList(),
+    val actions: List<AgentActionPreview> = emptyList(),
     val warnings: List<String> = emptyList(),
+)
+
+data class AgentContextRequest(
+    val type: String,
+    val reason: String = "",
+)
+
+data class AgentActionPreview(
+    val type: String,
+    val title: String,
+    val description: String = "",
+    val impactCount: Int = 0,
+    val records: List<Map<String, Any?>> = emptyList(),
+    val scheduledRecords: List<Map<String, Any?>> = emptyList(),
+    val riskNotice: String = "",
 )
 
 sealed interface AgentCallResult {
@@ -75,6 +92,17 @@ sealed interface AgentCallResult {
     data class NetworkFailure(val message: String) : AgentCallResult
     data class InvalidResponse(val message: String) : AgentCallResult
 }
+
+fun AgentActionPreview.requiresConfirmation(): Boolean =
+    type in setOf(
+        "create_record",
+        "update_record",
+        "delete_record",
+        "batch_update_records",
+        "create_scheduled_record",
+        "update_scheduled_record",
+        "disable_scheduled_record",
+    )
 
 internal fun AgentSettings.chatUrl(): String {
     val baseUrl = endpointBaseUrl

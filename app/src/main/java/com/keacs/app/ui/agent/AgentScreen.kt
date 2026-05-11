@@ -47,6 +47,8 @@ fun AgentScreen(
             settingsMessage = validation.message,
             onExampleClick = viewModel::useExample,
             onOpenSettings = onOpenSettings,
+            onActionConfirm = viewModel::requestConfirmation,
+            onActionCancel = viewModel::cancelAction,
             modifier = Modifier.weight(1f),
         )
         AgentInputBar(
@@ -56,6 +58,17 @@ fun AgentScreen(
             errorMessage = state.errorMessage,
             onInputChange = viewModel::onInputChange,
             onSend = viewModel::send,
+        )
+    }
+
+    state.pendingConfirmation?.let { action ->
+        com.keacs.app.ui.components.ConfirmDialog(
+            title = "确认执行",
+            text = action.description.ifBlank { "确认后会写入本地账本。" },
+            confirmText = "确认",
+            onConfirm = viewModel::confirmPendingAction,
+            onDismiss = viewModel::cancelPendingAction,
+            isDestructive = action.type == "delete_record",
         )
     }
 }

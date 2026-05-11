@@ -3,9 +3,13 @@ package com.keacs.app.ui.agent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.keacs.app.data.agent.AgentActionExecutor
+import com.keacs.app.data.agent.AgentActionPreview
 import com.keacs.app.data.agent.AgentCallResult
 import com.keacs.app.data.agent.AgentContextProvider
+import com.keacs.app.data.agent.AgentExecutionResult
 import com.keacs.app.data.agent.AgentRepository
+import com.keacs.app.data.agent.requiresConfirmation
 import com.keacs.app.data.local.PreferencesManager
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.data.repository.ScheduledRecordRepository
@@ -21,6 +25,7 @@ data class AgentUiState(
     val input: String = "",
     val messages: List<AgentMessage> = emptyList(),
     val isSending: Boolean = false,
+    val pendingConfirmation: AgentActionPreview? = null,
     val errorMessage: String? = null,
 )
 
@@ -28,6 +33,7 @@ data class AgentMessage(
     val id: Long,
     val role: AgentMessageRole,
     val text: String,
+    val actions: List<AgentActionPreview> = emptyList(),
     val warnings: List<String> = emptyList(),
 )
 
@@ -35,11 +41,13 @@ enum class AgentMessageRole {
     USER,
     ASSISTANT,
     ERROR,
+    RESULT,
 }
 
 class AgentViewModel(
     private val agentRepository: AgentRepository,
     private val contextProvider: AgentContextProvider,
+    private val actionExecutor: AgentActionExecutor,
     preferencesManager: PreferencesManager,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AgentUiState())
@@ -96,6 +104,7 @@ class AgentViewModel(
                                 id = nextMessageId++,
                                 role = AgentMessageRole.ASSISTANT,
                                 text = result.response.reply,
+                                actions = result.response.actions,
                                 warnings = result.response.warnings,
                             ),
                         )
@@ -104,6 +113,58 @@ class AgentViewModel(
                 is AgentCallResult.ConfigurationRequired -> keepInputAndShowError(message, result.message)
                 is AgentCallResult.NetworkFailure -> keepInputAndShowError(message, result.message)
                 is AgentCallResult.InvalidResponse -> keepInputAndShowError(message, result.message)
+            }
+        }
+    }
+
+    fun requestConfirmation(action: AgentActionPreview) {
+        if (!action.requiresConfirmation()) return
+        _uiState.update { it.copy(pendingConfirmation = action) }
+    }
+
+    fun cancelPendingAction() {
+        val action = _uiState.value.pendingConfirmation ?: return
+        addCancelledMessage(action, clearPending = true)
+    }
+
+    fun cancelAction(action: AgentActionPreview) {
+        addCancelledMessage(action, clearPending = false)
+    }
+
+    private fun addCancelledMessage(
+        action: AgentActionPreview,
+        clearPending: Boolean,
+    ) {
+        _uiState.update {
+            it.copy(
+                pendingConfirmation = if (clearPending) null else it.pendingConfirmation,
+                messages = it.messages + AgentMessage(
+                    id = nextMessageId++,
+                    role = AgentMessageRole.RESULT,
+                    text = "已取消：${action.title}",
+                ),
+            )
+        }
+    }
+
+    fun confirmPendingAction() {
+        val action = _uiState.value.pendingConfirmation ?: return
+        _uiState.update { it.copy(pendingConfirmation = null, isSending = true) }
+        viewModelScope.launch {
+            when (val result = actionExecutor.execute(action)) {
+                is AgentExecutionResult.Success -> {
+                    _uiState.update {
+                        it.copy(
+                            isSending = false,
+                            messages = it.messages + AgentMessage(
+                                id = nextMessageId++,
+                                role = AgentMessageRole.RESULT,
+                                text = result.message,
+                            ),
+                        )
+                    }
+                }
+                is AgentExecutionResult.Failure -> keepInputAndShowError(_uiState.value.input, result.message)
             }
         }
     }
@@ -135,6 +196,7 @@ class AgentViewModelFactory(
             return AgentViewModel(
                 agentRepository = AgentRepository(preferencesManager),
                 contextProvider = AgentContextProvider(repository, scheduledRepository),
+                actionExecutor = AgentActionExecutor(repository, scheduledRepository),
                 preferencesManager = preferencesManager,
             ) as T
         }

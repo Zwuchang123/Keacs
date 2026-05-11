@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.keacs.app.data.agent.AgentActionPreview
+import com.keacs.app.data.agent.requiresConfirmation
 import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.theme.KeacsColors
@@ -38,6 +41,8 @@ fun AgentMessages(
     settingsMessage: String?,
     onExampleClick: (String) -> Unit,
     onOpenSettings: () -> Unit,
+    onActionConfirm: (AgentActionPreview) -> Unit,
+    onActionCancel: (AgentActionPreview) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -68,7 +73,11 @@ fun AgentMessages(
             }
         }
         items(state.messages, key = { it.id }) { message ->
-            AgentMessageBubble(message = message)
+            AgentMessageBubble(
+                message = message,
+                onActionConfirm = onActionConfirm,
+                onActionCancel = onActionCancel,
+            )
         }
         if (state.isSending) {
             item {
@@ -182,7 +191,11 @@ private fun ExampleRow(
 }
 
 @Composable
-private fun AgentMessageBubble(message: AgentMessage) {
+private fun AgentMessageBubble(
+    message: AgentMessage,
+    onActionConfirm: (AgentActionPreview) -> Unit,
+    onActionCancel: (AgentActionPreview) -> Unit,
+) {
     val isUser = message.role == AgentMessageRole.USER
     val isError = message.role == AgentMessageRole.ERROR
     Row(
@@ -219,7 +232,101 @@ private fun AgentMessageBubble(message: AgentMessage) {
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
+            message.actions.forEach { action ->
+                AgentActionCard(
+                    action = action,
+                    onConfirm = { onActionConfirm(action) },
+                    onCancel = { onActionCancel(action) },
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun AgentActionCard(
+    action: AgentActionPreview,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(KeacsColors.SurfaceSubtle)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = action.title,
+            color = KeacsColors.TextPrimary,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        if (action.description.isNotBlank()) {
+            Text(
+                text = action.description,
+                color = KeacsColors.TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        PreviewLines(action)
+        if (action.riskNotice.isNotBlank()) {
+            Text(
+                text = action.riskNotice,
+                color = KeacsColors.Warning,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        if (action.requiresConfirmation()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onCancel) {
+                    Text("取消")
+                }
+                Button(onClick = onConfirm) {
+                    Text("确认")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PreviewLines(action: AgentActionPreview) {
+    val recordLines = action.records.take(3).map { item ->
+        val amount = item["amountCent"]?.toString().orEmpty()
+        val category = item["categoryName"]?.toString().orEmpty()
+        val account = item["accountName"]?.toString()
+            ?: item["fromAccountName"]?.toString()
+            ?: item["toAccountName"]?.toString()
+            ?: ""
+        listOf(category, account, amount).filter { it.isNotBlank() }.joinToString(" · ")
+    }
+    val scheduleLines = action.scheduledRecords.take(3).map { item ->
+        val amount = item["amountCent"]?.toString().orEmpty()
+        val frequency = item["frequency"]?.toString().orEmpty()
+        val note = item["note"]?.toString().orEmpty()
+        listOf(frequency, note, amount).filter { it.isNotBlank() }.joinToString(" · ")
+    }
+    (recordLines + scheduleLines).filter { it.isNotBlank() }.forEach { line ->
+        Text(
+            text = line,
+            color = KeacsColors.TextPrimary,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+    val extraCount = action.records.size + action.scheduledRecords.size - recordLines.size - scheduleLines.size
+    if (extraCount > 0) {
+        Text(
+            text = "还有 $extraCount 项",
+            color = KeacsColors.TextSecondary,
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
 }
 

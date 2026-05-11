@@ -57,23 +57,19 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
         val json = JSONObject(body)
         return when (serviceMode) {
             AgentModelServiceMode.OFFICIAL -> AgentCallResult.Success(
-                AgentChatResponse(
-                    reply = json.optString("reply"),
-                    needsMoreContext = json.optBoolean("needsMoreContext", false),
-                    warnings = json.optJSONArray("warnings").toStringList(),
-                ),
+                json.toAgentChatResponse(),
             )
             AgentModelServiceMode.CUSTOM -> {
                 val choices = json.optJSONArray("choices")
-                val reply = choices
+                val content = choices
                     ?.optJSONObject(0)
                     ?.optJSONObject("message")
                     ?.optString("content")
                     .orEmpty()
-                if (reply.isBlank()) {
+                if (content.isBlank()) {
                     AgentCallResult.InvalidResponse("助手没有返回可展示内容。")
                 } else {
-                    AgentCallResult.Success(AgentChatResponse(reply = reply))
+                    AgentCallResult.Success(parseCustomContent(content))
                 }
             }
         }
@@ -134,6 +130,86 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
         }
         return List(length()) { index -> optString(index) }.filter { it.isNotBlank() }
     }
+
+    private fun parseCustomContent(content: String): AgentChatResponse {
+        val trimmed = content.trim().removeJsonFence()
+        return runCatching {
+            JSONObject(trimmed).toAgentChatResponse(fallbackReply = content)
+        }.getOrElse {
+            AgentChatResponse(reply = content)
+        }
+    }
+
+    private fun String.removeJsonFence(): String =
+        removePrefix("```json")
+            .removePrefix("```")
+            .removeSuffix("```")
+            .trim()
+
+    private fun JSONObject.toAgentChatResponse(fallbackReply: String = ""): AgentChatResponse =
+        AgentChatResponse(
+            reply = optString("reply").ifBlank { fallbackReply },
+            needsMoreContext = optBoolean("needsMoreContext", false),
+            contextRequests = optJSONArray("contextRequests").toContextRequests(),
+            actions = optJSONArray("actions").toActionPreviews(),
+            warnings = optJSONArray("warnings").toStringList(),
+        )
+
+    private fun JSONArray?.toContextRequests(): List<AgentContextRequest> {
+        if (this == null) return emptyList()
+        return List(length()) { index ->
+            optJSONObject(index)?.let { item ->
+                AgentContextRequest(
+                    type = item.optString("type"),
+                    reason = item.optString("reason"),
+                )
+            }
+        }.filterNotNull().filter { it.type.isNotBlank() }
+    }
+
+    private fun JSONArray?.toActionPreviews(): List<AgentActionPreview> {
+        if (this == null) return emptyList()
+        return List(length()) { index ->
+            optJSONObject(index)?.let { item ->
+                AgentActionPreview(
+                    type = item.optString("type"),
+                    title = item.optString("title"),
+                    description = item.optString("description"),
+                    impactCount = item.optInt("impactCount", 0),
+                    records = item.optJSONArray("records").toMapList(),
+                    scheduledRecords = item.optJSONArray("scheduledRecords").toMapList(),
+                    riskNotice = item.optString("riskNotice"),
+                )
+            }
+        }.filterNotNull().filter { it.type.isNotBlank() && it.title.isNotBlank() }
+    }
+
+    private fun JSONArray?.toMapList(): List<Map<String, Any?>> {
+        if (this == null) return emptyList()
+        return List(length()) { index ->
+            optJSONObject(index)?.toMap()
+        }.filterNotNull()
+    }
+
+    private fun JSONObject.toMap(): Map<String, Any?> =
+        keys().asSequence().associateWith { key ->
+            when (val value = opt(key)) {
+                JSONObject.NULL -> null
+                is JSONObject -> value.toMap()
+                is JSONArray -> value.toList()
+                else -> value
+            }
+        }
+
+    private fun JSONArray.toList(): List<Any?> =
+        List(length()) { index ->
+            when (val value = opt(index)) {
+                JSONObject.NULL -> null
+                is JSONObject -> value.toMap()
+                is JSONArray -> value.toList()
+                else -> value
+            }
+        }
 
     private fun Int.toUserMessage(): String = when (this) {
         401, 403 -> "模型服务拒绝访问，请检查配置。"
