@@ -11,7 +11,7 @@
 | 助手       | `app/src/main/java/com/keacs/app/ui/agent`                               | 在线助手一级页面、消息列表、输入框和基础状态    |
 | 管理       | `app/src/main/java/com/keacs/app/ui/management`                          | 分类管理、账户管理、图标与颜色映射        |
 | 定时记账     | `app/src/main/java/com/keacs/app/ui/scheduled`                           | 定时记账列表、编辑和启停              |
-| 设置       | `app/src/main/java/com/keacs/app/ui/settings`                            | 我的、当月概览、资产负债概览、设置、关于     |
+| 设置       | `app/src/main/java/com/keacs/app/ui/settings`                            | 我的、设置、关于     |
 | 通用组件     | `app/src/main/java/com/keacs/app/ui/components`                          | 卡片、底栏、数字键盘、弹窗等通用 UI      |
 | Domain 层 | `app/src/main/java/com/keacs/app/domain`                                 | 业务模型、UseCase、规则          |
 | 余额规则     | `app/src/main/java/com/keacs/app/domain/rule/RecordCalculations.kt`      | 余额、历史余额、收支汇总规则           |

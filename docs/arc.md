@@ -15,7 +15,7 @@
 
 | 开发内容       | 对应章节                      | 说明                                        |
 | ---------- | ------------------------- | ----------------------------------------- |
-| 技术栈变化      | `1. 技术栈`                  | 增加 Agent 后端、通用大模型接入和 HTTPS 部署要求           |
+| 技术栈变化      | `1. 技术栈`                  | 增加 Agent 后端、通用大模型接入和 HTTPS API 要求           |
 | App 目录调整   | `3. 目录结构`                 | 增加 `ui/agent`、`domain/agent`、`data/agent` |
 | 在线助手配置     | `5. 数据库`                  | 增加 DataStore 配置项                          |
 | Agent 服务边界 | `6. 核心服务`                 | 明确 App 端、后端和模型各自职责                        |
@@ -46,7 +46,7 @@ Agent 后端：
 - 数据校验：Pydantic
 - HTTP 客户端：httpx
 - 轻量存储：SQLite
-- 部署：Docker Compose
+- 容器编排：Docker Compose
 - HTTPS 反向代理：Caddy 或 Nginx
 
 大模型：
@@ -507,12 +507,6 @@ App 只能通过现有 UseCase 执行写入：
 - Docker Compose
 - Caddy 或 Nginx 提供 HTTPS 反向代理
 
-部署目标：
-
-- 腾讯云轻量应用服务器
-- 只开放 HTTPS 端口
-- 官方免费服务使用的模型访问地址、API Key 和模型名放在服务器环境变量或服务端配置中
-
 后端目录建议：
 
 ```text
@@ -548,21 +542,6 @@ server/
 - 校验模型结构化输出。
 - 返回 App 可展示的回答、追问或操作预览。
 - 保存不含账本内容的元信息日志。
-
-部署配置：
-
-- `server/Dockerfile`：构建 FastAPI 后端镜像。
-- `server/docker-compose.yml`：启动后端和 Caddy HTTPS 反向代理。
-- `server/Caddyfile`：按 `KEACS_AGENT_DOMAIN` 自动申请 HTTPS 证书并反向代理到后端。
-- `server/.env.example`：列出部署所需环境变量，真实 API Key 只放在服务器环境变量或 `server/.env`，不入库。
-
-官方模型默认部署参数：
-
-- `KEACS_MODEL_PROVIDER=openai_compatible`
-- `KEACS_MODEL_BASE_URL=https://api.minimax.io/v1`
-- `KEACS_MODEL_NAME=MiniMax-M2.7`
-- `KEACS_MODEL_REASONING_SPLIT=true`
-- `KEACS_MODEL_API_KEY` 由服务器环境变量提供，后续可直接调整。
 
 后端不负责：
 

@@ -107,7 +107,6 @@ fun MineScreen(
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
-        MineOverviewSection(repository = repository)
         DividedMenuCard {
             MenuRow(Icons.Rounded.Category, "分类管理", KeacsColors.Primary, onClick = onCategoryClick)
             MenuDivider()
