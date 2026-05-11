@@ -40,7 +40,16 @@ class AgentContextProvider(
             emptyList()
         }
 
+        val now = clock()
+        val timeContext = mapOf(
+            "today" to SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(now)),
+            "thisMonth" to SimpleDateFormat("yyyy-MM", Locale.getDefault()).format(Date(now)),
+            "thisYear" to SimpleDateFormat("yyyy", Locale.getDefault()).format(Date(now)),
+            "currentTime" to SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(now))
+        )
+
         return AgentLocalContext(
+            timeContext = timeContext,
             categories = categories
                 .filter { it.isEnabled && it.direction in accountOrRecordDirections }
                 .sortedWith(compareBy<CategoryEntity> { it.direction }.thenBy { it.sortOrder })

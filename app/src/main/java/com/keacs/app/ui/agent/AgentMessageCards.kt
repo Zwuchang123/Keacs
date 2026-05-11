@@ -34,24 +34,6 @@ import kotlinx.coroutines.delay
 import java.util.Locale
 
 @Composable
-internal fun AgentConversationHeader(onClearConversation: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "已保留原对话",
-            color = KeacsColors.TextSecondary,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        TextButton(onClick = onClearConversation) {
-            Text("清空对话")
-        }
-    }
-}
-
-@Composable
 internal fun LongConversationNotice(onClearConversation: () -> Unit) {
     KeacsCard {
         Row(
@@ -243,5 +225,5 @@ internal fun Long.formatElapsed(): String =
     if (this < 1_000) {
         "${this}ms"
     } else {
-        String.format(Locale.getDefault(), "%.1f 秒", this / 1000.0)
+        String.format(Locale.getDefault(), "%.1fS", this / 1000.0)
     }

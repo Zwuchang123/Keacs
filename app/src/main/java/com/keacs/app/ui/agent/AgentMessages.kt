@@ -61,11 +61,6 @@ fun AgentMessages(
                 AgentStatusCard(message = settingsMessage, onOpenSettings = onOpenSettings)
             }
         }
-        if (state.messages.isNotEmpty()) {
-            item {
-                AgentConversationHeader(onClearConversation = onClearConversation)
-            }
-        }
         if (state.messages.size >= AgentViewModel.CLEANUP_WARNING_THRESHOLD) {
             item {
                 LongConversationNotice(onClearConversation = onClearConversation)
@@ -113,15 +108,16 @@ private fun AgentMessageBubble(
             Column(
                 modifier = Modifier
                     .widthIn(max = bubbleMaxWidth)
-                    .clip(MaterialTheme.shapes.large)
-                    .background(
-                        when {
-                            isUser -> KeacsColors.Primary
-                            isError -> KeacsColors.Error.copy(alpha = 0.1f)
-                            else -> KeacsColors.Surface
-                        },
-                    )
-                    .padding(horizontal = 14.dp, vertical = 11.dp),
+                    .then(
+                        if (isUser) {
+                            Modifier
+                                .clip(MaterialTheme.shapes.large)
+                                .background(KeacsColors.Primary)
+                                .padding(horizontal = 14.dp, vertical = 11.dp)
+                        } else {
+                            Modifier.padding(vertical = 4.dp)
+                        }
+                    ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
@@ -149,7 +145,7 @@ private fun AgentMessageBubble(
                 }
                 message.elapsedMillis?.let { elapsed ->
                     Text(
-                        text = "回复耗时 ${elapsed.formatElapsed()}",
+                        text = elapsed.formatElapsed(),
                         color = if (isUser) KeacsColors.Surface.copy(alpha = 0.8f) else KeacsColors.TextTertiary,
                         style = MaterialTheme.typography.bodySmall,
                     )

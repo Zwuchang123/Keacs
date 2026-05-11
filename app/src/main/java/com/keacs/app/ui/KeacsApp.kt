@@ -2,6 +2,8 @@ package com.keacs.app.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -94,6 +96,15 @@ fun KeacsApp(
     var scheduledDeleteRequest by rememberSaveable { mutableStateOf(0) }
     var navigationDirection by rememberSaveable { mutableIntStateOf(1) }
     val currentDestination = bottomDestinations.firstOrNull { it.route == currentRoute }
+
+    val agentViewModel: AgentViewModel = viewModel(
+        factory = AgentViewModelFactory(
+            preferencesManager = preferencesManager,
+            repository = repository,
+            scheduledRepository = scheduledRepository
+        )
+    )
+
     val screenTitle = when {
         currentRoute == ROUTE_CATEGORY_LIST -> "分类管理"
         currentRoute.startsWith(ROUTE_CATEGORY_EDIT) -> "编辑分类"
@@ -162,7 +173,7 @@ fun KeacsApp(
             navigateBack()
         },
         actions = {
-            currentDestination?.let { TopActions(destination = it) }
+            currentDestination?.let { TopActions(destination = it, agentViewModel = agentViewModel) }
         },
         bottomBar = {
             val imeVisible = WindowInsets.isImeVisible
@@ -239,18 +250,11 @@ fun KeacsApp(
                 )
 
                 route == KeacsDestination.Agent.route -> {
-                    val agentViewModel: AgentViewModel = viewModel(
-                        factory = AgentViewModelFactory(
-                            preferencesManager = preferencesManager,
-                            repository = repository,
-                            scheduledRepository = scheduledRepository,
-                        ),
-                    )
                     AgentScreen(
                         viewModel = agentViewModel,
                         onOpenSettings = { navigateForward(ROUTE_SETTINGS) },
                         onSwipeLeft = { navigateTo(KeacsDestination.Mine.route) },
-                        onSwipeRight = { navigateTo(KeacsDestination.Stats.route) },
+                        onSwipeRight = { navigateTo(KeacsDestination.Stats.route) }
                     )
                 }
 
@@ -391,4 +395,17 @@ private fun backRoute(route: String): String = when {
 }
 
 @Composable
-private fun TopActions(destination: KeacsDestination) = Unit
+private fun TopActions(
+    destination: KeacsDestination,
+    agentViewModel: AgentViewModel,
+) {
+    if (destination == KeacsDestination.Agent) {
+        androidx.compose.material3.IconButton(onClick = { agentViewModel.clearConversation() }) {
+            androidx.compose.material3.Icon(
+                imageVector = Icons.Rounded.DeleteOutline,
+                contentDescription = "清空对话",
+                tint = com.keacs.app.ui.theme.KeacsColors.TextPrimary,
+            )
+        }
+    }
+}

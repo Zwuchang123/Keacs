@@ -110,6 +110,17 @@ def _parse_model_content(content: str) -> dict[str, Any]:
     payload.setdefault("contextRequests", [])
     payload.setdefault("actions", [])
     payload.setdefault("warnings", [])
+
+    # 防止模型将 JSON 暴露给用户
+    if isinstance(payload.get("reply"), str):
+        reply_str = payload["reply"].strip()
+        if (reply_str.startswith("{") and reply_str.endswith("}")) or (reply_str.startswith("[") and reply_str.endswith("]")):
+            try:
+                # 检查是否为合法的 JSON
+                json.loads(reply_str)
+                payload["reply"] = "好的，我已经收到并处理了你的请求。"
+            except json.JSONDecodeError:
+                pass
     return payload
 
 
@@ -127,19 +138,19 @@ def _parse_json_fragment(content: str) -> dict[str, Any] | None:
 
 def _timeout_response() -> dict[str, Any]:
     return {
-        "reply": "模型响应较慢，这次没有拿到稳定结果。请继续补充金额、日期、分类或账户，我会结合本机上下文重新判断。",
+        "reply": "我没有拿到稳定的结果。请继续补充金额、日期、分类或账户，我会结合上下文重新判断。",
         "needsMoreContext": False,
         "contextRequests": [],
         "actions": [],
-        "warnings": ["模型响应超过 90 秒，已自动停止等待。"],
+        "warnings": [],
     }
 
 
 def _upstream_limited_response() -> dict[str, Any]:
     return {
-        "reply": "官方模型服务当前请求受限，请稍后再试。",
+        "reply": "当前请求受限，请稍后再试。",
         "needsMoreContext": False,
         "contextRequests": [],
         "actions": [],
-        "warnings": ["模型服务返回限流提示。"],
+        "warnings": [],
     }

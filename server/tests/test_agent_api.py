@@ -79,7 +79,7 @@ def test_model_failure_returns_readable_fallback(tmp_path):
     response = client.post("/api/agent/chat", json=_payload("昨天午饭 18 微信"))
 
     assert response.status_code == 200
-    assert "没有拿到稳定的模型结果" in response.json()["reply"]
+    assert "没有拿到稳定的结果" in response.json()["reply"]
 
 
 def test_chat_rejects_empty_message(tmp_path):
@@ -159,10 +159,10 @@ def test_model_content_extracts_json_after_think_block():
 def test_model_timeout_returns_fast_user_message():
     payload = _timeout_response()
 
-    assert "响应较慢" in payload["reply"]
+    assert "没有拿到稳定的结果" in payload["reply"]
     assert payload["needsMoreContext"] is False
     assert payload["actions"] == []
-    assert payload["warnings"]
+    assert payload["warnings"] == []
 
 
 def test_model_limit_returns_clear_user_message():

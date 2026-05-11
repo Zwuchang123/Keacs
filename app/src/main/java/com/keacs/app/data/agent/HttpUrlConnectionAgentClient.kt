@@ -229,7 +229,7 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
             return "**我整理好了待确认内容**\n\n请查看下面的预览，确认后才会写入本机账本。"
         }
         if (fallbackReply.trim().startsWith("{")) {
-            return "我收到模型结果，但内容不够清晰。请换个说法再试。"
+            return "返回内容不够清晰。请换个说法再试。"
         }
         return fallbackReply
     }
@@ -298,8 +298,8 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
             return detail
         }
         return when (this) {
-        401, 403 -> "模型服务拒绝访问，请检查配置。"
-        404 -> "模型服务地址不可用，请检查访问地址。"
+        401, 403 -> "服务拒绝访问，请检查配置。"
+        404 -> "服务地址不可用，请检查访问地址。"
         429 -> "请求过于频繁，请稍后再试。"
         in 500..599 -> "服务器暂时不可用，请稍后再试。"
         else -> "助手请求失败，请检查网络或配置。"

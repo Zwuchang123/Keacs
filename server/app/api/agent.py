@@ -41,11 +41,11 @@ def create_agent_router(settings: Settings, audit_log: AuditLog) -> APIRouter:
         except Exception:
             error_type = "model_call_failed"
             return AgentChatResponse(
-                reply="**这次没有拿到稳定的模型结果**\n\n我不会写入账本。你可以继续补充金额、日期、分类或账户，我会结合本机上下文重新判断。",
+                reply="我没有拿到稳定的结果，不会写入账本。你可以继续补充金额、日期、分类或账户，我会结合上下文重新判断。",
                 needs_more_context=False,
                 context_requests=[],
                 actions=[],
-                warnings=["模型响应较慢或格式异常，已保留本次问题。"],
+                warnings=[],
             )
         finally:
             audit_log.record(

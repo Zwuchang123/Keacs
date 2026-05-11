@@ -54,12 +54,12 @@ class AgentRepository(
             is AgentCallResult.Success -> AgentCallResult.Success(
                 response = result.response.copy(clientRequestId = request.clientRequestId),
             )
-            is AgentCallResult.NetworkFailure -> localFallback(message, localContext, "在线模型这次没有稳定返回，已先用本地规则处理。")
+            is AgentCallResult.NetworkFailure -> localFallback(message, localContext, null)
                 ?.let { AgentCallResult.Success(it.copy(clientRequestId = request.clientRequestId)) }
-                ?: AgentCallResult.NetworkFailure("这次没有连上在线模型。已保留输入内容，可以稍后重试或检查模型配置。")
-            is AgentCallResult.InvalidResponse -> localFallback(message, localContext, "模型返回格式不稳定，已先用本地规则处理。")
+                ?: AgentCallResult.NetworkFailure("服务连接失败。已保留输入内容，可以稍后重试或检查配置。")
+            is AgentCallResult.InvalidResponse -> localFallback(message, localContext, null)
                 ?.let { AgentCallResult.Success(it.copy(clientRequestId = request.clientRequestId)) }
-                ?: AgentCallResult.InvalidResponse("助手没有返回清晰内容。已保留输入内容，可以换个说法再试。")
+                ?: AgentCallResult.InvalidResponse("没有返回清晰内容。已保留输入内容，可以换个说法再试。")
             else -> result
         }
     }
@@ -108,6 +108,7 @@ data class AgentConversationTurn(
 )
 
 data class AgentLocalContext(
+    val timeContext: Map<String, String> = emptyMap(),
     val categories: List<Map<String, Any?>> = emptyList(),
     val accounts: List<Map<String, Any?>> = emptyList(),
     val records: List<Map<String, Any?>> = emptyList(),
@@ -211,7 +212,7 @@ private fun List<AgentConversationTurn>.trimForRequest(): List<AgentConversation
 private fun localFallback(
     message: String,
     localContext: AgentLocalContext,
-    warning: String,
+    warning: String?,
 ): AgentChatResponse? =
     buildLocalRecordPreview(message, localContext, warning)
         ?: buildLocalStatsReply(message, localContext, warning)
@@ -219,7 +220,7 @@ private fun localFallback(
 private fun buildLocalRecordPreview(
     message: String,
     localContext: AgentLocalContext,
-    warning: String,
+    warning: String?,
 ): AgentChatResponse? {
     if (!message.looksLikeRecordCreation()) return null
     if (message.contains("转")) return null
@@ -245,7 +246,7 @@ private fun buildLocalRecordPreview(
         record["fromAccountName"] = accountName
     }
     return AgentChatResponse(
-        reply = "**请确认这笔账目**\n\n我先按本地规则整理成预览。确认后才会保存到本机账本。",
+        reply = "**请确认这笔账目**\n\n确认后才会保存到本机账本。",
         actions = listOf(
             AgentActionPreview(
                 type = "create_record",
@@ -256,14 +257,14 @@ private fun buildLocalRecordPreview(
                 riskNotice = "请核对金额、日期、分类和账户。",
             ),
         ),
-        warnings = listOf(warning),
+        warnings = listOfNotNull(warning),
     )
 }
 
 private fun buildLocalStatsReply(
     message: String,
     localContext: AgentLocalContext,
-    warning: String,
+    warning: String?,
 ): AgentChatResponse? {
     if (!message.looksLikeStatsQuestion()) return null
     val stats = localContext.stats
@@ -272,8 +273,8 @@ private fun buildLocalStatsReply(
     val expense = stats.longValue("expenseCent") ?: 0L
     val balance = stats.longValue("balanceCent") ?: (income - expense)
     return AgentChatResponse(
-        reply = "**$rangeLabel 账本摘要**\n\n收入：${income.formatMoney()}\n支出：${expense.formatMoney()}\n结余：${balance.formatMoney()}\n\n以上结果来自本机账本，本次不会写入任何内容。",
-        warnings = listOf(warning),
+        reply = "**$rangeLabel 账本摘要**\n\n收入：${income.formatMoney()}\n支出：${expense.formatMoney()}\n结余：${balance.formatMoney()}",
+        warnings = listOfNotNull(warning),
     )
 }
 
