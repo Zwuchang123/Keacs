@@ -193,36 +193,15 @@ internal fun AgentEmptyState(
 }
 
 @Composable
-internal fun AgentGuidanceToggleRow(onToggle: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End,
-    ) {
-        TextButton(onClick = onToggle) {
-            Icon(
-                imageVector = Icons.Rounded.AutoAwesome,
-                contentDescription = null,
-                tint = KeacsColors.Primary,
-                modifier = Modifier.size(16.dp),
-            )
-            Text(
-                text = "打开引导",
-                color = KeacsColors.Primary,
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-        }
-    }
-}
-
-@Composable
 internal fun AgentFeedbackRow(
     selectedFeedback: String,
     canRegenerate: Boolean,
+    showGuidanceToggle: Boolean,
     onLike: () -> Unit,
     onDislike: () -> Unit,
     onRegenerate: () -> Unit,
     onCopy: () -> Unit,
+    onToggleGuidance: () -> Unit,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -262,6 +241,16 @@ internal fun AgentFeedbackRow(
                 )
             }
         }
+        if (showGuidanceToggle) {
+            IconButton(onClick = onToggleGuidance, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Rounded.AutoAwesome,
+                    contentDescription = "打开引导",
+                    tint = KeacsColors.Primary,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
     }
 }
 
@@ -271,7 +260,7 @@ internal fun AgentCopyRow(
     onCopy: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = if (isUser) Modifier else Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
     ) {
         IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
