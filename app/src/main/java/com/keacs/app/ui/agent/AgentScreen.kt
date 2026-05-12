@@ -53,6 +53,7 @@ fun AgentScreen(
             onActionChange = viewModel::updateAction,
             onFeedback = viewModel::submitMessageFeedback,
             onClearConversation = viewModel::clearConversation,
+            onToggleGuidance = viewModel::toggleGuidance,
             modifier = Modifier.weight(1f),
         )
         AgentInputBar(

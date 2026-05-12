@@ -30,6 +30,7 @@ data class AgentUiState(
     val input: String = "",
     val messages: List<AgentMessage> = emptyList(),
     val suggestions: List<String> = emptyList(),
+    val isGuidanceVisible: Boolean = true,
     val isSending: Boolean = false,
     val lastClientRequestId: String = "",
     val sendingStartedAtMillis: Long? = null,
@@ -43,6 +44,7 @@ data class AgentMessage(
     val actions: List<AgentActionPreview> = emptyList(),
     val warnings: List<String> = emptyList(),
     val elapsedMillis: Long? = null,
+    val feedback: String = "",
 )
 
 enum class AgentMessageRole {
@@ -216,12 +218,23 @@ class AgentViewModel(
 
     fun clearConversation() {
         _uiState.update {
-            it.copy(input = "", messages = emptyList(), suggestions = buildSuggestions(emptyList()), isSending = false, sendingStartedAtMillis = null)
+            it.copy(
+                input = "",
+                messages = emptyList(),
+                suggestions = buildSuggestions(emptyList()),
+                isGuidanceVisible = true,
+                isSending = false,
+                sendingStartedAtMillis = null,
+            )
         }
         refreshSuggestions(emptyList())
         viewModelScope.launch {
             preferencesManager.clearAgentConversationSnapshot()
         }
+    }
+
+    fun toggleGuidance() {
+        _uiState.update { it.copy(isGuidanceVisible = toggleAgentGuidance(it.isGuidanceVisible)) }
     }
 
     fun updateAction(messageId: Long, action: AgentActionPreview, changedField: String) {
@@ -246,8 +259,17 @@ class AgentViewModel(
     }
 
     fun submitMessageFeedback(message: AgentMessage, feedback: String) {
+        if (message.role != AgentMessageRole.ASSISTANT) return
+        if (feedback == AgentFeedbackRegenerate) {
+            regenerateMessage(message)
+            return
+        }
+        _uiState.update { current ->
+            current.copy(messages = current.messages.withMessageFeedback(message.id, feedback))
+        }
+        persistConversation()
         val clientRequestId = _uiState.value.lastClientRequestId
-        if (clientRequestId.isBlank() || message.role != AgentMessageRole.ASSISTANT) return
+        if (clientRequestId.isBlank()) return
         viewModelScope.launch {
             agentRepository.sendFeedback(
                 clientRequestId = clientRequestId,
@@ -255,9 +277,79 @@ class AgentViewModel(
                 actionTypes = emptyList(),
             )
         }
-        if (feedback == "regenerate") {
-            _uiState.update { it.copy(input = it.messages.lastOrNull { msg -> msg.role == AgentMessageRole.USER }?.text.orEmpty()) }
+    }
+
+    private fun regenerateMessage(message: AgentMessage) {
+        val state = _uiState.value
+        if (state.isSending || !state.messages.canRegenerateMessage(message.id)) return
+        val userMessage = state.messages.userMessageBefore(message.id) ?: return
+        val startedAt = System.currentTimeMillis()
+        val history = state.messages
+            .takeWhile { it.id != message.id }
+            .toConversationTurns()
+            .dropLast(1)
+        _uiState.update {
+            it.copy(
+                isSending = true,
+                sendingStartedAtMillis = startedAt,
+                messages = it.messages.replaceAssistantMessage(
+                    messageId = message.id,
+                    text = "正在重新生成",
+                ),
+            )
         }
+        persistConversation()
+        viewModelScope.launch {
+            val localContext = contextProvider.buildForMessage(userMessage.text)
+            when (val result = agentRepository.sendMessage(userMessage.text, localContext, history)) {
+                is AgentCallResult.Success -> {
+                    val actions = result.response.actions.withStableActionIds(result.response.clientRequestId)
+                    actions.filter { it.requiresConfirmation() }.forEach { action ->
+                        runStore.savePendingAction(result.response.clientRequestId, action)
+                    }
+                    _uiState.update { current ->
+                        val messages = current.messages.replaceAssistantMessage(
+                            messageId = message.id,
+                            text = result.response.reply,
+                            actions = actions,
+                            warnings = result.response.warnings,
+                            elapsedMillis = System.currentTimeMillis() - startedAt,
+                        )
+                        current.copy(
+                            isSending = false,
+                            sendingStartedAtMillis = null,
+                            lastClientRequestId = result.response.clientRequestId,
+                            messages = messages,
+                            suggestions = buildSuggestions(messages),
+                        )
+                    }
+                    refreshSuggestions(_uiState.value.messages)
+                    persistConversation()
+                }
+                is AgentCallResult.ConfigurationRequired -> replaceRegeneratedMessageWithError(message.id, result.message, startedAt)
+                is AgentCallResult.NetworkFailure -> replaceRegeneratedMessageWithError(message.id, result.message, startedAt)
+                is AgentCallResult.InvalidResponse -> replaceRegeneratedMessageWithError(message.id, result.message, startedAt)
+            }
+        }
+    }
+
+    private fun replaceRegeneratedMessageWithError(
+        messageId: Long,
+        error: String,
+        startedAt: Long,
+    ) {
+        _uiState.update { current ->
+            current.copy(
+                isSending = false,
+                sendingStartedAtMillis = null,
+                messages = current.messages.replaceAssistantMessage(
+                    messageId = messageId,
+                    text = error,
+                    elapsedMillis = System.currentTimeMillis() - startedAt,
+                ),
+            )
+        }
+        persistConversation()
     }
 
     private fun sendActionFeedback(

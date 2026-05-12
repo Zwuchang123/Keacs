@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.ThumbDown
@@ -114,11 +116,25 @@ internal fun AgentStatusCard(
 internal fun AgentGuidedSuggestions(
     suggestions: List<String>,
     onExampleClick: (String) -> Unit,
+    onToggle: () -> Unit,
 ) {
     val items = suggestions.ifEmpty {
         listOf("记一笔今天的支出", "分析最近7天消费", "查看本月收入支出")
     }
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            IconButton(onClick = onToggle, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Rounded.Close,
+                    contentDescription = "关闭引导",
+                    tint = KeacsColors.TextTertiary,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
         items.forEach { example ->
             ExampleRow(text = example, onClick = { onExampleClick(example) })
         }
@@ -129,6 +145,7 @@ internal fun AgentGuidedSuggestions(
 internal fun AgentEmptyState(
     suggestions: List<String>,
     onExampleClick: (String) -> Unit,
+    onToggle: () -> Unit,
 ) {
     KeacsCard {
         Column(
@@ -147,8 +164,18 @@ internal fun AgentEmptyState(
                     text = "想记账或查账，直接输入一句话。",
                     color = KeacsColors.TextPrimary,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(start = 12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 12.dp),
                 )
+                IconButton(onClick = onToggle, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "关闭引导",
+                        tint = KeacsColors.TextTertiary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
             }
             val examples = suggestions.ifEmpty {
                 listOf("记一笔午饭 18 元", "这个月花了多少？", "帮我看看本月支出")
@@ -166,20 +193,54 @@ internal fun AgentEmptyState(
 }
 
 @Composable
+internal fun AgentGuidanceToggleRow(onToggle: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End,
+    ) {
+        TextButton(onClick = onToggle) {
+            Icon(
+                imageVector = Icons.Rounded.AutoAwesome,
+                contentDescription = null,
+                tint = KeacsColors.Primary,
+                modifier = Modifier.size(16.dp),
+            )
+            Text(
+                text = "打开引导",
+                color = KeacsColors.Primary,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(start = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
 internal fun AgentFeedbackRow(
+    selectedFeedback: String,
+    canRegenerate: Boolean,
     onLike: () -> Unit,
     onDislike: () -> Unit,
     onRegenerate: () -> Unit,
+    onCopy: () -> Unit,
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
+            Icon(
+                imageVector = Icons.Rounded.ContentCopy,
+                contentDescription = "复制消息",
+                tint = KeacsColors.TextTertiary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
         IconButton(onClick = onLike, modifier = Modifier.size(32.dp)) {
             Icon(
                 imageVector = Icons.Rounded.ThumbUp,
                 contentDescription = "有帮助",
-                tint = KeacsColors.TextTertiary,
+                tint = if (selectedFeedback == AgentFeedbackLike) KeacsColors.Primary else KeacsColors.TextTertiary,
                 modifier = Modifier.size(16.dp),
             )
         }
@@ -187,14 +248,36 @@ internal fun AgentFeedbackRow(
             Icon(
                 imageVector = Icons.Rounded.ThumbDown,
                 contentDescription = "不满意",
-                tint = KeacsColors.TextTertiary,
+                tint = if (selectedFeedback == AgentFeedbackDislike) KeacsColors.Error else KeacsColors.TextTertiary,
                 modifier = Modifier.size(16.dp),
             )
         }
-        IconButton(onClick = onRegenerate, modifier = Modifier.size(32.dp)) {
+        if (canRegenerate) {
+            IconButton(onClick = onRegenerate, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Rounded.Refresh,
+                    contentDescription = "重新生成",
+                    tint = KeacsColors.TextTertiary,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun AgentCopyRow(
+    isUser: Boolean,
+    onCopy: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
+    ) {
+        IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
             Icon(
-                imageVector = Icons.Rounded.Refresh,
-                contentDescription = "重新生成",
+                imageVector = Icons.Rounded.ContentCopy,
+                contentDescription = "复制消息",
                 tint = KeacsColors.TextTertiary,
                 modifier = Modifier.size(16.dp),
             )

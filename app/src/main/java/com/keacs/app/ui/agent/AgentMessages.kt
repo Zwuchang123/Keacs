@@ -11,11 +11,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.Insights
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -46,6 +43,7 @@ fun AgentMessages(
     onActionChange: (Long, AgentActionPreview, String) -> Unit,
     onFeedback: (AgentMessage, String) -> Unit,
     onClearConversation: () -> Unit,
+    onToggleGuidance: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -75,14 +73,19 @@ fun AgentMessages(
                 LongConversationNotice(onClearConversation = onClearConversation)
             }
         }
-        if (state.messages.isEmpty()) {
+        if (state.messages.isEmpty() && state.isGuidanceVisible) {
             item {
-                AgentEmptyState(suggestions = state.suggestions, onExampleClick = onExampleClick)
+                AgentEmptyState(
+                    suggestions = state.suggestions,
+                    onExampleClick = onExampleClick,
+                    onToggle = onToggleGuidance,
+                )
             }
         }
         items(state.messages, key = { it.id }) { message ->
             AgentMessageBubble(
                 message = message,
+                canRegenerate = !state.isSending && state.messages.canRegenerateMessage(message.id),
                 editOptions = state.editOptions,
                 onActionConfirm = onActionConfirm,
                 onActionCancel = onActionCancel,
@@ -90,14 +93,23 @@ fun AgentMessages(
                 onFeedback = onFeedback,
             )
         }
-        if (state.isSending) {
+        if (state.isSending && state.messages.lastOrNull()?.text != "正在重新生成") {
             item {
                 SendingBubble(startedAtMillis = state.sendingStartedAtMillis)
             }
         }
-        if (state.messages.isNotEmpty() && !state.isSending) {
+        if (state.messages.isNotEmpty() && !state.isSending && state.isGuidanceVisible) {
             item {
-                AgentGuidedSuggestions(suggestions = state.suggestions, onExampleClick = onExampleClick)
+                AgentGuidedSuggestions(
+                    suggestions = state.suggestions,
+                    onExampleClick = onExampleClick,
+                    onToggle = onToggleGuidance,
+                )
+            }
+        }
+        if (!state.isGuidanceVisible && !state.isSending) {
+            item {
+                AgentGuidanceToggleRow(onToggle = onToggleGuidance)
             }
         }
     }
@@ -106,6 +118,7 @@ fun AgentMessages(
 @Composable
 private fun AgentMessageBubble(
     message: AgentMessage,
+    canRegenerate: Boolean,
     editOptions: AgentEditOptions,
     onActionConfirm: (AgentActionPreview) -> Unit,
     onActionCancel: (AgentActionPreview) -> Unit,
@@ -114,6 +127,7 @@ private fun AgentMessageBubble(
 ) {
     val isUser = message.role == AgentMessageRole.USER
     val isError = message.role == AgentMessageRole.ERROR
+    val clipboard = LocalClipboardManager.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
@@ -125,7 +139,7 @@ private fun AgentMessageBubble(
                         Modifier
                             .widthIn(max = 288.dp)
                             .clip(MaterialTheme.shapes.large)
-                            .background(KeacsColors.TextPrimary.copy(alpha = 0.92f))
+                            .background(KeacsColors.PrimaryLight)
                             .padding(horizontal = 15.dp, vertical = 12.dp)
                     } else {
                         Modifier
@@ -159,15 +173,23 @@ private fun AgentMessageBubble(
             message.elapsedMillis?.let { elapsed ->
                 Text(
                     text = elapsed.formatElapsed(),
-                    color = if (isUser) KeacsColors.Surface.copy(alpha = 0.8f) else KeacsColors.TextTertiary,
+                    color = if (isUser) KeacsColors.TextSecondary else KeacsColors.TextTertiary,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
             if (message.role == AgentMessageRole.ASSISTANT) {
                 AgentFeedbackRow(
-                    onLike = { onFeedback(message, "like") },
-                    onDislike = { onFeedback(message, "dislike") },
-                    onRegenerate = { onFeedback(message, "regenerate") },
+                    selectedFeedback = message.feedback,
+                    canRegenerate = canRegenerate,
+                    onLike = { onFeedback(message, AgentFeedbackLike) },
+                    onDislike = { onFeedback(message, AgentFeedbackDislike) },
+                    onRegenerate = { onFeedback(message, AgentFeedbackRegenerate) },
+                    onCopy = { clipboard.setText(AnnotatedString(message.text)) },
+                )
+            } else {
+                AgentCopyRow(
+                    isUser = isUser,
+                    onCopy = { clipboard.setText(AnnotatedString(message.text)) },
                 )
             }
         }
@@ -181,15 +203,12 @@ private fun RichMessageContent(
     isError: Boolean,
 ) {
     val baseColor = when {
-        isUser -> KeacsColors.Surface
+        isUser -> KeacsColors.TextPrimary
         isError -> KeacsColors.Error
         else -> KeacsColors.TextPrimary
     }
     val blocks = parseRichBlocks(text)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (!isUser && blocks.any { it is AgentRichBlock.Info }) {
-            AgentSticker(text = stickerText(text), isError = isError)
-        }
         blocks.forEach { block ->
             when (block) {
                 is AgentRichBlock.Paragraph -> Text(
@@ -205,7 +224,7 @@ private fun RichMessageContent(
                         ) {
                             Text(
                                 text = "•",
-                                color = if (isUser) KeacsColors.Surface.copy(alpha = 0.82f) else KeacsColors.Primary,
+                                color = if (isUser) KeacsColors.TextSecondary else KeacsColors.TextSecondary,
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                             Text(
@@ -217,43 +236,8 @@ private fun RichMessageContent(
                         }
                     }
                 }
-                is AgentRichBlock.Info -> AgentInfoBlock(
-                    label = block.text,
-                    color = block.color,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
             }
         }
-    }
-}
-
-@Composable
-private fun AgentSticker(text: String, isError: Boolean) {
-    val color = if (isError) KeacsColors.Error else KeacsColors.Primary
-    Row(
-        modifier = Modifier
-            .clip(MaterialTheme.shapes.extraLarge)
-            .background(color.copy(alpha = 0.1f))
-            .padding(horizontal = 10.dp, vertical = 7.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = when {
-                isError -> Icons.Rounded.ErrorOutline
-                text.contains("完成") -> Icons.Rounded.CheckCircle
-                else -> Icons.Rounded.Insights
-            },
-            contentDescription = null,
-            tint = color,
-            modifier = Modifier.padding(top = 1.dp),
-        )
-        Text(
-            text = text,
-            color = color,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
     }
 }
 
@@ -278,7 +262,6 @@ private fun AgentInfoBlock(
 private sealed interface AgentRichBlock {
     data class Paragraph(val text: String) : AgentRichBlock
     data class Bullets(val items: List<String>) : AgentRichBlock
-    data class Info(val text: String, val color: Color) : AgentRichBlock
 }
 
 private fun parseRichBlocks(text: String): List<AgentRichBlock> {
@@ -314,12 +297,6 @@ private fun parseRichBlocks(text: String): List<AgentRichBlock> {
             bullets += bullet
             return@forEach
         }
-        line.infoColor()?.let { color ->
-            flushParagraph()
-            flushBullets()
-            blocks += AgentRichBlock.Info(line, color)
-            return@forEach
-        }
         if (paragraph.isNotEmpty()) {
             paragraph.append('\n')
         }
@@ -329,27 +306,6 @@ private fun parseRichBlocks(text: String): List<AgentRichBlock> {
     flushBullets()
     return blocks.ifEmpty { listOf(AgentRichBlock.Paragraph(text)) }
 }
-
-private fun String.infoColor(): Color? {
-    val label = substringBefore("：").substringBefore(":").trim()
-    return when (label) {
-        "收入" -> KeacsColors.Income
-        "支出" -> KeacsColors.Expense
-        "结余", "范围" -> KeacsColors.Primary
-        "提醒", "注意" -> KeacsColors.Warning
-        "失败" -> KeacsColors.Error
-        else -> null
-    }
-}
-
-private fun stickerText(text: String): String =
-    when {
-        text.contains("已完成") -> "已完成"
-        text.contains("请确认") -> "待确认"
-        text.contains("失败") -> "处理失败"
-        text.contains("摘要") || text.contains("复盘") -> "账本摘要"
-        else -> "已整理"
-    }
 
 private fun richText(text: String) = buildAnnotatedString {
     var index = 0

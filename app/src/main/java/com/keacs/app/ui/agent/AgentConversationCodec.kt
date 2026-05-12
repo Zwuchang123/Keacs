@@ -27,6 +27,7 @@ private fun AgentMessage.toJson(): JSONObject =
         .put("actions", actions.toJsonArray())
         .put("warnings", JSONArray(warnings))
         .put("elapsedMillis", elapsedMillis ?: JSONObject.NULL)
+        .put("feedback", feedback)
 
 private fun JSONObject.toAgentMessage(): AgentMessage =
     AgentMessage(
@@ -37,6 +38,7 @@ private fun JSONObject.toAgentMessage(): AgentMessage =
         actions = optJSONArray("actions").toActionPreviews(),
         warnings = optJSONArray("warnings").toStringList(),
         elapsedMillis = if (isNull("elapsedMillis")) null else optLong("elapsedMillis"),
+        feedback = optString("feedback"),
     )
 
 private fun List<AgentActionPreview>.toJsonArray(): JSONArray =
