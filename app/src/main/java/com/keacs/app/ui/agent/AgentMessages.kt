@@ -1,6 +1,8 @@
 package com.keacs.app.ui.agent
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,10 +13,16 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +60,11 @@ fun AgentMessages(
         if (lastIndex > 0) {
             listState.animateScrollToItem(lastIndex - 1)
         }
+    }
+    val guidanceToggleMessageId = if (!state.isGuidanceVisible && !state.isSending) {
+        state.messages.lastOrNull { it.role != AgentMessageRole.USER }?.id
+    } else {
+        null
     }
 
     LazyColumn(
@@ -91,6 +104,8 @@ fun AgentMessages(
                 onActionCancel = onActionCancel,
                 onActionChange = onActionChange,
                 onFeedback = onFeedback,
+                showGuidanceToggle = message.id == guidanceToggleMessageId,
+                onToggleGuidance = onToggleGuidance,
             )
         }
         if (state.isSending && state.messages.lastOrNull()?.text != "正在重新生成") {
@@ -107,15 +122,11 @@ fun AgentMessages(
                 )
             }
         }
-        if (!state.isGuidanceVisible && !state.isSending) {
-            item {
-                AgentGuidanceToggleRow(onToggle = onToggleGuidance)
-            }
-        }
     }
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun AgentMessageBubble(
     message: AgentMessage,
     canRegenerate: Boolean,
@@ -124,10 +135,13 @@ private fun AgentMessageBubble(
     onActionCancel: (AgentActionPreview) -> Unit,
     onActionChange: (Long, AgentActionPreview, String) -> Unit,
     onFeedback: (AgentMessage, String) -> Unit,
+    showGuidanceToggle: Boolean,
+    onToggleGuidance: () -> Unit,
 ) {
     val isUser = message.role == AgentMessageRole.USER
     val isError = message.role == AgentMessageRole.ERROR
     val clipboard = LocalClipboardManager.current
+    var showUserCopyMenu by remember(message.id) { mutableStateOf(false) }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
@@ -140,6 +154,10 @@ private fun AgentMessageBubble(
                             .widthIn(max = 288.dp)
                             .clip(MaterialTheme.shapes.large)
                             .background(KeacsColors.PrimaryLight)
+                            .combinedClickable(
+                                onClick = {},
+                                onLongClick = { showUserCopyMenu = true },
+                            )
                             .padding(horizontal = 15.dp, vertical = 12.dp)
                     } else {
                         Modifier
@@ -181,16 +199,32 @@ private fun AgentMessageBubble(
                 AgentFeedbackRow(
                     selectedFeedback = message.feedback,
                     canRegenerate = canRegenerate,
+                    showGuidanceToggle = showGuidanceToggle,
                     onLike = { onFeedback(message, AgentFeedbackLike) },
                     onDislike = { onFeedback(message, AgentFeedbackDislike) },
                     onRegenerate = { onFeedback(message, AgentFeedbackRegenerate) },
                     onCopy = { clipboard.setText(AnnotatedString(message.text)) },
+                    onToggleGuidance = onToggleGuidance,
                 )
-            } else {
+            } else if (!isUser) {
                 AgentCopyRow(
                     isUser = isUser,
                     onCopy = { clipboard.setText(AnnotatedString(message.text)) },
                 )
+            }
+            if (isUser) {
+                DropdownMenu(
+                    expanded = showUserCopyMenu,
+                    onDismissRequest = { showUserCopyMenu = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("复制") },
+                        onClick = {
+                            clipboard.setText(AnnotatedString(message.text))
+                            showUserCopyMenu = false
+                        },
+                    )
+                }
             }
         }
     }
@@ -219,7 +253,7 @@ private fun RichMessageContent(
                 is AgentRichBlock.Bullets -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     block.items.forEach { item ->
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = if (isUser) Modifier else Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Text(
