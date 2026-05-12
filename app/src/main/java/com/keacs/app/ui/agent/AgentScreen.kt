@@ -50,6 +50,7 @@ fun AgentScreen(
             onOpenSettings = onOpenSettings,
             onActionConfirm = viewModel::confirmAction,
             onActionCancel = viewModel::cancelAction,
+            onFeedback = viewModel::submitMessageFeedback,
             onClearConversation = viewModel::clearConversation,
             modifier = Modifier.weight(1f),
         )

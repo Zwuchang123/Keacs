@@ -16,7 +16,7 @@
 | Domain 层 | `app/src/main/java/com/keacs/app/domain`                                 | 业务模型、UseCase、规则          |
 | 余额规则     | `app/src/main/java/com/keacs/app/domain/rule/RecordCalculations.kt`      | 余额、历史余额、收支汇总规则           |
 | Data 层   | `app/src/main/java/com/keacs/app/data`                                   | 本地存储、仓库、偏好、备份            |
-| Agent App 数据 | `app/src/main/java/com/keacs/app/data/agent`                             | 助手配置读取、网络请求、长对话上下文、按问题范围选择账单上下文、模型异常本地兜底和确认后操作执行 |
+| Agent App 数据 | `app/src/main/java/com/keacs/app/data/agent`                             | 助手配置读取、网络请求、任务模型、事件归并、本地待确认操作拦截、动态引导、按问题范围选择账单上下文、模型异常本地兜底和确认后操作执行 |
 | 仓库入口     | `app/src/main/java/com/keacs/app/data/repository/LocalDataRepository.kt` | 分类、账户、记录、初始化、备份导入的核心入口   |
 | 定时记账仓库   | `app/src/main/java/com/keacs/app/data/repository/ScheduledRecordRepository.kt` | 定时记账模板保存和到期账目生成       |
 | 本地数据     | `app/src/main/java/com/keacs/app/data/local`                             | 数据库、DAO、Entity、预置数据、偏好设置 |
@@ -26,7 +26,8 @@
 | Excel 添加  | `app/src/main/java/com/keacs/app/data/importer/ExcelRecordImportService.kt` | 读取 XLSX 并添加收入、支出账目      |
 | 单元测试     | `app/src/test`                                                           | 单元测试                     |
 | 设备测试     | `app/src/androidTest`                                                    | Android 设备测试             |
-| Agent 后端  | `server/app`                                                             | FastAPI 服务、健康检查、官方助手接口、限流、日志、模型通路和安全提示词 |
+| Agent 后端  | `server/app`                                                             | FastAPI 服务、健康检查、官方助手接口、任务流接口、上下文继续、确认继续、反馈、动态引导、限流、日志、模型通路和安全提示词 |
+| Agent 后端状态 | `server/app/storage/agent_run_store.py`                                  | 保存任务阶段、待确认动作、上下文观察和反馈的轻量运行状态 |
 | Agent 部署  | `server/Dockerfile`、`server/docker-compose.yml`、`server/Caddyfile`       | 官方助手后端容器化部署和 HTTPS 反向代理配置 |
 | Agent 后端测试 | `server/tests`                                                           | 后端健康检查、mock 模型、限流和日志安全测试 |
 

@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keacs Agent 助手架构</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+
+        :root {
+            --slide-padding: clamp(1rem, 4vw, 4rem);
+            --content-gap: clamp(0.5rem, 2vw, 2rem);
+            --element-gap: clamp(0.25rem, 1vw, 1rem);
+            --title-size: clamp(1.5rem, 5vw, 4rem);
+            --h2-size: clamp(1.25rem, 3.5vw, 2.5rem);
+            --h3-size: clamp(1rem, 2.5vw, 1.75rem);
+            --body-size: clamp(0.75rem, 1.5vw, 1.125rem);
+            --small-size: clamp(0.65rem, 1vw, 0.875rem);
+            --navy: #0a0f1a;
+            --cyan: #00f5ff;
+            --magenta: #ff00ff;
+            --cyan-dim: #00f5ff33;
+            --magenta-dim: #ff00ff33;
+            --grid-color: #00f5ff15;
+        }
+
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: var(--navy);
+            color: white;
+        }
+
+        .slide::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
+                linear-gradient(var(--grid-color) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        .slide-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            max-height: 100%;
+            overflow: hidden;
+            padding: var(--slide-padding);
+            position: relative;
+            z-index: 1;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 20px var(--cyan), 0 0 40px var(--cyan-dim);
+        }
+
+        .magenta-glow {
+            text-shadow: 0 0 20px var(--magenta), 0 0 40px var(--magenta-dim);
+        }
+
+        h1 {
+            font-size: var(--title-size);
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: var(--content-gap);
+        }
+
+        h2 {
+            font-size: var(--h2-size);
+            font-weight: 600;
+            margin-bottom: var(--content-gap);
+            color: var(--cyan);
+        }
+
+        h3 {
+            font-size: var(--h3-size);
+            font-weight: 500;
+            margin-bottom: var(--element-gap);
+        }
+
+        p, li {
+            font-size: var(--body-size);
+            line-height: 1.6;
+        }
+
+        .subtitle {
+            font-size: var(--h3-size);
+            color: #888;
+            margin-bottom: var(--content-gap);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.3em 0.8em;
+            background: linear-gradient(135deg, var(--cyan-dim), var(--magenta-dim));
+            border: 1px solid var(--cyan);
+            border-radius: 20px;
+            font-size: var(--small-size);
+            margin: 0.25em;
+        }
+
+        .card {
+            background: linear-gradient(145deg, #0d1520, #151d2e);
+            border: 1px solid var(--cyan-dim);
+            border-radius: 12px;
+            padding: clamp(1rem, 2vw, 1.5rem);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--cyan), var(--magenta));
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+            gap: var(--element-gap);
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        @media (max-width: 900px) {
+            .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .flowchart {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .flow-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .flow-box {
+            padding: 0.6em 1em;
+            border-radius: 8px;
+            font-size: var(--small-size);
+            text-align: center;
+            min-width: 100px;
+            position: relative;
+        }
+
+        .flow-box.app { background: linear-gradient(135deg, #1a3a5c, #0d2240); border: 1px solid #3498db; }
+        .flow-box.backend { background: linear-gradient(135deg, #3a1a5c, #220d40); border: 1px solid #9b59b6; }
+        .flow-box.store { background: linear-gradient(135deg, #1a5c3a, #0d4022); border: 1px solid #2ecc71; }
+        .flow-box.model { background: linear-gradient(135deg, #5c3a1a, #40220d); border: 1px solid #e67e22; }
+        .flow-box.harness { background: linear-gradient(135deg, #5c1a3a, #400d22); border: 1px solid #e74c3c; }
+
+        .arrow {
+            color: var(--cyan);
+            font-size: 1.2rem;
+        }
+
+        .arrow-down {
+            width: 2px;
+            height: 20px;
+            background: linear-gradient(to bottom, var(--cyan), transparent);
+        }
+
+        table {
+            width: 100%;
+            max-width: 1000px;
+            border-collapse: collapse;
+            font-size: var(--small-size);
+        }
+
+        th, td {
+            padding: 0.6em 0.8em;
+            text-align: left;
+            border-bottom: 1px solid var(--cyan-dim);
+        }
+
+        th {
+            color: var(--cyan);
+            font-weight: 500;
+            background: rgba(0, 245, 255, 0.1);
+        }
+
+        tr:hover td {
+            background: rgba(0, 245, 255, 0.05);
+        }
+
+        .diagram-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 1rem;
+        }
+
+        .state-node {
+            padding: 0.5em 1em;
+            background: linear-gradient(135deg, #1a2a4a, #0d1525);
+            border: 1px solid var(--cyan-dim);
+            border-radius: 6px;
+            font-size: var(--small-size);
+            color: var(--cyan);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .state-node:hover {
+            background: linear-gradient(135deg, #2a4a6a, #1d3545);
+            border-color: var(--cyan);
+            box-shadow: 0 0 15px var(--cyan-dim);
+        }
+
+        .state-arrow {
+            color: var(--magenta);
+            font-size: 0.8rem;
+        }
+
+        .element-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .element-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .element-number {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--cyan), var(--magenta));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: var(--small-size);
+        }
+
+        .element-title {
+            font-size: var(--body-size);
+            font-weight: 600;
+            color: var(--cyan);
+        }
+
+        .element-desc {
+            font-size: var(--small-size);
+            color: #aaa;
+        }
+
+        .nav-dots {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .nav-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--cyan-dim);
+            border: 1px solid var(--cyan);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-dot.active {
+            background: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan);
+        }
+
+        .nav-dot:hover {
+            background: var(--cyan);
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--cyan), var(--magenta));
+            z-index: 100;
+            transition: width 0.3s ease;
+        }
+
+        .slide-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: var(--small-size);
+            color: #666;
+            z-index: 100;
+        }
+
+        .keyboard-hint {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            font-size: 0.7rem;
+            color: #444;
+            z-index: 100;
+        }
+
+        .icon-box {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .feature-list li {
+            padding-left: 1.5em;
+            position: relative;
+        }
+
+        .feature-list li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--cyan);
+        }
+
+        .scroll-container {
+            overflow-y: auto;
+            width: 100%;
+            max-height: 60vh;
+            padding-right: 1rem;
+        }
+
+        .scroll-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .scroll-container::-webkit-scrollbar-track {
+            background: var(--cyan-dim);
+            border-radius: 2px;
+        }
+
+        .scroll-container::-webkit-scrollbar-thumb {
+            background: var(--cyan);
+            border-radius: 2px;
+        }
+
+        .title-slide {
+            text-align: center;
+        }
+
+        .title-slide h1 {
+            font-size: clamp(2rem, 6vw, 5rem);
+        }
+
+        .section-number {
+            font-size: clamp(4rem, 15vw, 12rem);
+            font-weight: 900;
+            opacity: 0.1;
+            position: absolute;
+            top: 10%;
+            left: 5%;
+            line-height: 1;
+        }
+
+        .intro-points {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .intro-point {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(0, 245, 255, 0.05);
+            border-left: 3px solid var(--cyan);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .intro-icon {
+            font-size: 1.5rem;
+        }
+
+        .intro-text {
+            font-size: var(--body-size);
+        }
+
+        @media (max-height: 700px) {
+            :root {
+                --slide-padding: clamp(0.75rem, 3vw, 2rem);
+                --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+                --title-size: clamp(1.25rem, 4.5vw, 2.5rem);
+                --h2-size: clamp(1rem, 3vw, 1.75rem);
+            }
+        }
+
+        @media (max-height: 600px) {
+            :root {
+                --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem);
+                --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+                --title-size: clamp(1.1rem, 4vw, 2rem);
+                --body-size: clamp(0.7rem, 1.2vw, 0.95rem);
+            }
+            .nav-dots, .keyboard-hint {
+                display: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.2s !important;
+            }
+            html {
+                scroll-behavior: auto;
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .slide-content {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px var(--cyan-dim); }
+            50% { box-shadow: 0 0 20px var(--cyan-dim); }
+        }
+
+        .interactive-table {
+            cursor: pointer;
+        }
+
+        .interactive-table tr {
+            transition: all 0.3s ease;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: #1a2a4a;
+            border: 1px solid var(--cyan);
+            padding: 0.5em 1em;
+            border-radius: 6px;
+            font-size: var(--small-size);
+            max-width: 250px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tab-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab {
+            padding: 0.5em 1em;
+            background: transparent;
+            border: 1px solid var(--cyan-dim);
+            border-radius: 6px 6px 0 0;
+            color: #888;
+            cursor: pointer;
+            font-size: var(--small-size);
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: rgba(0, 245, 255, 0.1);
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .highlight {
+            color: var(--cyan);
+            font-weight: 500;
+        }
+
+        .forbidden {
+            color: #ff6b6b;
+        }
+
+        .separator {
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--cyan), var(--magenta));
+            margin: 1rem auto;
+        }
+
+        .logo-mark {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .end-slide {
+            text-align: center;
+        }
+
+        .end-slide h1 {
+            font-size: clamp(2rem, 5vw, 4rem);
+            margin-bottom: 1rem;
+        }
+
+        .qr-placeholder {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #1a2a4a, #0d1525);
+            border: 1px solid var(--cyan-dim);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 1rem auto;
+            font-size: 0.7rem;
+            color: #666;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--cyan);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 10s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100vh) translateX(20px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    
+    <nav class="nav-dots" id="navDots"></nav>
+    
+    <div class="slide-indicator" id="slideIndicator">1 / 12</div>
+    
+    <div class="keyboard-hint">↑↓ 滚动 · 点击圆点跳转</div>
+
+    <section class="slide" id="slide-0">
+        <div class="slide-content title-slide">
+            <div class="logo-mark">🤖</div>
+            <h1 class="glow-text">Agent 助手架构</h1>
+            <p class="subtitle">Keacs 智能记账的核心引擎</p>
+            <div class="separator"></div>
+            <p style="color: #888; font-size: var(--body-size);">一个拥有 AI 能力的便捷记账工具</p>
+            <div class="badge">AI Powered</div>
+            <div class="badge">智能记账</div>
+            <div class="badge">用户隐私优先</div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide-1">
+        <div class="slide-content">
+            <h2 class="glow-text">🏗️ 架构边界</h2>
+            <div class="grid grid-3">
+                <div class="card">
+                    <h3>📱 Android App</h3>
+                    <ul class="feature-list">
+                        <li>对话展示</li>
+                        <li>动态引导展示</li>
+                        <li>反馈采集</li>
+                        <li>确认卡片</li>
+                        <li>本地写入执行</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>⚙️ Agent 后端</h3>
+                    <ul class="feature-list">
+                        <li>Harness 编排</li>
+                        <li>状态图运行</li>
+                        <li>上下文组织</li>
+                        <li>模型调用</li>
+                        <li>自我优化</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>🧠 大模型</h3>
+                    <ul class="feature-list">
+                        <li>意图理解</li>
+                        <li>候选回答</li>
+                        <li>候选操作</li>
+                        <li>摘要生成</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide-2">
+        <div class="slide-content">
+            <h2 class="glow-text">🚫 禁止事项</h2>
+            <div class="grid grid-3">
+                <div class="card" style="border-color: #ff6b6b;">
+                    <h3 class="forbidden">📱 App 禁止</h3>
+                    <ul class="feature-list">
+                        <li class="forbidden">模型直接写库</li>
+                        <li class="forbidden">绕过确认执行写入</li>
+                    </ul>
+                </div>
+                <div class="card" style="border-color: #ff6b6b;">
+                    <h3 class="forbidden">⚙️ 后端禁止</h3>
+                    <ul class="feature-list">
+                        <li class="forbidden">替 App 写本地账本</li>
+                        <li class="forbidden">自动发布未验证策略</li>
+                    </ul>
+                </div>
+                <div class="card" style="border-color: #ff6b6b;">
+                    <h3 class="forbidden">🧠 模型禁止</h3>
+                    <ul class="feature-list">
+                        <li class="forbidden">决定最终写入</li>
+                        <li class="forbidden">声明写入已完成</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide-3">
+        <div class="slide-content">
+            <h2 class="glow-text">🔄 总体架构</h2>
+            <div class="flowchart">
+                <div class="flow-row">
+                    <div class="flow-box app">用户</div>
+                </div>
+                <div class="arrow-down"></div>
+                <div class="flow-row">
+                    <div class="flow-box app">ChatUI</div>
+                    <div class="flow-box app">FeedbackUI</div>
+                    <div class="flow-box app">SuggestionUI</div>
+                </div>
+                <div class="arrow">↓</div>
+                <div class="flow-row">
+                    <div class="flow-box backend">Agent API / SSE</div>
+                </div>
+                <div class="arrow">↓</div>
+                <div class="flow-row">
+                    <div class="flow-box harness">状态图运行时</div>
+                </div>
+                <div class="arrow">↓</div>
+                <div class="flow-row">
+                    <div class="flow-box harness">Harness 控制层</div>
+                </div>
+                <div class="arrow">↓</div>
+                <div class="flow-row">
+                    <div class="flow-box harness">模型适配层</div>
+                </div>
+                <div class="arrow">↓</div>
+                <div class="flow-row">
+                    <div class="flow-box model">大模型服务</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide-4">
+        <div class="slide-content">
+            <h2 class="glow-text">🎯 Harness 六大要素</h2>
+            <div class="grid">
+                <div class="card element-card" data-element="1">
+                    <div class="element-header">
+                        <div class="element-number">1</div>
+                        <div class="element-title">上下文工程</div>
+                    </div>
+                    <div class="element-desc">输入管控 · ContextBudgeter · ContextRetriever</div>
+                </div>
+                <div class="card element-card" data-element="2">
+                    <div class="element-header">
+                        <div class="element-number">2</div>
+                        <div class="element-title">工具编排与沙箱</div>
+                    </div>
+                    <div class="element-desc">执行能力 · ToolRegistry · ToolSandbox</div>
+                </div>
+                <div class="card element-card" data-element="3">
+                    <div class="element-header">
+                        <div class="element-number">3</div>
+                        <div class="element-title">记忆与状态管理</div>
+                    </div>
+                    <div class="element-desc">持久化 · RunStore · ConversationStore</div>
+                </div>
+                <div class="card element-card" data-element="4">
+                    <div class="element-header">
+                        <div class="element-number">4</div>
+                        <div class="element-title">任务规划与分解</div>
+                    </div>
+                    <div class="element-desc">流程化 · AgentGraph · IntentRouter</div>
+                </div>
+                <div class="card element-card" data-element="5">
+                    <div class="element-header">
+                        <div class="element-number">5</div>
+                        <div class="element-title">硬约束与安全护栏</div>
+                    </div>
+                    <div class="element-desc">可控性 · InputGuard · PolicyGuard</div>
+                </div>
+                <div class="card element-card" data-element="6">
+                    <div class="element-header">
+                        <div class="element-number">6</div>
+                        <div class="element-title">自验证反馈循环</div>
+                    </div>
+                    <div class="element-desc">质量兜底 · FeedbackCollector · Optimizer</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide-5">
+        <div class="slide-content">
+            <h2 class="glow-text">📋 任务状态图</h2>
+            <div class="diagram-flow">
+                <div class="flow-row">
+                    <div class="state-node" data-state="start">[*] 启动</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node" data-state="input_guard">input_guard</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node" data-state="intent_router">intent_router</div>
+                </div>
+                <div class="state-arrow">↓</div>
+                <div class="flow-row">
+                    <div class="state-node" data-state="context_planner">context_planner</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node" data-state="memory_loader">memory_loader</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node" data-state="reasoner">reasoner</div>
+                </div>
+                <div class="state-arrow">↓</div>
+                <div class="flow-row">
+                    <div class="state-node" data-state="action_builder">action_builder</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node" data-state="validation_guard">validation_guard</div>
+                </div>
+                <div class="state-arrow">↓</div>
+                <div class="flow-row">
+                    <div class="state-node" data-state="final" style="background: linear-gradient(135deg, #2a4a6a, #1d3545);">final_responder</div>
+                    <span class="state-arrow">|</span>
+                    <div class="state-node" data-state="confirm" style="background: linear-gradient(135deg, #4a2a6a, #351d45);">confirmation_interrupt</div>
+                </div>
+                <div class="state-arrow">↓</div>
+                <div class="flow-row">
+                    <div class="state-node" data-state="execution">execution_feedback</div>
+                    <span class="state-arrow">→</span>
+                    <div class="state-node" data-state="feedback">feedback_collector</div>
+                </div>
+            </div>
+            <p style="text-align: center; color: #666; font-size: var(--small-size); margin-top: 1rem;">
+                点击节点查看状态详情
+            </p>
+        </div>
+    </section>
+
+    <section class="slide" id="slide-6">
+        <div class="slide-content">
+            <h2 class="glow-text">🔄 数据流</h2>
+            <div class="card" style="width: 100%; max-width: 900px;">
+                <div class="tab-container">
+                    <div class="tab active" data-tab="1">用户输入</div>
+                    <div class="tab" data-tab="2">模型处理</div>
+                    <div class="tab" data-tab="3">确认执行</div>
+                    <div class="tab" data-tab="4">保存更新</div>
+                </div>
+                <div class="tab-content active" id="tab-1">
+                    <p>1. 用户输入问题 → App 创建任务</p>
+                    <p>2. 后端接收请求 → 触发 run_started</p>
+                    <p>3. 状态图规划上下文</p>
+                </div>
+                <div class="tab-content" id="tab-2">
+                    <p>4. Harness 读取账本/对话/偏好/反馈</p>
+                    <p>5. 有预算的模型请求发送</p>
+                    <p>6. 模型返回候选回答或候选操作</p>
+                </div>
+                <div class="tab-content" id="tab-3">
+                    <p>7. 状态图校验结果</p>
+                    <p>8. SSE 返回阶段事件/回答/预览</p>
+                    <p>9. 用户确认/取消/反馈</p>
+                </div>
+                <div class="tab-content" id="tab-4">
+                    <p>10. App 执行本地写入</p>
+                    <p>11. 回传执行结果</p>
+                    <p>12. 保存对话/反馈/评估/记忆</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide-7">
+        <div class="slide-content">
+            <h2 class="glow-text">💾 存储结构</h2>
+            <div class="scroll-container">
+                <table class="interactive-table">
+                    <thead>
+                        <tr>
+                            <th>存储</th>
+                            <th>内容</th>
+                            <th>用途</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-info="ledger_store">
+                            <td><span class="highlight">ledger_store</span></td>
+                            <td>账本镜像、统计摘要、明细索引</td>
+                            <td>查账、复盘、上下文检索</td>
+                        </tr>
+                        <tr data-info="conversation_store">
+                            <td><span class="highlight">conversation_store</span></td>
+                            <td>用户消息、助手消息、模型输入输出</td>
+                            <td>多轮对话、质量评估</td>
+                        </tr>
+                        <tr data-info="profile_store">
+                            <td><span class="highlight">profile_store</span></td>
+                            <td>常用分类、账户、表达习惯</td>
+                            <td>个性化理解、动态引导</td>
+                        </tr>
+                        <tr data-info="run_store">
+                            <td><span class="highlight">run_store</span></td>
+                            <td>任务 ID、阶段、状态、检查点</td>
+                            <td>任务恢复、审计、调试</td>
+                        </tr>
+                        <tr data-info="feedback_store">
+                            <td><span class="highlight">feedback_store</span></td>
+                            <td>点赞、点踩、重新生成、取消</td>
+                            <td>质量评分、自我优化</td>
+                        </tr>
+                        <tr data-info="evaluation_store">
+                            <td><span class="highlight">evaluation_store</span></td>
+                            <td>完成率、重试率、耗时、成本</td>
+                            <td>策略评估、版本对比</td>
+                        </tr>
+                        <tr data-info="policy_store">
+                            <td><span class="highlight">policy_store</span></td>
+                            <td>提示词版本、路由规则、策略</td>
+                            <td>灰度、回滚、发布控制</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide-8">
+        <div class="slide-content">
+            <h2 class="glow-text">🔌 接口设计</h2>
+            <div class="scroll-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>接口</th>
+                            <th>方法</th>
+                            <th>作用</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>/health</code></td>
+                            <td>GET</td>
+                            <td>健康检查</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/agent/runs/stream</code></td>
+                            <td>POST</td>
+                            <td>创建任务并返回 SSE</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/agent/runs/{runId}/context</code></td>
+                            <td>POST</td>
+                            <td>App 回传本地上下文观察结果</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/agent/runs/{runId}/resume</code></td>
+                            <td>POST</td>
+                            <td>App 回传确认、取消或执行结果</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/agent/runs/{runId}/feedback</code></td>
+                            <td>POST</td>
+                            <td>回传点赞、点踩、重新生成</td>
+                        </tr>
+                        <tr>
+                            <td><code>/api/agent/suggestions</code></td>
+                            <td>POST</td>
+                            <td>获取动态引导词</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide-9">
+        <div class="slide-content">
+            <h2 class="glow-text">🖥️ 前端能力</h2>
+            <div class="grid grid-3">
+                <div class="card">
+                    <div class="icon-box">💬</div>
+                    <h3>任务阶段</h3>
+                    <p>消息流内轻量状态展示</p>
+                    <p style="color: #666; font-size: var(--small-size);">数据来源：SSE stage_changed</p>
+                </div>
+                <div class="card">
+                    <div class="icon-box">📝</div>
+                    <h3>流式回复</h3>
+                    <p>助手消息实时渲染</p>
+                    <p style="color: #666; font-size: var(--small-size);">数据来源：SSE partial_message</p>
+                </div>
+                <div class="card">
+                    <div class="icon-box">✅</div>
+                    <h3>确认卡片</h3>
+                    <p>助手消息下方展示预览</p>
+                    <p style="color: #666; font-size: var(--small-size);">数据来源：SSE action_preview</p>
+                </div>
+                <div class="card">
+                    <div class="icon-box">👍</div>
+                    <h3>点赞/点踩</h3>
+                    <p>助手消息右下角小图标</p>
+                    <p style="color: #666; font-size: var(--small-size);">数据来源：AgentFeedbackEvent</p>
+                </div>
+                <div class="card">
+                    <div class="icon-box">💡</div>
+                    <h3>动态引导词</h3>
+                    <p>输入框上方或会话底部</p>
+                    <p style="color: #666; font-size: var(--small-size);">数据来源：/api/agent/suggestions</p>
+                </div>
+                <div class="card">
+                    <div class="icon-box">🔄</div>
+                    <h3>待确认恢复</h3>
+                    <p>进入助手页时恢复任务</p>
+                    <p style="color: #666; font-size: var(--small-size);">数据来源：agent_pending_actions</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="slide" id="slide-10">
+        <div class="slide-content">
+            <h2 class="glow-text">📋 发布约束</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>变更类型</th>
+                        <th>发布要求</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>用户个人记忆</td>
+                        <td><span class="badge" style="background: #2ecc7120; border-color: #2ecc71;">可自动更新</span></td>
+                    </tr>
+                    <tr>
+                        <td>动态引导词排序</td>
+                        <td><span class="badge" style="background: #2ecc7120; border-color: #2ecc71;">可自动更新</span></td>
+                    </tr>
+                    <tr>
+                        <td>上下文选择阈值</td>
+                        <td><span class="badge" style="background: #f39c1220; border-color: #f39c12;">需评估通过</span></td>
+                    </tr>
+                    <tr>
+                        <td>提示词版本</td>
+                        <td><span class="badge" style="background: #e74c3c20; border-color: #e74c3c;">需离线评估</span></td>
+                    </tr>
+                    <tr>
+                        <td>工具路由规则</td>
+                        <td><span class="badge" style="background: #e74c3c20; border-color: #e74c3c;">需离线评估</span></td>
+                    </tr>
+                    <tr>
+                        <td>状态图结构</td>
+                        <td><span class="badge" style="background: #e74c3c20; border-color: #e74c3c;">需人工确认</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="slide" id="slide-11">
+        <div class="slide-content end-slide">
+            <h1 class="glow-text">谢谢观看</h1>
+            <p class="subtitle">Keacs Agent 助手架构概览</p>
+            <div class="separator"></div>
+            <div class="intro-points" style="max-width: 500px; text-align: left;">
+                <div class="intro-point">
+                    <span class="intro-icon">🎯</span>
+                    <span class="intro-text">简单、轻量、便捷、智能</span>
+                </div>
+                <div class="intro-point">
+                    <span class="intro-icon">🔒</span>
+                    <span class="intro-text">用户隐私优先，数据安全</span>
+                </div>
+                <div class="intro-point">
+                    <span class="intro-icon">🚀</span>
+                    <span class="intro-text">AI 驱动的智能记账体验</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const navDots = document.getElementById('navDots');
+        const progressBar = document.getElementById('progressBar');
+        const slideIndicator = document.getElementById('slideIndicator');
+        const totalSlides = slides.length;
+
+        slides.forEach((_, index) => {
+            const dot = document.createElement('div');
+            dot.className = 'nav-dot';
+            dot.addEventListener('click', () => {
+                slides[index].scrollIntoView({ behavior: 'smooth' });
+            });
+            navDots.appendChild(dot);
+        });
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const index = Array.from(slides).indexOf(entry.target);
+                    updateProgress(index);
+                }
+            });
+        }, { threshold: 0.5 });
+
+        slides.forEach(slide => observer.observe(slide));
+
+        function updateProgress(index) {
+            const progress = ((index + 1) / totalSlides) * 100;
+            progressBar.style.width = `${progress}%`;
+            slideIndicator.textContent = `${index + 1} / ${totalSlides}`;
+            
+            document.querySelectorAll('.nav-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === index);
+            });
+        }
+
+        document.querySelectorAll('.state-node').forEach(node => {
+            node.addEventListener('click', () => {
+                const state = node.dataset.state;
+                const descriptions = {
+                    'start': '初始状态，系统准备就绪',
+                    'input_guard': '输入守卫，校验用户输入',
+                    'intent_router': '意图路由，识别用户意图',
+                    'context_planner': '上下文规划，准备必要信息',
+                    'memory_loader': '记忆加载，检索相关历史',
+                    'reasoner': '推理引擎，生成候选响应',
+                    'action_builder': '操作构建，组装待执行动作',
+                    'validation_guard': '校验守卫，验证操作合法性',
+                    'final': '最终响应，直接回复用户',
+                    'confirm': '确认中断，暂停等待用户确认',
+                    'execution': '执行反馈，用户已确认执行',
+                    'feedback': '反馈收集，收集用户评价'
+                };
+                
+                document.querySelectorAll('.state-node').forEach(n => {
+                    n.style.border = '';
+                });
+                node.style.border = '2px solid var(--cyan)';
+                
+                const tooltip = document.getElementById('tooltip');
+                tooltip.textContent = descriptions[state] || '未知状态';
+                tooltip.classList.add('visible');
+                
+                const rect = node.getBoundingClientRect();
+                tooltip.style.left = `${rect.left}px`;
+                tooltip.style.top = `${rect.bottom + 10}px`;
+            });
+        });
+
+        document.querySelectorAll('.interactive-table tr[data-info]').forEach(row => {
+            row.addEventListener('mouseenter', (e) => {
+                const info = row.dataset.info;
+                const details = {
+                    'ledger_store': '账本镜像用于上下文检索，支持按时间、分类、账户筛选',
+                    'conversation_store': '保留完整对话历史，支持质量评估和个性化学习',
+                    'profile_store': '用户画像用于个性化理解，影响动态引导词生成',
+                    'run_store': '任务状态用于断点恢复，支持任务重试和审计',
+                    'feedback_store': '反馈数据用于自我优化，影响提示词和路由规则',
+                    'evaluation_store': '评估指标用于策略对比，支持灰度发布决策',
+                    'policy_store': '策略版本用于回滚控制，支持多版本管理'
+                };
+                
+                const tooltip = document.getElementById('tooltip');
+                tooltip.textContent = details[info] || '';
+                tooltip.classList.add('visible');
+                
+                const rect = row.getBoundingClientRect();
+                tooltip.style.left = `${rect.left}px`;
+                tooltip.style.top = `${rect.bottom + 5}px`;
+            });
+            
+            row.addEventListener('mouseleave', () => {
+                document.getElementById('tooltip').classList.remove('visible');
+            });
+        });
+
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.dataset.tab;
+                
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(`tab-${tabId}`).classList.add('active');
+            });
+        });
+
+        document.querySelectorAll('.element-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const num = card.dataset.element;
+                const details = {
+                    '1': '上下文工程控制输入质量：通过 ContextBudgeter 控制 token 预算，ContextRetriever 检索相关记忆，PromptAssembler 组装提示词',
+                    '2': '工具编排通过 ToolRegistry 注册工具，ToolSandbox 隔离执行环境，确保操作安全可控',
+                    '3': '记忆管理包括 RunStore（任务状态）、ConversationStore（对话历史）、LedgerStore（账本镜像），支持检查点恢复',
+                    '4': '任务规划使用 AgentGraph 定义状态转换，IntentRouter 识别意图，PlannerNode 分解任务',
+                    '5': '安全护栏包括 InputGuard（输入校验）、ActionValidator（操作校验）、PolicyGuard（策略校验）、WriteGuard（写入校验）',
+                    '6': '自验证循环通过 FeedbackCollector 收集反馈，RunScorer 评分，PolicyOptimizer 优化策略'
+                };
+                
+                const tooltip = document.getElementById('tooltip');
+                tooltip.textContent = details[num] || '';
+                tooltip.classList.add('visible');
+                
+                const rect = card.getBoundingClientRect();
+                tooltip.style.left = `${rect.left}px`;
+                tooltip.style.top = `${rect.bottom + 10}px`;
+                
+                setTimeout(() => tooltip.classList.remove('visible'), 5000);
+            });
+        });
+
+        for (let i = 0; i < 15; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = `${Math.random() * 100}%`;
+            particle.style.bottom = '-10px';
+            particle.style.animationDelay = `${Math.random() * 10}s`;
+            particle.style.animationDuration = `${8 + Math.random() * 6}s`;
+            document.body.appendChild(particle);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+                e.preventDefault();
+                const currentIndex = Array.from(slides).findIndex(s => s.getBoundingClientRect().top >= 0);
+                if (currentIndex < slides.length - 1) {
+                    slides[currentIndex + 1].scrollIntoView({ behavior: 'smooth' });
+                }
+            } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+                e.preventDefault();
+                const currentIndex = Array.from(slides).findIndex(s => s.getBoundingClientRect().top >= 0);
+                if (currentIndex > 0) {
+                    slides[currentIndex - 1].scrollIntoView({ behavior: 'smooth' });
+                }
+            }
+        });
+
+        updateProgress(0);
+    </script>
+</body>
+</html>

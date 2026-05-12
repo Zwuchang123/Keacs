@@ -36,6 +36,7 @@ fun AgentMessages(
     onOpenSettings: () -> Unit,
     onActionConfirm: (AgentActionPreview) -> Unit,
     onActionCancel: (AgentActionPreview) -> Unit,
+    onFeedback: (AgentMessage, String) -> Unit,
     onClearConversation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -76,6 +77,7 @@ fun AgentMessages(
                 message = message,
                 onActionConfirm = onActionConfirm,
                 onActionCancel = onActionCancel,
+                onFeedback = onFeedback,
             )
         }
         if (state.isSending) {
@@ -85,7 +87,7 @@ fun AgentMessages(
         }
         if (state.messages.isNotEmpty() && !state.isSending) {
             item {
-                AgentGuidedSuggestions(onExampleClick = onExampleClick)
+                AgentGuidedSuggestions(suggestions = state.suggestions, onExampleClick = onExampleClick)
             }
         }
     }
@@ -96,6 +98,7 @@ private fun AgentMessageBubble(
     message: AgentMessage,
     onActionConfirm: (AgentActionPreview) -> Unit,
     onActionCancel: (AgentActionPreview) -> Unit,
+    onFeedback: (AgentMessage, String) -> Unit,
 ) {
     val isUser = message.role == AgentMessageRole.USER
     val isError = message.role == AgentMessageRole.ERROR
@@ -148,6 +151,13 @@ private fun AgentMessageBubble(
                         text = elapsed.formatElapsed(),
                         color = if (isUser) KeacsColors.Surface.copy(alpha = 0.8f) else KeacsColors.TextTertiary,
                         style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (message.role == AgentMessageRole.ASSISTANT) {
+                    AgentFeedbackRow(
+                        onLike = { onFeedback(message, "like") },
+                        onDislike = { onFeedback(message, "dislike") },
+                        onRegenerate = { onFeedback(message, "regenerate") },
                     )
                 }
             }

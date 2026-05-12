@@ -81,12 +81,10 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
         serviceMode: AgentModelServiceMode,
         body: String,
     ): AgentCallResult {
-        val json = JSONObject(body)
         return when (serviceMode) {
-            AgentModelServiceMode.OFFICIAL -> AgentCallResult.Success(
-                json.toAgentChatResponse(),
-            )
+            AgentModelServiceMode.OFFICIAL -> parseOfficialStream(body)
             AgentModelServiceMode.CUSTOM -> {
+                val json = JSONObject(body)
                 val choices = json.optJSONArray("choices")
                 val content = choices
                     ?.optJSONObject(0)
@@ -100,6 +98,52 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
                 }
             }
         }
+    }
+
+    private fun parseOfficialStream(body: String): AgentCallResult {
+        val events = body
+            .lineSequence()
+            .map { it.trim() }
+            .filter { it.startsWith("data:") }
+            .mapNotNull { line ->
+                runCatching { JSONObject(line.removePrefix("data:").trim()) }.getOrNull()
+            }
+            .toList()
+        if (events.isEmpty()) {
+            return runCatching {
+                AgentCallResult.Success(JSONObject(body).toAgentChatResponse())
+            }.getOrDefault(AgentCallResult.InvalidResponse("助手没有返回可展示内容。"))
+        }
+
+        val partialText = StringBuilder()
+        var finalReply = ""
+        val warnings = mutableListOf<String>()
+        val actions = mutableListOf<AgentActionPreview>()
+        val contextRequests = mutableListOf<AgentContextRequest>()
+        events.forEach { event ->
+            when (event.optString("type")) {
+                "partial_message" -> partialText.append(event.optString("content"))
+                "context_requested" -> contextRequests += event.optJSONArray("requests").toContextRequests()
+                "action_preview" -> actions += event.optJSONArray("actions").toActionPreviews()
+                "final_message" -> {
+                    finalReply = event.optString("reply")
+                    warnings += event.optJSONArray("warnings").toStringList()
+                }
+                "run_failed" -> return AgentCallResult.NetworkFailure(event.optString("message").ifBlank { "助手处理失败，请稍后再试。" })
+            }
+        }
+        val reply = finalReply.ifBlank {
+            readableReplyFor(actions, partialText.toString())
+        }
+        return AgentCallResult.Success(
+            AgentChatResponse(
+                reply = reply,
+                needsMoreContext = false,
+                contextRequests = contextRequests,
+                actions = actions,
+                warnings = warnings,
+            ),
+        )
     }
 
     private fun AgentChatRequest.toJson(settings: AgentSettings): JSONObject =
@@ -252,6 +296,7 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
         return List(length()) { index ->
             optJSONObject(index)?.let { item ->
                 AgentActionPreview(
+                    actionId = item.optString("actionId"),
                     type = item.optString("type"),
                     title = item.optString("title"),
                     description = item.optString("description"),

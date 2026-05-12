@@ -9,6 +9,8 @@
 
 - 需求文档：`docs\prd.md`。
 - 技术路线：`docs\arc.md`。
+- Agent 架构速览：`docs\agent-arc.md`。
+- Agent 重构计划：`docs\agent-plan.md`。
 - 设计规范：`docs\design.md`。
 - 代码映射：`docs\code-map.md`。
 - 部署与发版：`docs\deploy.md`。
@@ -81,7 +83,7 @@
 
 ## 文档管理
 
-- 项目文档：`prd.md` 只写需求和产品规则变化；`arc.md` 只写技术路线、架构、存储和构建机制变化；`code-map.md` 只写模块、入口或路径变化；`deploy.md` 只写交付、发版、部署和运维流程。
+- 项目文档：`prd.md` 只写需求和产品规则变化；`arc.md` 只写技术路线、架构、存储和构建机制变化；`agent-arc.md` 只写 Agent 助手架构速览；`agent-plan.md` 只写 Agent 重构开发计划；`code-map.md` 只写模块、入口或路径变化；`deploy.md` 只写交付、发版、部署和运维流程。
 - 分支、版本号、发版记录和部署说明统一维护在 `docs\deploy.md`。
 
 ## 提交要求
@@ -123,4 +125,3 @@
 - 启动应用：`adb shell am start -n com.keacs.app/.MainActivity`
 - 检查联网权限：`Select-String -Path "app\src\main\AndroidManifest.xml" -Pattern "INTERNET|ACCESS_NETWORK_STATE|uses-permission" -SimpleMatch`
 - 提交前查看：`git status --short`
-

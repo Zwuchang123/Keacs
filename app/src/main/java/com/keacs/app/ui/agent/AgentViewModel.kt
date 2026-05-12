@@ -10,7 +10,9 @@ import com.keacs.app.data.agent.AgentConversationTurn
 import com.keacs.app.data.agent.AgentContextProvider
 import com.keacs.app.data.agent.AgentExecutionResult
 import com.keacs.app.data.agent.AgentRepository
+import com.keacs.app.data.agent.AgentRunStore
 import com.keacs.app.data.agent.requiresConfirmation
+import com.keacs.app.data.agent.onceActionId
 import com.keacs.app.data.local.PreferencesManager
 import com.keacs.app.data.repository.LocalDataRepository
 import com.keacs.app.data.repository.ScheduledRecordRepository
@@ -26,6 +28,7 @@ data class AgentUiState(
     val settings: AgentSettings = AgentSettings(),
     val input: String = "",
     val messages: List<AgentMessage> = emptyList(),
+    val suggestions: List<String> = emptyList(),
     val isSending: Boolean = false,
     val lastClientRequestId: String = "",
     val sendingStartedAtMillis: Long? = null,
@@ -52,6 +55,8 @@ class AgentViewModel(
     private val contextProvider: AgentContextProvider,
     private val actionExecutor: AgentActionExecutor,
     private val preferencesManager: PreferencesManager,
+    private val runStore: AgentRunStore = AgentRunStore(),
+    private val suggestionProvider: com.keacs.app.data.agent.AgentSuggestionProvider = com.keacs.app.data.agent.AgentSuggestionProvider(),
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AgentUiState())
     val uiState: StateFlow<AgentUiState> = _uiState.asStateFlow()
@@ -68,7 +73,7 @@ class AgentViewModel(
                 .takeLast(MAX_STORED_MESSAGES)
             if (savedMessages.isNotEmpty()) {
                 nextMessageId = savedMessages.maxOf { it.id } + 1
-                _uiState.update { it.copy(messages = savedMessages) }
+                _uiState.update { it.copy(messages = savedMessages, suggestions = buildSuggestions(savedMessages)) }
             }
         }
     }
@@ -110,19 +115,25 @@ class AgentViewModel(
             val localContext = contextProvider.buildForMessage(message)
             when (val result = agentRepository.sendMessage(message, localContext, history)) {
                 is AgentCallResult.Success -> {
-                    _uiState.update {
-                        it.copy(
+                    val actions = result.response.actions.withStableActionIds(result.response.clientRequestId)
+                    actions.filter { it.requiresConfirmation() }.forEach { action ->
+                        runStore.savePendingAction(result.response.clientRequestId, action)
+                    }
+                    _uiState.update { current ->
+                        val messages = (current.messages + AgentMessage(
+                            id = nextMessageId++,
+                            role = AgentMessageRole.ASSISTANT,
+                            text = result.response.reply,
+                            actions = actions,
+                            warnings = result.response.warnings,
+                            elapsedMillis = System.currentTimeMillis() - startedAt,
+                        )).takeLast(MAX_STORED_MESSAGES)
+                        current.copy(
                             isSending = false,
                             sendingStartedAtMillis = null,
                             lastClientRequestId = result.response.clientRequestId,
-                            messages = (it.messages + AgentMessage(
-                                id = nextMessageId++,
-                                role = AgentMessageRole.ASSISTANT,
-                                text = result.response.reply,
-                                actions = result.response.actions,
-                                warnings = result.response.warnings,
-                                elapsedMillis = System.currentTimeMillis() - startedAt,
-                            )).takeLast(MAX_STORED_MESSAGES),
+                            messages = messages,
+                            suggestions = buildSuggestions(messages),
                         )
                     }
                     persistConversation()
@@ -136,6 +147,11 @@ class AgentViewModel(
 
     fun confirmAction(action: AgentActionPreview) {
         if (!action.requiresConfirmation()) return
+        val actionId = action.onceActionId()
+        if (!runStore.markActionConfirmed(actionId)) {
+            keepInputAndShowError(_uiState.value.input, "这次操作已经处理过，不能重复执行。")
+            return
+        }
         _uiState.update {
             it.copy(
                 isSending = true,
@@ -149,16 +165,18 @@ class AgentViewModel(
             when (val result = actionExecutor.execute(action)) {
                 is AgentExecutionResult.Success -> {
                     sendActionFeedback(action, "confirmed")
-                    _uiState.update {
-                        it.copy(
+                    _uiState.update { current ->
+                        val messages = (current.messages + AgentMessage(
+                            id = nextMessageId++,
+                            role = AgentMessageRole.RESULT,
+                            text = "**操作已完成**\n\n${result.message}",
+                            elapsedMillis = System.currentTimeMillis() - startedAt,
+                        )).takeLast(MAX_STORED_MESSAGES)
+                        current.copy(
                             isSending = false,
                             sendingStartedAtMillis = null,
-                            messages = (it.messages + AgentMessage(
-                                id = nextMessageId++,
-                                role = AgentMessageRole.RESULT,
-                                text = "**操作已完成**\n\n${result.message}",
-                                elapsedMillis = System.currentTimeMillis() - startedAt,
-                            )).takeLast(MAX_STORED_MESSAGES),
+                            messages = messages,
+                            suggestions = buildSuggestions(messages),
                         )
                     }
                     persistConversation()
@@ -172,13 +190,16 @@ class AgentViewModel(
     }
 
     fun cancelAction(action: AgentActionPreview) {
-        _uiState.update {
-            it.copy(
-                messages = (it.messages.removeAction(action) + AgentMessage(
+        runStore.markActionCancelled(action.onceActionId())
+        _uiState.update { current ->
+            val messages = (current.messages.removeAction(action) + AgentMessage(
                     id = nextMessageId++,
                     role = AgentMessageRole.RESULT,
                     text = "**已取消**\n\n${action.title}",
-                )).takeLast(MAX_STORED_MESSAGES),
+                )).takeLast(MAX_STORED_MESSAGES)
+            current.copy(
+                messages = messages,
+                suggestions = buildSuggestions(messages),
             )
         }
         persistConversation()
@@ -187,10 +208,25 @@ class AgentViewModel(
 
     fun clearConversation() {
         _uiState.update {
-            it.copy(input = "", messages = emptyList(), isSending = false, sendingStartedAtMillis = null)
+            it.copy(input = "", messages = emptyList(), suggestions = buildSuggestions(emptyList()), isSending = false, sendingStartedAtMillis = null)
         }
         viewModelScope.launch {
             preferencesManager.clearAgentConversationSnapshot()
+        }
+    }
+
+    fun submitMessageFeedback(message: AgentMessage, feedback: String) {
+        val clientRequestId = _uiState.value.lastClientRequestId
+        if (clientRequestId.isBlank() || message.role != AgentMessageRole.ASSISTANT) return
+        viewModelScope.launch {
+            agentRepository.sendFeedback(
+                clientRequestId = clientRequestId,
+                result = feedback,
+                actionTypes = emptyList(),
+            )
+        }
+        if (feedback == "regenerate") {
+            _uiState.update { it.copy(input = it.messages.lastOrNull { msg -> msg.role == AgentMessageRole.USER }?.text.orEmpty()) }
         }
     }
 
@@ -216,17 +252,19 @@ class AgentViewModel(
         message: String,
         startedAt: Long? = _uiState.value.sendingStartedAtMillis,
     ) {
-        _uiState.update {
-            it.copy(
+        _uiState.update { current ->
+            val messages = (current.messages + AgentMessage(
+                id = nextMessageId++,
+                role = AgentMessageRole.ERROR,
+                text = message,
+                elapsedMillis = startedAt?.let { start -> System.currentTimeMillis() - start },
+            )).takeLast(MAX_STORED_MESSAGES)
+            current.copy(
                 input = input,
                 isSending = false,
                 sendingStartedAtMillis = null,
-                messages = (it.messages + AgentMessage(
-                    id = nextMessageId++,
-                    role = AgentMessageRole.ERROR,
-                    text = message,
-                    elapsedMillis = startedAt?.let { start -> System.currentTimeMillis() - start },
-                )).takeLast(MAX_STORED_MESSAGES),
+                messages = messages,
+                suggestions = buildSuggestions(messages),
             )
         }
         persistConversation()
@@ -256,7 +294,25 @@ class AgentViewModel(
     }
 
     private fun AgentActionPreview.stableKey(): String =
-        listOf(type, title, description, records.toString(), scheduledRecords.toString()).joinToString("|")
+        onceActionId()
+
+    private fun List<AgentActionPreview>.withStableActionIds(clientRequestId: String): List<AgentActionPreview> =
+        mapIndexed { index, action ->
+            if (!action.requiresConfirmation() || action.actionId.isNotBlank()) {
+                action
+            } else {
+                action.copy(actionId = "$clientRequestId-$index")
+            }
+        }
+
+    private fun buildSuggestions(messages: List<AgentMessage>): List<String> {
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+        return suggestionProvider.buildLocalSuggestions(
+            today = today,
+            recentMessages = messages.takeLast(8).map { it.text },
+            localSummary = emptyMap(),
+        ).map { it.text }
+    }
 
     companion object {
         const val CLEANUP_WARNING_THRESHOLD = 60

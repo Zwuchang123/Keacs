@@ -45,6 +45,7 @@ private fun List<AgentActionPreview>.toJsonArray(): JSONArray =
             array.put(
                 JSONObject()
                     .put("type", action.type)
+                    .put("actionId", action.actionId)
                     .put("title", action.title)
                     .put("description", action.description)
                     .put("impactCount", action.impactCount)
@@ -60,6 +61,7 @@ private fun JSONArray?.toActionPreviews(): List<AgentActionPreview> {
     return List(length()) { index ->
         optJSONObject(index)?.let { item ->
             AgentActionPreview(
+                actionId = item.optString("actionId"),
                 type = item.optString("type"),
                 title = item.optString("title"),
                 description = item.optString("description"),

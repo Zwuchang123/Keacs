@@ -12,7 +12,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.ThumbDown
+import androidx.compose.material.icons.rounded.ThumbUp
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -106,14 +111,20 @@ internal fun AgentStatusCard(
 }
 
 @Composable
-internal fun AgentGuidedSuggestions(onExampleClick: (String) -> Unit) {
+internal fun AgentGuidedSuggestions(
+    suggestions: List<String>,
+    onExampleClick: (String) -> Unit,
+) {
+    val items = suggestions.ifEmpty {
+        listOf("记一笔今天的支出", "分析最近7天消费", "查看本月收入支出")
+    }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = "可以继续问",
             color = KeacsColors.TextSecondary,
             style = MaterialTheme.typography.bodySmall,
         )
-        listOf("继续分析本月支出", "帮我找最近的大额消费", "记一笔午饭 18 元").forEach { example ->
+        items.forEach { example ->
             ExampleRow(text = example, onClick = { onExampleClick(example) })
         }
     }
@@ -150,6 +161,43 @@ internal fun AgentEmptyState(onExampleClick: (String) -> Unit) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+internal fun AgentFeedbackRow(
+    onLike: () -> Unit,
+    onDislike: () -> Unit,
+    onRegenerate: () -> Unit,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onLike, modifier = Modifier.size(32.dp)) {
+            Icon(
+                imageVector = Icons.Rounded.ThumbUp,
+                contentDescription = "有帮助",
+                tint = KeacsColors.TextTertiary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+        IconButton(onClick = onDislike, modifier = Modifier.size(32.dp)) {
+            Icon(
+                imageVector = Icons.Rounded.ThumbDown,
+                contentDescription = "不满意",
+                tint = KeacsColors.TextTertiary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+        IconButton(onClick = onRegenerate, modifier = Modifier.size(32.dp)) {
+            Icon(
+                imageVector = Icons.Rounded.Refresh,
+                contentDescription = "重新生成",
+                tint = KeacsColors.TextTertiary,
+                modifier = Modifier.size(16.dp),
+            )
         }
     }
 }

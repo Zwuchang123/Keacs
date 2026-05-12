@@ -139,6 +139,7 @@ data class AgentContextRequest(
 )
 
 data class AgentActionPreview(
+    val actionId: String = "",
     val type: String,
     val title: String,
     val description: String = "",
@@ -169,7 +170,7 @@ fun AgentActionPreview.requiresConfirmation(): Boolean =
 internal fun AgentSettings.chatUrl(): String {
     val baseUrl = endpointBaseUrl
     return when (serviceMode) {
-        AgentModelServiceMode.OFFICIAL -> "$baseUrl/api/agent/chat"
+        AgentModelServiceMode.OFFICIAL -> "$baseUrl/api/agent/runs/stream"
         AgentModelServiceMode.CUSTOM -> "$baseUrl/chat/completions"
     }
 }

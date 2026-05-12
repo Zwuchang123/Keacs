@@ -336,6 +336,81 @@ def test_chat_returns_content_for_200_agent_questions_and_long_history(tmp_path)
     assert passed == 200
 
 
+def test_run_stream_emits_ordered_task_events(tmp_path):
+    client = _client(tmp_path)
+    payload = {
+        "clientRequestId": str(uuid4()),
+        "deviceIdHash": "abcdef1234567890abcdef",
+        "message": "昨天午饭 18 微信",
+        "conversationHistory": [],
+        "timezone": "Asia/Shanghai",
+        "appVersion": "1.4.2",
+    }
+
+    with client.stream("POST", "/api/agent/runs/stream", json=payload) as response:
+        lines = [line for line in response.iter_lines() if line.startswith("data: ")]
+
+    assert response.status_code == 200
+    event_types = [line.split('"type":"', 1)[1].split('"', 1)[0] for line in lines]
+    assert event_types[:3] == ["run_started", "stage_changed", "context_requested"]
+    assert "action_preview" in event_types
+    assert "awaiting_confirmation" in event_types
+
+
+def test_run_context_resume_feedback_and_suggestions(tmp_path):
+    client = _client(tmp_path)
+    run_id = str(uuid4())
+    context_response = client.post(
+        f"/api/agent/runs/{run_id}/context",
+        json={
+            "clientRequestId": str(uuid4()),
+            "deviceIdHash": "abcdef1234567890abcdef",
+            "observations": [
+                {"status": "success", "summary": "已读取本月账目", "data": {}, "nextActions": [], "artifacts": []}
+            ],
+        },
+    )
+    resume_response = client.post(
+        f"/api/agent/runs/{run_id}/resume",
+        json={
+            "clientRequestId": str(uuid4()),
+            "deviceIdHash": "abcdef1234567890abcdef",
+            "decision": "cancelled",
+            "actionResults": [],
+            "errorType": "",
+        },
+    )
+    feedback_response = client.post(
+        f"/api/agent/runs/{run_id}/feedback",
+        json={
+            "clientRequestId": str(uuid4()),
+            "deviceIdHash": "abcdef1234567890abcdef",
+            "messageId": "m1",
+            "feedback": "like",
+            "reason": "",
+        },
+    )
+    suggestions_response = client.post(
+        "/api/agent/suggestions",
+        json={
+            "deviceIdHash": "abcdef1234567890abcdef",
+            "today": "2026-05-31",
+            "timezone": "Asia/Shanghai",
+            "recentConversation": [{"role": "user", "content": "本月餐饮花了多少"}],
+            "localSummary": {"largeExpense": True},
+            "limit": 4,
+        },
+    )
+
+    assert context_response.status_code == 200
+    assert resume_response.status_code == 200
+    assert feedback_response.status_code == 200
+    assert suggestions_response.status_code == 200
+    suggestions = suggestions_response.json()["suggestions"]
+    assert 2 <= len(suggestions) <= 4
+    assert len({item["text"] for item in suggestions}) == len(suggestions)
+
+
 def _agent_test_questions() -> list[str]:
     creation_templates = [
         "今天午饭 {amount} 元 微信",
