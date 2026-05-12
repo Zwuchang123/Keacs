@@ -8,7 +8,7 @@
 | 首页       | `app/src/main/java/com/keacs/app/ui/home`                                | 首页与首页状态                  |
 | 记录       | `app/src/main/java/com/keacs/app/ui/record`                              | 新增/编辑记录、账目详情、选择器         |
 | 统计       | `app/src/main/java/com/keacs/app/ui/stats`                               | 收入、支出、结余统计与图表            |
-| 助手       | `app/src/main/java/com/keacs/app/ui/agent`                               | 在线助手一级页面、消息列表、确认卡片、输入框、会话保留和清空 |
+| 助手       | `app/src/main/java/com/keacs/app/ui/agent`                               | 在线助手一级页面、消息列表、确认卡片、确认卡片分页与底部编辑弹窗、输入框、会话保留和清空 |
 | 管理       | `app/src/main/java/com/keacs/app/ui/management`                          | 分类管理、账户管理、图标与颜色映射        |
 | 定时记账     | `app/src/main/java/com/keacs/app/ui/scheduled`                           | 定时记账列表、编辑和启停              |
 | 设置       | `app/src/main/java/com/keacs/app/ui/settings`                            | 我的、设置、关于     |

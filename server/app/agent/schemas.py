@@ -79,6 +79,7 @@ class AgentRunRequest(BaseModel):
     client_request_id: str = Field(alias="clientRequestId", min_length=1, max_length=64)
     device_id_hash: str = Field(alias="deviceIdHash", min_length=16, max_length=128)
     message: str = Field(min_length=1)
+    local_context: LocalContext = Field(default_factory=LocalContext, alias="localContext")
     conversation_history: list[AgentConversationTurn] = Field(default_factory=list, alias="conversationHistory")
     timezone: str = Field(min_length=1, max_length=64)
     app_version: str = Field(alias="appVersion", min_length=1, max_length=32)
