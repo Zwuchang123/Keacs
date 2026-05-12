@@ -10,18 +10,13 @@
 - 需求文档：`docs\prd.md`。
 - 技术路线：`docs\arc.md`。
 - Agent 架构速览：`docs\agent-arc.md`。
-- Agent 重构计划：`docs\agent-plan.md`。
 - 设计规范：`docs\design.md`。
 - 代码映射：`docs\code-map.md`。
 - 部署与发版：`docs\deploy.md`。
 
 ## 工作流程
 
-先判断任务类型，再只读取和修改必要内容；测试范围统一按“测试要求”执行，不要扩大范围。
-
-行动前先制定计划，列清楚 task list，再按计划执行；执行中持续迭代分析、执行、验证闭环，直到对当前策略有 100% 把握。
-
-不要假设用户一定是对的，运用第一性原理，主动考虑影响范围，思考更合理的方案并让用户确认。
+必须先判断任务类型，再只读取和修改必要内容；测试范围统一按“测试要求”执行，不要扩大范围。
 
 | 任务类型    | 读取范围                                                               | 执行范围                                                                                                      |
 | ------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -30,13 +25,26 @@
 | BUG 修复  | 先看 `docs\code-map.md`，再读缺陷相关代码                                     | 先复现，再修复，不扩大范围                                                                                             |
 | 大功能迭代   | 读取 `docs\prd.md`、`docs\arc.md`、`docs\design.md`、`docs\code-map.md` | 进入计划模式，并调用 Codex 已安装的 Superpowers 插件。先使用Superpowers: Brainstorming技能对需求进行详细分析，与用户沟通不清晰的内容；然后确认方案；再更新文档和代码 |
 
-<br />
+##
 
-<br />
+- 分支：非代码任务不拉取临时分支，其他任务从 `master` 建短分支，功能用 `feature/`，修复用 `fix/`；不使用长期 `develop`。
+- 状态：`master` 表示已验收、可随时发版；`v*` 标签表示已正式发布。
+- 待发版记录：未立即发版的用户可感知变化写入 `docs\releases\next.md`；文件不存在时先创建；正式发版后清空。
+- 版本号：只在发布 APK 时更新 `app\build.gradle.kts`；`versionName` 为 `X.Y.Z`，标签必须一致；`versionCode` 每次发版加 1。
+- 版本递增：修复、小优化、应用内文案改 `PATCH`；新页面、新入口、新能力改 `MINOR`；数据不兼容或重大规则变化改 `MAJOR`。
+
+## 不发版流程
+
+1. 在短分支完成开发和自测。
+2. 用户验收通过后，更新必要文档和 `docs\releases\next.md`。
+3. 提交本次变更，合并到 `master`。
+4. 删除短分支。
 
 ## 部署与发版索引
 
-交付、合并、版本号、发版记录、APK 发布、后端部署和服务器运维流程统一查看 `docs\deploy.md`，不要在其他文档重复维护同一套流程。
+版本号、发版记录、APK 发布、后端部署和服务器运维流程统一查看 `docs\deploy.md`，不要在其他文档重复维护同一套流程。
+
+## 分支、版本和记录
 
 ## 开发边界
 
@@ -83,7 +91,7 @@
 
 ## 文档管理
 
-- 项目文档：`prd.md` 只写需求和产品规则变化；`arc.md` 只写技术路线、架构、存储和构建机制变化；`agent-arc.md` 只写 Agent 助手架构速览；`agent-plan.md` 只写 Agent 重构开发计划；`code-map.md` 只写模块、入口或路径变化；`deploy.md` 只写交付、发版、部署和运维流程。
+- 项目文档：`prd.md` 只写需求和产品规则变化；`arc.md` 只写技术路线、架构、存储和构建机制变化；`agent-arc.md` 只写 Agent 助手架构速览；`code-map.md` 只写模块、入口或路径变化；`deploy.md` 只写交付、发版、部署和运维流程。
 - 分支、版本号、发版记录和部署说明统一维护在 `docs\deploy.md`。
 
 ## 提交要求
@@ -125,3 +133,4 @@
 - 启动应用：`adb shell am start -n com.keacs.app/.MainActivity`
 - 检查联网权限：`Select-String -Path "app\src\main\AndroidManifest.xml" -Pattern "INTERNET|ACCESS_NETWORK_STATE|uses-permission" -SimpleMatch`
 - 提交前查看：`git status --short`
+

@@ -15,22 +15,9 @@
 | 小功能优化，确认上线       | 发补丁或小版本 | 发版准备完成后合并   | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md` |
 | 大功能迭代            | 默认发版    | 发版准备完成后合并   | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md` |
 
-## 2. 分支、版本和记录
 
-- 分支：非代码任务不拉取临时分支，每个任务从 `master` 建短分支，功能用 `feature/`，修复用 `fix/`；不使用长期 `develop`。
-- 状态：`master` 表示已验收、可随时发版；`v*` 标签表示已正式发布。
-- 待发版记录：未立即发版的用户可感知变化写入 `docs\releases\next.md`；文件不存在时先创建；正式发版后清空。
-- 版本号：只在发布 APK 时更新 `app\build.gradle.kts`；`versionName` 为 `X.Y.Z`，标签必须一致；`versionCode` 每次发版加 1。
-- 版本递增：修复、小优化、应用内文案改 `PATCH`；新页面、新入口、新能力改 `MINOR`；数据不兼容或重大规则变化改 `MAJOR`。
 
-## 3. 不发版流程
-
-1. 在短分支完成开发和自测。
-2. 用户验收通过后，更新必要文档和 `docs\releases\next.md`。
-3. 提交本次变更，合并到 `master`。
-4. 删除短分支。
-
-## 4. APK 发版流程
+## 2. APK 发版流程
 
 1. 确认本次发布内容和版本号。
 2. 更新 `app\build.gradle.kts` 中的 `versionCode` 和 `versionName`。
@@ -56,7 +43,7 @@ GitHub Release 需要以下 Secrets：
 - `KEACS_RELEASE_KEY_PASSWORD`
 - `GITEE_TOKEN`：可选，用于同步创建 Gitee Release。
 
-## 5. 后端部署目标
+## 3. 后端部署目标
 
 官方 Agent 后端部署在腾讯云轻量应用服务器。
 
@@ -73,7 +60,7 @@ GitHub Release 需要以下 Secrets：
 
 当前过渡阶段，App 默认官方助手地址暂时使用 `http://43.138.174.171`。正式域名配置完成后，再切换为 HTTPS 域名。
 
-## 6. 首次部署后端
+## 4. 首次部署后端
 
 首次部署前确认服务器已安装 Docker 和 Docker Compose 插件。
 
@@ -117,7 +104,7 @@ ssh keacs-prod "curl -fsS https://<正式域名>/health"
 
 健康检查返回 `{"status":"ok"}` 后，才允许把 App 的官方服务地址指向该域名。
 
-## 7. 后端更新部署
+## 5. 后端更新部署
 
 后端更新和 App 发版可以分开执行。只要接口协议向后兼容，可以先部署后端，再发布 App。
 
@@ -140,7 +127,7 @@ ssh keacs-prod "cd /opt/keacs/server && docker compose logs --tail 200"
 
 1. 再次访问健康检查，并用 App 官方服务主路径做一次连接验证。
 
-## 8. 后端回滚
+## 6. 后端回滚
 
 如果更新后健康检查失败，或 App 主路径无法连接，先回滚后端，不发布新的 APK。
 
@@ -159,7 +146,7 @@ ssh keacs-prod "cd /opt/keacs && git checkout <上一个可用标签或提交> &
 ssh keacs-prod "cd /opt/keacs/server && docker compose up -d"
 ```
 
-## 9. 部署检查清单
+## 7. 部署检查清单
 
 每次后端部署完成后，至少确认：
 
@@ -169,7 +156,7 @@ ssh keacs-prod "cd /opt/keacs/server && docker compose up -d"
 - 官方模型 API Key 只存在于服务器 `.env` 或服务器环境变量中。
 - App 官方服务地址优先使用 HTTPS 正式域名；过渡阶段允许临时使用 `http://43.138.174.171`。
 
-## 10. 腾讯云服务器常用命令
+## 8. 腾讯云服务器常用命令
 
 PowerShell 读取中文前先执行：
 
