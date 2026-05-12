@@ -217,6 +217,8 @@ def _validate_chat_request(payload: AgentChatRequest, settings: Settings) -> Non
 def _validate_run_request(payload: AgentRunRequest, settings: Settings) -> None:
     if len(payload.message) > settings.max_message_length:
         raise HTTPException(status_code=400, detail="输入内容过长，请缩短后再发送。")
+    if count_context_items(payload.local_context) > settings.max_context_items:
+        raise HTTPException(status_code=400, detail="本次上下文过大，请缩小查询范围后再试。")
     history_chars = sum(len(item.content) for item in payload.conversation_history)
     if len(payload.conversation_history) > 40 or history_chars > 12_000:
         raise HTTPException(status_code=400, detail="对话内容过长，请先清空对话后再继续。")
@@ -224,24 +226,7 @@ def _validate_run_request(payload: AgentRunRequest, settings: Settings) -> None:
 
 def _build_stream_events(run_id: str, payload: AgentRunRequest) -> list[dict]:
     context_requests = _context_requests_for(payload.message)
-    local_context = LocalContext(
-        timeContext={"today": "2026-05-12"},
-        categories=[
-            {"name": "餐饮", "direction": "EXPENSE"},
-            {"name": "交通", "direction": "EXPENSE"},
-            {"name": "其他", "direction": "EXPENSE"},
-            {"name": "工资", "direction": "INCOME"},
-            {"name": "其他", "direction": "INCOME"},
-        ],
-        accounts=[
-            {"name": "微信"},
-            {"name": "银行卡"},
-            {"name": "现金"},
-        ],
-        records=[],
-        stats={},
-        scheduledRecords=[],
-    )
+    local_context = _local_context_for_run(payload)
     chat_request = AgentChatRequest(
         clientRequestId=payload.client_request_id,
         deviceIdHash=payload.device_id_hash,
@@ -292,6 +277,39 @@ def _build_stream_events(run_id: str, payload: AgentRunRequest) -> list[dict]:
             ]
         )
     return events
+
+
+def _local_context_for_run(payload: AgentRunRequest) -> LocalContext:
+    context = payload.local_context
+    has_client_context = any(
+        [
+            context.categories,
+            context.accounts,
+            context.records,
+            context.stats,
+            context.scheduled_records,
+        ]
+    )
+    if has_client_context:
+        return context
+    return LocalContext(
+        timeContext={"today": "2026-05-12"},
+        categories=[
+            {"name": "餐饮", "direction": "EXPENSE"},
+            {"name": "交通", "direction": "EXPENSE"},
+            {"name": "其他", "direction": "EXPENSE"},
+            {"name": "工资", "direction": "INCOME"},
+            {"name": "其他", "direction": "INCOME"},
+        ],
+        accounts=[
+            {"name": "微信"},
+            {"name": "银行卡"},
+            {"name": "现金"},
+        ],
+        records=[],
+        stats={},
+        scheduledRecords=[],
+    )
 
 
 def _context_requests_for(message: str) -> list[dict[str, str]]:

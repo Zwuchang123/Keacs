@@ -388,6 +388,56 @@ def test_run_stream_emits_ordered_task_events(tmp_path):
     assert "awaiting_confirmation" in event_types
 
 
+def test_run_stream_uses_client_local_context_for_stats(tmp_path):
+    client = _client(tmp_path)
+    payload = _payload("这个月花了多少")
+
+    with client.stream("POST", "/api/agent/runs/stream", json=payload) as response:
+        lines = [line for line in response.iter_lines() if line.startswith("data: ")]
+
+    assert response.status_code == 200
+    joined = "\n".join(lines)
+    assert "本月账本摘要" in joined
+    assert "¥1,234" in joined
+    assert "¥6,766" in joined
+
+
+def test_run_stream_uses_default_account_from_client_context(tmp_path):
+    client = _client(tmp_path)
+    payload = _payload("昨天午饭 18")
+    payload["localContext"]["accounts"][0]["isDefaultRecordAccount"] = True
+    payload["localContext"]["stats"]["defaultRecordAccountName"] = "微信"
+
+    with client.stream("POST", "/api/agent/runs/stream", json=payload) as response:
+        lines = [line for line in response.iter_lines() if line.startswith("data: ")]
+
+    assert response.status_code == 200
+    joined = "\n".join(lines)
+    assert '"fromAccountName":"微信"' in joined
+
+
+def test_delete_request_with_amount_returns_delete_preview(tmp_path):
+    client = _client(tmp_path)
+
+    response = client.post("/api/agent/chat", json=_payload("删除昨天那笔 18 元午饭"))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["actions"][0]["type"] == "delete_record"
+    assert "删除" in body["reply"]
+
+
+def test_analysis_request_with_day_count_does_not_create_record(tmp_path):
+    client = _client(tmp_path)
+
+    response = client.post("/api/agent/chat", json=_payload("最近30天消费复盘"))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["actions"] == []
+    assert "账本摘要" in body["reply"]
+
+
 def test_run_context_resume_feedback_and_suggestions(tmp_path):
     client = _client(tmp_path)
     run_id = str(uuid4())

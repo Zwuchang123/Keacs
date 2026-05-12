@@ -15,9 +15,9 @@ TRANSFER = "TRANSFER"
 def build_fallback_response(request: AgentChatRequest, warning: str = "") -> AgentChatResponse:
     message = request.message.strip()
     response = (
-        _build_record_creation_response(request, message)
+        _build_record_operation_response(request, message)
+        or _build_record_creation_response(request, message)
         or _build_stats_response(request, message)
-        or _build_record_operation_response(request, message)
         or _build_scheduled_response(request, message)
         or _build_general_response(message)
     )
@@ -45,6 +45,8 @@ def should_replace_model_response(request: AgentChatRequest, response: AgentChat
 def _build_record_creation_response(request: AgentChatRequest, message: str) -> AgentChatResponse | None:
     amount_cent = _extract_amount_cent(message)
     if amount_cent is None or not _looks_like_record_creation(message):
+        return None
+    if _looks_like_analysis_request(message):
         return None
     if _contains_any(message, ("明天", "后天", "下周", "下月", "下个月", "明年")):
         return _ask_user_response("日期不能是未来时间", "请换成今天或过去日期后再发送。")
@@ -131,7 +133,7 @@ def _build_transfer_response(
 
 
 def _build_stats_response(request: AgentChatRequest, message: str) -> AgentChatResponse | None:
-    if not _contains_any(message, ("多少", "花了", "支出", "收入", "结余", "总结", "复盘", "本月", "这个月", "最近")):
+    if not _contains_any(message, ("多少", "花了", "支出", "收入", "结余", "总结", "复盘", "本月", "这个月", "最近", "分析")):
         return None
     stats = request.local_context.stats
     range_label = str(stats.get("rangeLabel") or "本次范围")
@@ -254,6 +256,10 @@ def _resolve_record_type(message: str) -> str:
 
 def _looks_like_record_creation(message: str) -> bool:
     return _contains_any(message, ("记", "花", "买", "饭", "餐", "工资", "收入", "支出", "转", "报销", "消费", "付款", "收款"))
+
+
+def _looks_like_analysis_request(message: str) -> bool:
+    return _contains_any(message, ("多少", "复盘", "分析", "总结", "趋势", "排行", "异常", "结构"))
 
 
 def _resolve_category_name(request: AgentChatRequest, record_type: str, message: str) -> str:
