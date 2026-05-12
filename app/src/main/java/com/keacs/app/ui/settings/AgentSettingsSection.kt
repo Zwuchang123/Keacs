@@ -1,15 +1,17 @@
 package com.keacs.app.ui.settings
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -23,10 +25,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -37,11 +42,12 @@ import com.keacs.app.domain.agent.AgentSettings
 import com.keacs.app.domain.agent.validateForRequest
 import com.keacs.app.ui.components.CategoryIcon
 import com.keacs.app.ui.components.DividedMenuCard
-import com.keacs.app.ui.components.KeacsCard
 import com.keacs.app.ui.components.MenuDivider
 import com.keacs.app.ui.components.MenuRow
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun AgentSettingsSection(
@@ -75,14 +81,13 @@ fun AgentSettingsSection(
             value = settings.serviceMode.label(),
             onClick = onModeClick,
         )
-    }
 
-    if (settings.serviceMode == AgentModelServiceMode.CUSTOM) {
-        KeacsCard(contentPadding = PaddingValues(KeacsSpacing.CardPadding)) { padding ->
+        if (settings.serviceMode == AgentModelServiceMode.CUSTOM) {
+            MenuDivider()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(padding),
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 AgentTextField(
@@ -157,6 +162,7 @@ private fun AgentSwitchRow(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AgentTextField(
     label: String,
@@ -166,10 +172,22 @@ private fun AgentTextField(
     secret: Boolean = false,
     onValueChange: (String) -> Unit,
 ) {
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 58.dp)
+            .bringIntoViewRequester(bringIntoViewRequester)
+            .onFocusChanged { focusState ->
+                if (focusState.hasFocus) {
+                    scope.launch {
+                        delay(250)
+                        bringIntoViewRequester.bringIntoView()
+                    }
+                }
+            }
             .clip(MaterialTheme.shapes.medium)
             .background(KeacsColors.SurfaceSubtle)
             .padding(horizontal = 12.dp, vertical = 9.dp),

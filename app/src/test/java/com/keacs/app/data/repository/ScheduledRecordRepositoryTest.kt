@@ -9,6 +9,7 @@ import com.keacs.app.domain.model.RecordType
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,6 +67,71 @@ class ScheduledRecordRepositoryTest {
         assertEquals("固定收入", record.note)
         assertEquals(dateMillis(2026, 6, 1, 9), schedule.nextRunAt)
         assertEquals(10_000L, repository.getAccounts().first { it.id == account.id }.initialBalanceCent)
+    }
+
+    @Test
+    fun dueExpenseScheduleCreatesRecordAndMovesBalance() = runTest {
+        repository.initializePresets()
+        val category = repository.getCategories().first { it.name == "餐饮" }
+        val account = repository.getAccounts().first { it.name == "现金" }
+
+        scheduledRepository.saveSchedule(
+            id = null,
+            type = RecordType.EXPENSE,
+            amountCent = 2_500,
+            categoryId = category.id,
+            fromAccountId = account.id,
+            toAccountId = null,
+            frequency = ScheduledFrequency.MONTHLY,
+            nextRunAt = dateMillis(2026, 5, 1),
+            note = "固定支出",
+            isEnabled = true,
+        )
+
+        val createdCount = scheduledRepository.createDueRecords()
+
+        val record = repository.getRecords().single()
+        assertEquals(1, createdCount)
+        assertEquals(RecordType.EXPENSE, record.type)
+        assertEquals(account.id, record.fromAccountId)
+        assertEquals(-2_500L, repository.getAccounts().first { it.id == account.id }.initialBalanceCent)
+    }
+
+    @Test
+    fun incomeAndExpenseSchedulesRequireAccounts() = runTest {
+        repository.initializePresets()
+        val incomeCategory = repository.getCategories().first { it.name == "工资" }
+        val expenseCategory = repository.getCategories().first { it.name == "餐饮" }
+
+        assertFailsWithMessage("请选择转入账户") {
+            scheduledRepository.saveSchedule(
+                id = null,
+                type = RecordType.INCOME,
+                amountCent = 10_000,
+                categoryId = incomeCategory.id,
+                fromAccountId = null,
+                toAccountId = null,
+                frequency = ScheduledFrequency.MONTHLY,
+                nextRunAt = dateMillis(2026, 5, 1),
+                note = "",
+                isEnabled = true,
+            )
+        }
+
+        assertFailsWithMessage("请选择转出账户") {
+            scheduledRepository.saveSchedule(
+                id = null,
+                type = RecordType.EXPENSE,
+                amountCent = 2_500,
+                categoryId = expenseCategory.id,
+                fromAccountId = null,
+                toAccountId = null,
+                frequency = ScheduledFrequency.MONTHLY,
+                nextRunAt = dateMillis(2026, 5, 1),
+                note = "",
+                isEnabled = true,
+            )
+        }
     }
 
     @Test
@@ -178,4 +244,13 @@ class ScheduledRecordRepositoryTest {
             set(year, month - 1, day, hour, 0, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
+
+    private inline fun assertFailsWithMessage(message: String, block: () -> Unit) {
+        val error = runCatching(block).exceptionOrNull()
+        if (error == null) {
+            fail("应该提示：$message")
+            return
+        }
+        assertEquals(message, error.message)
+    }
 }

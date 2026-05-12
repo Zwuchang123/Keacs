@@ -141,6 +141,8 @@ internal fun scheduledValidationText(
     error ?: when {
         amount == null -> null
         type != RecordType.TRANSFER && categoryId == null -> "请选择分类"
+        type == RecordType.INCOME && toId == null -> "请选择转入账户"
+        type == RecordType.EXPENSE && fromId == null -> "请选择转出账户"
         type == RecordType.TRANSFER && fromId == toId -> "转出和转入账户不能相同"
         type == RecordType.TRANSFER && (fromId == null || toId == null) -> "请选择转账账户"
         else -> null

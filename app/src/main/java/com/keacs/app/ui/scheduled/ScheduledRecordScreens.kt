@@ -74,8 +74,10 @@ fun ScheduledRecordEditScreen(
     val parsedAmount = amountToCent(amount)
     val canSave = parsedAmount != null && recurrenceValues.isNotBlank() && if (type == RecordType.TRANSFER) {
         fromAccountId != null && toAccountId != null && fromAccountId != toAccountId
+    } else if (type == RecordType.INCOME) {
+        categoryId != null && toAccountId != null
     } else {
-        categoryId != null
+        categoryId != null && fromAccountId != null
     }
 
     LaunchedEffect(editing?.id) {
@@ -110,6 +112,10 @@ fun ScheduledRecordEditScreen(
         if (type == RecordType.TRANSFER && availableAccounts.isNotEmpty()) {
             if (availableAccounts.none { it.id == fromAccountId }) fromAccountId = availableAccounts.first().id
             if (availableAccounts.none { it.id == toAccountId }) toAccountId = availableAccounts.drop(1).firstOrNull()?.id
+        } else if (type == RecordType.INCOME && availableAccounts.none { it.id == toAccountId }) {
+            toAccountId = availableAccounts.firstOrNull()?.id
+        } else if (type == RecordType.EXPENSE && availableAccounts.none { it.id == fromAccountId }) {
+            fromAccountId = availableAccounts.firstOrNull()?.id
         }
     }
 
@@ -229,7 +235,7 @@ fun ScheduledRecordEditScreen(
             accountCategories = categories,
             selectedId = if (type == RecordType.INCOME) toAccountId else fromAccountId,
             title = "选择账户",
-            includeNone = true,
+            includeNone = false,
             onSelected = {
                 if (type == RecordType.INCOME) {
                     toAccountId = it

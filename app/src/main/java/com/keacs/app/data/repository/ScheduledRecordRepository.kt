@@ -143,7 +143,7 @@ class ScheduledRecordRepository(
                 occurredAt = occurredAt,
                 categoryId = requireNotNull(schedule.categoryId) { "请选择分类" },
                 fromAccountId = null,
-                toAccountId = schedule.toAccountId,
+                toAccountId = requireNotNull(schedule.toAccountId) { "请选择转入账户" },
                 note = schedule.note,
             )
             RecordType.EXPENSE -> localDataRepository.saveRecord(
@@ -152,7 +152,7 @@ class ScheduledRecordRepository(
                 amountCent = schedule.amountCent,
                 occurredAt = occurredAt,
                 categoryId = requireNotNull(schedule.categoryId) { "请选择分类" },
-                fromAccountId = schedule.fromAccountId,
+                fromAccountId = requireNotNull(schedule.fromAccountId) { "请选择转出账户" },
                 toAccountId = null,
                 note = schedule.note,
             )
@@ -197,7 +197,10 @@ class ScheduledRecordRepository(
         }
         require(category.direction == expectedDirection) { "分类类型不正确" }
         val accountId = if (type == RecordType.INCOME) toAccountId else fromAccountId
-        accountId?.let { require(database.accountDao().getById(it) != null) { "账户不存在" } }
+        require(accountId != null) {
+            if (type == RecordType.INCOME) "请选择转入账户" else "请选择转出账户"
+        }
+        require(database.accountDao().getById(accountId) != null) { "账户不存在" }
     }
 
     companion object {
