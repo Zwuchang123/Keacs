@@ -118,12 +118,7 @@ internal fun AgentGuidedSuggestions(
     val items = suggestions.ifEmpty {
         listOf("记一笔今天的支出", "分析最近7天消费", "查看本月收入支出")
     }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "可以继续问",
-            color = KeacsColors.TextSecondary,
-            style = MaterialTheme.typography.bodySmall,
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         items.forEach { example ->
             ExampleRow(text = example, onClick = { onExampleClick(example) })
         }
@@ -131,7 +126,10 @@ internal fun AgentGuidedSuggestions(
 }
 
 @Composable
-internal fun AgentEmptyState(onExampleClick: (String) -> Unit) {
+internal fun AgentEmptyState(
+    suggestions: List<String>,
+    onExampleClick: (String) -> Unit,
+) {
     KeacsCard {
         Column(
             modifier = Modifier
@@ -152,7 +150,9 @@ internal fun AgentEmptyState(onExampleClick: (String) -> Unit) {
                     modifier = Modifier.padding(start = 12.dp),
                 )
             }
-            val examples = listOf("记一笔午饭 18 元", "这个月花了多少？", "帮我看看本月支出")
+            val examples = suggestions.ifEmpty {
+                listOf("记一笔午饭 18 元", "这个月花了多少？", "帮我看看本月支出")
+            }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 examples.forEach { example ->
                     ExampleRow(
@@ -249,7 +249,7 @@ private fun ExampleRow(
         Text(
             text = text,
             color = KeacsColors.TextPrimary,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

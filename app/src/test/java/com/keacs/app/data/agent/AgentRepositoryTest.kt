@@ -124,13 +124,66 @@ class AgentRepositoryTest {
 
         assertTrue(result is AgentCallResult.Success)
         assertFalse(client.called)
-        assertTrue((result as AgentCallResult.Success).response.reply.contains("不能给投资"))
+        assertTrue((result as AgentCallResult.Success).response.reply.contains("不能处理"))
+    }
+
+    @Test
+    fun officialSuggestionsComeFromNetwork() = runTest {
+        val client = FakeAgentNetworkClient(
+            suggestions = listOf(AgentSuggestion("看看工资到账了吗", "salary_day")),
+        )
+        val repository = AgentRepository(
+            settingsProvider = {
+                AgentSettings(
+                    enabled = true,
+                    serviceMode = AgentModelServiceMode.OFFICIAL,
+                    deviceId = "1234567890abcdef",
+                    officialServiceUrl = "https://agent.example.com",
+                )
+            },
+            client = client,
+        )
+
+        val suggestions = repository.loadSuggestions(
+            today = "2026-05-12",
+            recentHistory = listOf(AgentConversationTurn("user", "看看收入")),
+            localSummary = mapOf("isLikelySalaryDay" to true),
+        )
+
+        assertEquals(listOf("看看工资到账了吗"), suggestions.map { it.text })
+        assertTrue(client.suggestionsCalled)
+    }
+
+    @Test
+    fun suggestionsFallbackToLocalWhenNetworkFails() = runTest {
+        val client = FakeAgentNetworkClient(suggestions = emptyList())
+        val repository = AgentRepository(
+            settingsProvider = {
+                AgentSettings(
+                    enabled = true,
+                    serviceMode = AgentModelServiceMode.OFFICIAL,
+                    deviceId = "1234567890abcdef",
+                    officialServiceUrl = "https://agent.example.com",
+                )
+            },
+            client = client,
+        )
+
+        val suggestions = repository.loadSuggestions(
+            today = "2026-05-12",
+            recentHistory = emptyList(),
+            localSummary = mapOf("isLikelySalaryDay" to true),
+        )
+
+        assertTrue(suggestions.any { it.text.contains("工资") })
     }
 
     private class FakeAgentNetworkClient(
         private val result: AgentCallResult = AgentCallResult.Success(AgentChatResponse(reply = "测试回复")),
+        private val suggestions: List<AgentSuggestion> = emptyList(),
     ) : AgentNetworkClient {
         var called = false
+        var suggestionsCalled = false
         var lastMessage = ""
         var lastHistory: List<AgentConversationTurn> = emptyList()
 
@@ -142,6 +195,14 @@ class AgentRepositoryTest {
             lastMessage = request.message
             lastHistory = request.conversationHistory
             return result
+        }
+
+        override suspend fun suggestions(
+            settings: AgentSettings,
+            request: AgentSuggestionRequest,
+        ): List<AgentSuggestion> {
+            suggestionsCalled = true
+            return suggestions
         }
     }
 }

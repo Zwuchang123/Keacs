@@ -153,6 +153,20 @@ class AgentSuggestionProvider {
         limit: Int = 4,
     ): List<AgentSuggestion> {
         val candidates = mutableListOf<AgentSuggestion>()
+        val festivalName = localSummary["festivalName"]?.toString().orEmpty()
+        val topExpenseCategory = localSummary["topExpenseCategory"]?.toString().orEmpty()
+        val isLikelySalaryDay = localSummary["isLikelySalaryDay"] == true
+        val hasLargeExpense = localSummary["hasLargeExpense"] == true || localSummary["largeExpense"] == true
+
+        if (festivalName.isNotBlank()) {
+            candidates += AgentSuggestion("${festivalName}花销看一下", "festival")
+        }
+        if (isLikelySalaryDay) {
+            candidates += AgentSuggestion("看看工资到账了吗", "salary_day")
+        }
+        if (hasLargeExpense) {
+            candidates += AgentSuggestion("找出最近的大额消费", "spending_change")
+        }
         if (today.endsWith("-28") || today.endsWith("-29") || today.endsWith("-30") || today.endsWith("-31")) {
             candidates += AgentSuggestion("月末复盘本月支出", "month_end")
         }
@@ -162,13 +176,20 @@ class AgentSuggestionProvider {
         val recentText = recentMessages.joinToString(" ")
         if ("餐饮" in recentText) {
             candidates += AgentSuggestion("继续看本月餐饮明细", "recent_topic")
-        }
-        if (localSummary["hasLargeExpense"] == true || localSummary["largeExpense"] == true) {
-            candidates += AgentSuggestion("找出最近的大额消费", "spending_change")
+        } else if (topExpenseCategory.isNotBlank()) {
+            candidates += AgentSuggestion("看看${topExpenseCategory}花了多少", "top_category")
         }
         candidates += AgentSuggestion("记一笔今天的支出", "user_habit")
         candidates += AgentSuggestion("分析最近7天消费", "date")
-        return candidates.distinctBy { it.text }.take(limit.coerceIn(2, 4))
+        candidates += AgentSuggestion("查看本月收入支出", "ledger")
+        return candidates
+            .filter { it.text.length <= MAX_SUGGESTION_LENGTH }
+            .distinctBy { it.text }
+            .take(limit.coerceIn(2, 4))
+    }
+
+    private companion object {
+        const val MAX_SUGGESTION_LENGTH = 18
     }
 }
 

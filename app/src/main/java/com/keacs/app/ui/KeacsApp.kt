@@ -232,7 +232,7 @@ fun KeacsApp(
                     HomeScreen(
                         viewModel = homeViewModel,
                         onRecordClick = { navigateRecordDetail(it, KeacsDestination.Home.route) },
-                        onSwipeLeft = { navigateTo(KeacsDestination.Stats.route) },
+                        onSwipeLeft = { navigateTo(KeacsDestination.Agent.route) },
                     )
                 }
 
@@ -245,16 +245,16 @@ fun KeacsApp(
 
                 route == KeacsDestination.Stats.route -> StatsScreen(
                     repository = repository,
-                    onSwipeBeyondStart = { navigateTo(KeacsDestination.Home.route) },
-                    onSwipeBeyondEnd = { navigateTo(KeacsDestination.Agent.route) },
+                    onSwipeBeyondStart = { navigateTo(KeacsDestination.Agent.route) },
+                    onSwipeBeyondEnd = { navigateTo(KeacsDestination.Mine.route) },
                 )
 
                 route == KeacsDestination.Agent.route -> {
                     AgentScreen(
                         viewModel = agentViewModel,
                         onOpenSettings = { navigateForward(ROUTE_SETTINGS) },
-                        onSwipeLeft = { navigateTo(KeacsDestination.Mine.route) },
-                        onSwipeRight = { navigateTo(KeacsDestination.Stats.route) }
+                        onSwipeLeft = { navigateTo(KeacsDestination.Stats.route) },
+                        onSwipeRight = { navigateTo(KeacsDestination.Home.route) }
                     )
                 }
 
@@ -270,7 +270,7 @@ fun KeacsApp(
                         onScheduledClick = { navigateForward(ROUTE_SCHEDULED_LIST) },
                         onSettingsClick = { navigateForward(ROUTE_SETTINGS) },
                         onAboutClick = { navigateForward(ROUTE_ABOUT) },
-                        onSwipeRight = { navigateTo(KeacsDestination.Agent.route) },
+                        onSwipeRight = { navigateTo(KeacsDestination.Stats.route) },
                     )
                 }
 
@@ -371,9 +371,9 @@ private fun isExistingScheduledEditRoute(route: String): Boolean =
 
 private fun navigationAnimationIndex(route: String): Int = when (route) {
     KeacsDestination.Home.route -> 0
-    KeacsDestination.Stats.route -> 1
+    KeacsDestination.Agent.route -> 1
     KeacsDestination.Add.route -> 2
-    KeacsDestination.Agent.route -> 3
+    KeacsDestination.Stats.route -> 3
     KeacsDestination.Mine.route -> 4
     else -> 5
 }

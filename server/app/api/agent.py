@@ -321,6 +321,14 @@ def _iter_sse(events: list[dict]):
 
 def _build_suggestions(payload: AgentSuggestionRequest) -> list[AgentSuggestion]:
     candidates: list[AgentSuggestion] = []
+    festival_name = str(payload.local_summary.get("festivalName") or "")
+    top_expense_category = str(payload.local_summary.get("topExpenseCategory") or "")
+    if festival_name:
+        candidates.append(AgentSuggestion(text=f"{festival_name}花销看一下", reason="festival"))
+    if payload.local_summary.get("isLikelySalaryDay"):
+        candidates.append(AgentSuggestion(text="看看工资到账了吗", reason="salary_day"))
+    if payload.local_summary.get("largeExpense") or payload.local_summary.get("hasLargeExpense"):
+        candidates.append(AgentSuggestion(text="找出最近的大额消费", reason="spending_change"))
     if payload.today.endswith(("-28", "-29", "-30", "-31")):
         candidates.append(AgentSuggestion(text="月末复盘本月支出", reason="month_end"))
     if payload.today.endswith("-01"):
@@ -328,8 +336,8 @@ def _build_suggestions(payload: AgentSuggestionRequest) -> list[AgentSuggestion]
     recent_text = " ".join(item.content for item in payload.recent_conversation)
     if "餐饮" in recent_text:
         candidates.append(AgentSuggestion(text="继续看本月餐饮明细", reason="recent_topic"))
-    if payload.local_summary.get("largeExpense") or payload.local_summary.get("hasLargeExpense"):
-        candidates.append(AgentSuggestion(text="找出最近的大额消费", reason="spending_change"))
+    elif top_expense_category:
+        candidates.append(AgentSuggestion(text=f"看看{top_expense_category}花了多少", reason="top_category"))
     candidates.extend(
         [
             AgentSuggestion(text="记一笔今天的支出", reason="user_habit"),

@@ -68,7 +68,7 @@ fun AgentInputBar(
                     enabled = enabled,
                     singleLine = false,
                     maxLines = 5,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = KeacsColors.TextPrimary),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = KeacsColors.TextPrimary),
                     cursorBrush = SolidColor(KeacsColors.Primary),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { if (enabled) onSend() }),
@@ -78,7 +78,7 @@ fun AgentInputBar(
                             Text(
                                 text = "输入一句话记账或查账",
                                 color = KeacsColors.TextTertiary,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodyLarge,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )

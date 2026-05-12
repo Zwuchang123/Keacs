@@ -101,6 +101,12 @@ private val KeacsTypography = Typography(
         fontWeight = FontWeight.Normal,
         lineHeight = 20.sp,
     ),
+    bodyLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Normal,
+        lineHeight = 24.sp,
+    ),
     bodySmall = TextStyle(
         fontFamily = FontFamily.Default,
         fontSize = 12.sp,

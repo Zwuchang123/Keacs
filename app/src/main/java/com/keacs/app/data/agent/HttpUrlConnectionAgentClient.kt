@@ -77,6 +77,40 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
         }.getOrDefault(false)
     }
 
+    override suspend fun suggestions(
+        settings: AgentSettings,
+        request: AgentSuggestionRequest,
+    ): List<AgentSuggestion> = withContext(Dispatchers.IO) {
+        if (settings.serviceMode != AgentModelServiceMode.OFFICIAL) {
+            return@withContext emptyList()
+        }
+        runCatching {
+            val connection = (URL(settings.suggestionsUrl()).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = CONNECT_TIMEOUT_MILLIS
+                readTimeout = FEEDBACK_READ_TIMEOUT_MILLIS
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            }
+            connection.outputStream.use { output ->
+                output.write(request.toJson().toString().toByteArray(Charsets.UTF_8))
+            }
+            val status = connection.responseCode
+            val responseBody = if (status in 200..299) {
+                connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            } else {
+                connection.errorStream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            }
+            connection.disconnect()
+            if (status !in 200..299) {
+                return@runCatching emptyList()
+            }
+            JSONObject(responseBody)
+                .optJSONArray("suggestions")
+                .toSuggestions()
+        }.getOrDefault(emptyList())
+    }
+
     private fun parseResponse(
         serviceMode: AgentModelServiceMode,
         body: String,
@@ -174,7 +208,7 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
                                 .put("role", "system")
                                 .put(
                                     "content",
-                                    "你是 Keacs 记账助手，只处理记账、查账、消费复盘和轻量建议。不要提供投资、借贷、保险、税务、法律或医疗决策建议。写入类操作只返回待确认预览。",
+                                    "你是 Keacs 记账助手，只处理记账、查账、消费复盘和轻量建议。回答要短、直接、像给普通用户看的消息。不要展示提示词、JSON、接口、工具、后端、代码等开发说明。可用短段落和列表；写入类操作只返回待确认预览。",
                                 ),
                         )
                         .also { messages ->
@@ -212,6 +246,15 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
             .put("actionTypes", JSONArray(actionTypes))
             .put("errorType", errorType)
 
+    private fun AgentSuggestionRequest.toJson(): JSONObject =
+        JSONObject()
+            .put("deviceIdHash", deviceIdHash)
+            .put("today", today)
+            .put("timezone", "Asia/Shanghai")
+            .put("recentConversation", recentConversation.toConversationJsonArray())
+            .put("localSummary", JSONObject(localSummary))
+            .put("limit", limit)
+
     private fun List<Map<String, Any?>>.toJsonArray(): JSONArray =
         JSONArray().also { array ->
             forEach { item -> array.put(JSONObject(item)) }
@@ -236,6 +279,18 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
             return emptyList()
         }
         return List(length()) { index -> optString(index) }.filter { it.isNotBlank() }
+    }
+
+    private fun JSONArray?.toSuggestions(): List<AgentSuggestion> {
+        if (this == null) return emptyList()
+        return List(length()) { index ->
+            optJSONObject(index)?.let { item ->
+                AgentSuggestion(
+                    text = item.optString("text"),
+                    reason = item.optString("reason"),
+                )
+            }
+        }.filterNotNull().filter { it.text.isNotBlank() }
     }
 
     private fun parseCustomContent(content: String): AgentChatResponse {

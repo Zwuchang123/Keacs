@@ -21,6 +21,51 @@ class AgentContextProvider(
     private val scheduledRepository: ScheduledRecordRepository? = null,
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) {
+    suspend fun buildSuggestionSummary(): Map<String, Any?> {
+        val categories = repository.getCategories()
+        val records = repository.getRecords()
+        val now = clock()
+        val today = Calendar.getInstance(Locale.getDefault()).apply { timeInMillis = now }
+        val categoryNameById = categories.associate { it.id to it.name }
+        val recentStart = Calendar.getInstance(Locale.getDefault()).apply {
+            timeInMillis = now
+            add(Calendar.DAY_OF_YEAR, -30)
+            setDayStart()
+        }.timeInMillis
+        val recentExpenses = records.filter {
+            it.type == RecordType.EXPENSE && it.occurredAt in recentStart..now
+        }
+        val topExpenseCategory = recentExpenses
+            .groupBy { it.categoryId }
+            .maxByOrNull { (_, items) -> items.sumOf { it.amountCent } }
+            ?.key
+            ?.let { categoryNameById[it] }
+            .orEmpty()
+        val averageExpense = recentExpenses
+            .takeIf { it.isNotEmpty() }
+            ?.sumOf { it.amountCent }
+            ?.div(recentExpenses.size)
+            ?: 0L
+        val hasLargeExpense = recentExpenses.any { record ->
+            record.amountCent >= LARGE_EXPENSE_CENT ||
+                (averageExpense > 0 && record.amountCent >= averageExpense * 3)
+        }
+        val todayDay = today.get(Calendar.DAY_OF_MONTH)
+        val isLikelySalaryDay = records.any { record ->
+            record.type == RecordType.INCOME &&
+                categoryNameById[record.categoryId] == "工资" &&
+                Calendar.getInstance(Locale.getDefault()).apply {
+                    timeInMillis = record.occurredAt
+                }.get(Calendar.DAY_OF_MONTH) == todayDay
+        }
+        return mapOf(
+            "hasLargeExpense" to hasLargeExpense,
+            "isLikelySalaryDay" to isLikelySalaryDay,
+            "festivalName" to festivalName(now),
+            "topExpenseCategory" to topExpenseCategory,
+        )
+    }
+
     suspend fun buildForMessage(message: String): AgentLocalContext {
         val categories = repository.getCategories()
         val accounts = repository.getAccounts()
@@ -291,6 +336,18 @@ class AgentContextProvider(
     private fun formatDate(timestamp: Long): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(timestamp))
 
+    private fun festivalName(timestamp: Long): String {
+        val day = SimpleDateFormat("MM-dd", Locale.getDefault()).format(Date(timestamp))
+        return when (day) {
+            "01-01" -> "元旦"
+            "02-14" -> "情人节"
+            "05-01" -> "五一"
+            "10-01" -> "国庆"
+            "12-31" -> "跨年"
+            else -> ""
+        }
+    }
+
     private data class ContextRange(
         val start: Long,
         val endExclusive: Long,
@@ -302,6 +359,7 @@ class AgentContextProvider(
         const val MAX_RECORD_CANDIDATES = 60
         const val MAX_ANALYSIS_RECORDS = 500
         const val MAX_SCHEDULES = 30
+        const val LARGE_EXPENSE_CENT = 100_000L
         const val DAY_MILLIS = 24L * 60L * 60L * 1000L
         val accountOrRecordDirections = setOf(
             PresetSeedData.CATEGORY_INCOME,

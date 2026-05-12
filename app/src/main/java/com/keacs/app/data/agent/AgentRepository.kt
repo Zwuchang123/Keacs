@@ -16,6 +16,7 @@ import java.util.Locale
 class AgentRepository(
     private val settingsProvider: suspend () -> AgentSettings,
     private val client: AgentNetworkClient = HttpUrlConnectionAgentClient(),
+    private val suggestionProvider: AgentSuggestionProvider = AgentSuggestionProvider(),
 ) {
     constructor(
         preferencesManager: PreferencesManager,
@@ -52,7 +53,7 @@ class AgentRepository(
         )
         return when (val result = client.chat(settings, request)) {
             is AgentCallResult.Success -> AgentCallResult.Success(
-                response = result.response.copy(clientRequestId = request.clientRequestId),
+                response = result.response.toUserFacingResponse().copy(clientRequestId = request.clientRequestId),
             )
             is AgentCallResult.NetworkFailure -> localFallback(message, localContext, null)
                 ?.let { AgentCallResult.Success(it.copy(clientRequestId = request.clientRequestId)) }
@@ -62,6 +63,35 @@ class AgentRepository(
                 ?: AgentCallResult.InvalidResponse("没有返回清晰内容。已保留输入内容，可以换个说法再试。")
             else -> result
         }
+    }
+
+    suspend fun loadSuggestions(
+        today: String,
+        recentHistory: List<AgentConversationTurn>,
+        localSummary: Map<String, Any?>,
+        limit: Int = 4,
+    ): List<AgentSuggestion> {
+        val local = suggestionProvider.buildLocalSuggestions(today, recentHistory.map { it.content }, localSummary, limit)
+        val settings = settingsProvider()
+        if (!settings.validateForRequest().canRequest || settings.serviceMode != AgentModelServiceMode.OFFICIAL) {
+            return local
+        }
+        val remote = runCatching {
+            client.suggestions(
+                settings = settings,
+                request = AgentSuggestionRequest(
+                    deviceIdHash = settings.deviceId,
+                    today = today,
+                    recentConversation = recentHistory.trimForRequest(),
+                    localSummary = localSummary,
+                    limit = limit,
+                ),
+            )
+        }.getOrDefault(emptyList())
+            .filter { it.text.isNotBlank() }
+            .distinctBy { it.text }
+            .take(limit.coerceIn(2, 4))
+        return remote.ifEmpty { local }
     }
 
     suspend fun sendFeedback(
@@ -90,6 +120,7 @@ class AgentRepository(
 interface AgentNetworkClient {
     suspend fun chat(settings: AgentSettings, request: AgentChatRequest): AgentCallResult
     suspend fun feedback(settings: AgentSettings, request: AgentFeedbackRequest): Boolean = true
+    suspend fun suggestions(settings: AgentSettings, request: AgentSuggestionRequest): List<AgentSuggestion> = emptyList()
 }
 
 data class AgentChatRequest(
@@ -131,6 +162,14 @@ data class AgentFeedbackRequest(
     val result: String,
     val actionTypes: List<String>,
     val errorType: String = "",
+)
+
+data class AgentSuggestionRequest(
+    val deviceIdHash: String,
+    val today: String,
+    val recentConversation: List<AgentConversationTurn> = emptyList(),
+    val localSummary: Map<String, Any?> = emptyMap(),
+    val limit: Int = 4,
 )
 
 data class AgentContextRequest(
@@ -178,6 +217,9 @@ internal fun AgentSettings.chatUrl(): String {
 internal fun AgentSettings.feedbackUrl(): String =
     "${endpointBaseUrl}/api/agent/feedback"
 
+internal fun AgentSettings.suggestionsUrl(): String =
+    "${endpointBaseUrl}/api/agent/suggestions"
+
 private fun String.isHighRiskAdvice(): Boolean {
     val highRiskTerms = listOf("股票", "基金", "理财", "投资", "贷款", "借钱", "借贷", "保险", "收益", "税", "法律", "医疗")
     val decisionTerms = listOf("建议", "推荐", "该不该", "能不能买", "买什么", "投什么", "收益率", "预测", "划算吗")
@@ -186,7 +228,7 @@ private fun String.isHighRiskAdvice(): Boolean {
 
 private fun boundaryResponse(): AgentChatResponse =
     AgentChatResponse(
-        reply = "**这个问题超出了记账助手范围**\n\n我不能给投资、借贷或保险等决策建议。\n\n可以继续帮你回顾账本记录、支出结构和消费习惯。",
+        reply = "**不能处理这类建议**\n\n我可以帮你看账本记录、支出结构和消费习惯。",
         actions = listOf(
             AgentActionPreview(
                 type = "answer_only",
@@ -195,6 +237,27 @@ private fun boundaryResponse(): AgentChatResponse =
             ),
         ),
     )
+
+private fun AgentChatResponse.toUserFacingResponse(): AgentChatResponse =
+    copy(
+        reply = reply.toUserFacingText(),
+        warnings = warnings.map { it.toUserFacingText() }.filter { it.isNotBlank() },
+    )
+
+private fun String.toUserFacingText(): String {
+    val blockedTerms = listOf("JSON", "json", "提示词", "系统提示", "工具调用", "后端", "接口", "开发", "代码", "schema")
+    val cleanedLines = lineSequence()
+        .map { it.trimEnd() }
+        .filterNot { line -> blockedTerms.any { term -> line.contains(term) } }
+        .filterNot { it.startsWith("```") }
+        .toList()
+    val paragraphs = cleanedLines.joinToString("\n")
+        .split(Regex("""\n{3,}"""))
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .take(MAX_REPLY_PARAGRAPHS)
+    return paragraphs.joinToString("\n\n").ifBlank { "我没整理出清晰结果，请换个说法再试。" }
+}
 
 private fun List<AgentConversationTurn>.trimForRequest(): List<AgentConversationTurn> {
     val recent = takeLast(MAX_HISTORY_TURNS)
@@ -342,3 +405,4 @@ private const val RecordTypeIncome = "INCOME"
 private const val MAX_HISTORY_TURNS = 24
 private const val MAX_HISTORY_CHARS = 8_000
 private const val MAX_TURN_LENGTH = 600
+private const val MAX_REPLY_PARAGRAPHS = 4

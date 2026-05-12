@@ -61,6 +61,7 @@ class AgentViewModel(
     private val _uiState = MutableStateFlow(AgentUiState())
     val uiState: StateFlow<AgentUiState> = _uiState.asStateFlow()
     private var nextMessageId = 1L
+    private var suggestionSummary: Map<String, Any?> = emptyMap()
 
     init {
         viewModelScope.launch {
@@ -75,6 +76,7 @@ class AgentViewModel(
                 nextMessageId = savedMessages.maxOf { it.id } + 1
                 _uiState.update { it.copy(messages = savedMessages, suggestions = buildSuggestions(savedMessages)) }
             }
+            refreshSuggestions()
         }
     }
 
@@ -88,6 +90,7 @@ class AgentViewModel(
 
     fun useExample(example: String) {
         onInputChange(example)
+        send()
     }
 
     fun send() {
@@ -136,6 +139,7 @@ class AgentViewModel(
                             suggestions = buildSuggestions(messages),
                         )
                     }
+                    refreshSuggestions(_uiState.value.messages)
                     persistConversation()
                 }
                 is AgentCallResult.ConfigurationRequired -> keepInputAndShowError(message, result.message)
@@ -179,6 +183,7 @@ class AgentViewModel(
                             suggestions = buildSuggestions(messages),
                         )
                     }
+                    refreshSuggestions(_uiState.value.messages)
                     persistConversation()
                 }
                 is AgentExecutionResult.Failure -> {
@@ -210,6 +215,7 @@ class AgentViewModel(
         _uiState.update {
             it.copy(input = "", messages = emptyList(), suggestions = buildSuggestions(emptyList()), isSending = false, sendingStartedAtMillis = null)
         }
+        refreshSuggestions(emptyList())
         viewModelScope.launch {
             preferencesManager.clearAgentConversationSnapshot()
         }
@@ -267,6 +273,7 @@ class AgentViewModel(
                 suggestions = buildSuggestions(messages),
             )
         }
+        refreshSuggestions(_uiState.value.messages)
         persistConversation()
     }
 
@@ -310,8 +317,27 @@ class AgentViewModel(
         return suggestionProvider.buildLocalSuggestions(
             today = today,
             recentMessages = messages.takeLast(8).map { it.text },
-            localSummary = emptyMap(),
+            localSummary = suggestionSummary,
         ).map { it.text }
+    }
+
+    private fun refreshSuggestions(messages: List<AgentMessage> = _uiState.value.messages) {
+        viewModelScope.launch {
+            suggestionSummary = contextProvider.buildSuggestionSummary()
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            val suggestions = agentRepository.loadSuggestions(
+                today = today,
+                recentHistory = messages.toConversationTurns().takeLast(8),
+                localSummary = suggestionSummary,
+            ).map { it.text }
+            _uiState.update { current ->
+                if (current.messages.size == messages.size) {
+                    current.copy(suggestions = suggestions)
+                } else {
+                    current
+                }
+            }
+        }
     }
 
     companion object {
