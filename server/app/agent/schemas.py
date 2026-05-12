@@ -159,6 +159,7 @@ class AgentFeedbackRequest(BaseModel):
 
     client_request_id: str = Field(alias="clientRequestId", min_length=1, max_length=64)
     device_id_hash: str = Field(alias="deviceIdHash", min_length=16, max_length=128)
-    result: Literal["confirmed", "cancelled", "failed"]
+    result: Literal["confirmed", "cancelled", "failed", "edited", "like", "dislike", "regenerate"]
     action_types: list[str] = Field(default_factory=list, alias="actionTypes")
     error_type: str = Field(default="", alias="errorType")
+    reason: str = ""

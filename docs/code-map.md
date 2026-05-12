@@ -16,7 +16,7 @@
 | Domain 层 | `app/src/main/java/com/keacs/app/domain`                                 | 业务模型、UseCase、规则          |
 | 余额规则     | `app/src/main/java/com/keacs/app/domain/rule/RecordCalculations.kt`      | 余额、历史余额、收支汇总规则           |
 | Data 层   | `app/src/main/java/com/keacs/app/data`                                   | 本地存储、仓库、偏好、备份            |
-| Agent App 数据 | `app/src/main/java/com/keacs/app/data/agent`                             | 助手配置读取、网络请求、任务模型、事件归并、本地待确认操作拦截、动态引导、按问题范围选择账单上下文、模型异常本地兜底和确认后操作执行 |
+| Agent App 数据 | `app/src/main/java/com/keacs/app/data/agent`                             | 助手配置读取、网络请求、任务模型、事件归并、本地待确认操作拦截、可编辑确认动作、动态引导、默认账户上下文、按问题范围选择账单上下文、模型异常本地兜底和确认后操作执行 |
 | 仓库入口     | `app/src/main/java/com/keacs/app/data/repository/LocalDataRepository.kt` | 分类、账户、记录、初始化、备份导入的核心入口   |
 | 定时记账仓库   | `app/src/main/java/com/keacs/app/data/repository/ScheduledRecordRepository.kt` | 定时记账模板保存和到期账目生成       |
 | 本地数据     | `app/src/main/java/com/keacs/app/data/local`                             | 数据库、DAO、Entity、预置数据、偏好设置 |

@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.agent.AgentActionPreview
+import com.keacs.app.data.agent.AgentEditOptions
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 
@@ -42,6 +43,7 @@ fun AgentMessages(
     onOpenSettings: () -> Unit,
     onActionConfirm: (AgentActionPreview) -> Unit,
     onActionCancel: (AgentActionPreview) -> Unit,
+    onActionChange: (Long, AgentActionPreview, String) -> Unit,
     onFeedback: (AgentMessage, String) -> Unit,
     onClearConversation: () -> Unit,
     modifier: Modifier = Modifier,
@@ -81,8 +83,10 @@ fun AgentMessages(
         items(state.messages, key = { it.id }) { message ->
             AgentMessageBubble(
                 message = message,
+                editOptions = state.editOptions,
                 onActionConfirm = onActionConfirm,
                 onActionCancel = onActionCancel,
+                onActionChange = onActionChange,
                 onFeedback = onFeedback,
             )
         }
@@ -102,8 +106,10 @@ fun AgentMessages(
 @Composable
 private fun AgentMessageBubble(
     message: AgentMessage,
+    editOptions: AgentEditOptions,
     onActionConfirm: (AgentActionPreview) -> Unit,
     onActionCancel: (AgentActionPreview) -> Unit,
+    onActionChange: (Long, AgentActionPreview, String) -> Unit,
     onFeedback: (AgentMessage, String) -> Unit,
 ) {
     val isUser = message.role == AgentMessageRole.USER
@@ -144,6 +150,8 @@ private fun AgentMessageBubble(
             message.actions.forEach { action ->
                 AgentActionCard(
                     action = action,
+                    editOptions = editOptions,
+                    onActionChange = { updated, field -> onActionChange(message.id, updated, field) },
                     onConfirm = { onActionConfirm(action) },
                     onCancel = { onActionCancel(action) },
                 )

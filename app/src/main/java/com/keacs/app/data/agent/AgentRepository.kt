@@ -99,6 +99,7 @@ class AgentRepository(
         result: String,
         actionTypes: List<String>,
         errorType: String = "",
+        reason: String = "",
     ): Boolean {
         if (clientRequestId.isBlank()) return false
         val settings = settingsProvider()
@@ -112,6 +113,7 @@ class AgentRepository(
                 result = result,
                 actionTypes = actionTypes,
                 errorType = errorType,
+                reason = reason,
             ),
         )
     }
@@ -162,6 +164,7 @@ data class AgentFeedbackRequest(
     val result: String,
     val actionTypes: List<String>,
     val errorType: String = "",
+    val reason: String = "",
 )
 
 data class AgentSuggestionRequest(
@@ -291,10 +294,7 @@ private fun buildLocalRecordPreview(
     val amountCent = message.extractAmountCent() ?: return null
     val type = if (message.looksLikeIncome()) RecordTypeIncome else RecordTypeExpense
     val categoryName = localContext.resolveCategoryName(type, message)
-    val accountName = localContext.accounts
-        .firstOrNull { account -> account["name"]?.toString()?.takeIf { message.contains(it) } != null }
-        ?.get("name")
-        ?.toString()
+    val accountName = localContext.resolveAccountName(message)
     val occurredAt = message.resolveOccurredAt()
     val record = mutableMapOf<String, Any?>(
         "type" to type,
@@ -386,6 +386,17 @@ private fun AgentLocalContext.resolveCategoryName(type: String, message: String)
         names.firstOrNull { it == "工资" }?.let { return it }
     }
     return names.firstOrNull { it == "其他" } ?: names.firstOrNull().orEmpty()
+}
+
+private fun AgentLocalContext.resolveAccountName(message: String): String? {
+    accounts.firstOrNull { account ->
+        account["name"]?.toString()?.takeIf { message.contains(it) } != null
+    }?.get("name")?.toString()?.let { return it }
+    accounts.firstOrNull { it["isDefaultRecordAccount"] == true }
+        ?.get("name")
+        ?.toString()
+        ?.let { return it }
+    return stats["defaultRecordAccountName"]?.toString()?.takeIf { it.isNotBlank() }
 }
 
 private fun Map<String, Any?>.longValue(key: String): Long? =

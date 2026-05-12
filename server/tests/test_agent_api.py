@@ -147,6 +147,37 @@ def test_model_failure_returns_readable_fallback(tmp_path):
     assert body["actions"][0]["type"] == "create_record"
 
 
+def test_fallback_uses_default_account_when_message_has_no_account(tmp_path):
+    settings = Settings(
+        model_provider="openai_compatible",
+        audit_db_path=str(tmp_path / "audit.sqlite3"),
+    )
+    client = TestClient(create_app(settings))
+    payload = _payload("昨天午饭 18")
+    payload["localContext"]["accounts"][0]["isDefaultRecordAccount"] = True
+    payload["localContext"]["stats"]["defaultRecordAccountName"] = "微信"
+
+    response = client.post("/api/agent/chat", json=payload)
+
+    assert response.status_code == 200
+    record = response.json()["actions"][0]["records"][0]
+    assert record["fromAccountName"] == "微信"
+
+
+def test_fallback_keeps_account_blank_without_default_account(tmp_path):
+    settings = Settings(
+        model_provider="openai_compatible",
+        audit_db_path=str(tmp_path / "audit.sqlite3"),
+    )
+    client = TestClient(create_app(settings))
+
+    response = client.post("/api/agent/chat", json=_payload("昨天午饭 18"))
+
+    assert response.status_code == 200
+    record = response.json()["actions"][0]["records"][0]
+    assert "fromAccountName" not in record
+
+
 @pytest.mark.anyio
 async def test_orchestrator_replaces_unclear_model_reply_for_record_creation():
     class _FakeRequest:
@@ -390,6 +421,17 @@ def test_run_context_resume_feedback_and_suggestions(tmp_path):
             "reason": "",
         },
     )
+    edit_feedback_response = client.post(
+        "/api/agent/feedback",
+        json={
+            "clientRequestId": str(uuid4()),
+            "deviceIdHash": "abcdef1234567890abcdef",
+            "result": "edited",
+            "actionTypes": ["create_record"],
+            "errorType": "",
+            "reason": "account",
+        },
+    )
     suggestions_response = client.post(
         "/api/agent/suggestions",
         json={
@@ -405,6 +447,7 @@ def test_run_context_resume_feedback_and_suggestions(tmp_path):
     assert context_response.status_code == 200
     assert resume_response.status_code == 200
     assert feedback_response.status_code == 200
+    assert edit_feedback_response.status_code == 200
     assert suggestions_response.status_code == 200
     suggestions = suggestions_response.json()["suggestions"]
     assert 2 <= len(suggestions) <= 4

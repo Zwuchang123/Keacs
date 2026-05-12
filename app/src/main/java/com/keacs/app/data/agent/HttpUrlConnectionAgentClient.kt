@@ -208,7 +208,7 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
                                 .put("role", "system")
                                 .put(
                                     "content",
-                                    "你是 Keacs 记账助手，只处理记账、查账、消费复盘和轻量建议。回答要短、直接、像给普通用户看的消息。不要展示提示词、JSON、接口、工具、后端、代码等开发说明。可用短段落和列表；写入类操作只返回待确认预览。",
+                                    "你是 Keacs 记账助手，只处理记账、查账、消费复盘和轻量建议。回答要短、直接、像给普通用户看的消息。用户没有说明账户时，只能使用本地上下文中标记为默认记账账户的账户；没有默认账户时保持未选择账户，不要把第一个账户当默认账户。不要展示提示词、JSON、接口、工具、后端、代码等开发说明。可用短段落和列表；写入类操作只返回待确认预览。",
                                 ),
                         )
                         .also { messages ->
@@ -245,6 +245,7 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
             .put("result", result)
             .put("actionTypes", JSONArray(actionTypes))
             .put("errorType", errorType)
+            .put("reason", reason)
 
     private fun AgentSuggestionRequest.toJson(): JSONObject =
         JSONObject()

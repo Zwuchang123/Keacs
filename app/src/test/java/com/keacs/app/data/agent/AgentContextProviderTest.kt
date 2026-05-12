@@ -126,6 +126,22 @@ class AgentContextProviderTest {
         assertTrue(context.records.map { it["note"] }.contains("去年午饭"))
     }
 
+    @Test
+    fun contextMarksDefaultRecordAccount() = runTest {
+        repository.initializePresets()
+        val cash = repository.getAccounts().first { it.name == "现金" }
+
+        val context = AgentContextProvider(
+            repository = repository,
+            scheduledRepository = scheduledRepository,
+            defaultRecordAccountIdProvider = { cash.id },
+            clock = { dateMillis(2026, 5, 11) },
+        ).buildForMessage("昨天午饭 18")
+
+        assertEquals("现金", context.stats["defaultRecordAccountName"])
+        assertTrue(context.accounts.first { it["name"] == "现金" }["isDefaultRecordAccount"] == true)
+    }
+
     private fun dateMillis(year: Int, month: Int, day: Int): Long =
         Calendar.getInstance(Locale.getDefault()).apply {
             set(year, month - 1, day, 12, 0, 0)

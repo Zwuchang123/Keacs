@@ -9,6 +9,7 @@ import com.keacs.app.data.agent.AgentCallResult
 import com.keacs.app.data.agent.AgentConversationTurn
 import com.keacs.app.data.agent.AgentContextProvider
 import com.keacs.app.data.agent.AgentExecutionResult
+import com.keacs.app.data.agent.AgentEditOptions
 import com.keacs.app.data.agent.AgentRepository
 import com.keacs.app.data.agent.AgentRunStore
 import com.keacs.app.data.agent.requiresConfirmation
@@ -32,6 +33,7 @@ data class AgentUiState(
     val isSending: Boolean = false,
     val lastClientRequestId: String = "",
     val sendingStartedAtMillis: Long? = null,
+    val editOptions: AgentEditOptions = AgentEditOptions(),
 )
 
 data class AgentMessage(
@@ -77,6 +79,7 @@ class AgentViewModel(
                 _uiState.update { it.copy(messages = savedMessages, suggestions = buildSuggestions(savedMessages)) }
             }
             refreshSuggestions()
+            refreshEditOptions()
         }
     }
 
@@ -221,6 +224,27 @@ class AgentViewModel(
         }
     }
 
+    fun updateAction(messageId: Long, action: AgentActionPreview, changedField: String) {
+        _uiState.update { current ->
+            current.copy(
+                messages = current.messages.map { message ->
+                    if (message.id != messageId) {
+                        message
+                    } else {
+                        message.copy(
+                            actions = message.actions.map { existing ->
+                                if (existing.onceActionId() == action.onceActionId()) action else existing
+                            },
+                        )
+                    }
+                },
+            )
+        }
+        runStore.updatePendingAction(action)
+        persistConversation()
+        sendActionFeedback(action, "edited", reason = changedField)
+    }
+
     fun submitMessageFeedback(message: AgentMessage, feedback: String) {
         val clientRequestId = _uiState.value.lastClientRequestId
         if (clientRequestId.isBlank() || message.role != AgentMessageRole.ASSISTANT) return
@@ -240,6 +264,7 @@ class AgentViewModel(
         action: AgentActionPreview,
         result: String,
         errorType: String = "",
+        reason: String = "",
     ) {
         val clientRequestId = _uiState.value.lastClientRequestId
         if (clientRequestId.isBlank()) return
@@ -249,6 +274,7 @@ class AgentViewModel(
                 result = result,
                 actionTypes = listOf(action.type),
                 errorType = errorType,
+                reason = reason,
             )
         }
     }
@@ -340,6 +366,12 @@ class AgentViewModel(
         }
     }
 
+    private fun refreshEditOptions() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(editOptions = contextProvider.buildEditOptions()) }
+        }
+    }
+
     companion object {
         const val CLEANUP_WARNING_THRESHOLD = 60
         const val MAX_INPUT_LENGTH = 1200
@@ -357,7 +389,11 @@ class AgentViewModelFactory(
         if (modelClass.isAssignableFrom(AgentViewModel::class.java)) {
             return AgentViewModel(
                 agentRepository = AgentRepository(preferencesManager),
-                contextProvider = AgentContextProvider(repository, scheduledRepository),
+                contextProvider = AgentContextProvider(
+                    repository = repository,
+                    scheduledRepository = scheduledRepository,
+                    defaultRecordAccountIdProvider = { preferencesManager.defaultRecordAccountId.first() },
+                ),
                 actionExecutor = AgentActionExecutor(repository, scheduledRepository),
                 preferencesManager = preferencesManager,
             ) as T

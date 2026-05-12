@@ -106,6 +106,72 @@ class AgentRepositoryTest {
     }
 
     @Test
+    fun localRecordPreviewUsesDefaultAccountWhenMessageHasNoAccount() = runTest {
+        val client = FakeAgentNetworkClient(
+            result = AgentCallResult.NetworkFailure("服务器暂时无法连接，请稍后再试。"),
+        )
+        val repository = AgentRepository(
+            settingsProvider = {
+                AgentSettings(
+                    enabled = true,
+                    serviceMode = AgentModelServiceMode.CUSTOM,
+                    customBaseUrl = "https://api.example.com/v1",
+                    customApiKey = "key",
+                )
+            },
+            client = client,
+        )
+        val localContext = AgentLocalContext(
+            categories = listOf(
+                mapOf("name" to "餐饮", "direction" to "EXPENSE"),
+                mapOf("name" to "其他", "direction" to "EXPENSE"),
+            ),
+            accounts = listOf(
+                mapOf("name" to "微信", "isDefaultRecordAccount" to true),
+                mapOf("name" to "银行卡", "isDefaultRecordAccount" to false),
+            ),
+            stats = mapOf("defaultRecordAccountName" to "微信"),
+        )
+
+        val result = repository.sendMessage("昨天午饭 18", localContext)
+
+        assertTrue(result is AgentCallResult.Success)
+        val record = (result as AgentCallResult.Success).response.actions.single().records.single()
+        assertEquals("微信", record["fromAccountName"])
+    }
+
+    @Test
+    fun localRecordPreviewKeepsAccountBlankWhenNoDefaultAccount() = runTest {
+        val client = FakeAgentNetworkClient(
+            result = AgentCallResult.NetworkFailure("服务器暂时无法连接，请稍后再试。"),
+        )
+        val repository = AgentRepository(
+            settingsProvider = {
+                AgentSettings(
+                    enabled = true,
+                    serviceMode = AgentModelServiceMode.CUSTOM,
+                    customBaseUrl = "https://api.example.com/v1",
+                    customApiKey = "key",
+                )
+            },
+            client = client,
+        )
+        val localContext = AgentLocalContext(
+            categories = listOf(
+                mapOf("name" to "餐饮", "direction" to "EXPENSE"),
+                mapOf("name" to "其他", "direction" to "EXPENSE"),
+            ),
+            accounts = listOf(mapOf("name" to "银行卡", "isDefaultRecordAccount" to false)),
+        )
+
+        val result = repository.sendMessage("昨天午饭 18", localContext)
+
+        assertTrue(result is AgentCallResult.Success)
+        val record = (result as AgentCallResult.Success).response.actions.single().records.single()
+        assertEquals(null, record["fromAccountName"])
+    }
+
+    @Test
     fun highRiskAdviceReturnsBoundaryWithoutNetwork() = runTest {
         val client = FakeAgentNetworkClient()
         val repository = AgentRepository(

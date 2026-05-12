@@ -51,6 +51,22 @@ class AgentTaskModelsTest {
     }
 
     @Test
+    fun runStoreUpdatesEditedPendingAction() {
+        val store = AgentRunStore()
+        val action = AgentActionPreview(
+            actionId = "once-1",
+            type = "create_record",
+            title = "新增账目",
+            records = listOf(mapOf("amountCent" to 1_800L)),
+        )
+
+        store.savePendingAction("run-1", action)
+        store.updatePendingAction(action.copy(records = listOf(mapOf("amountCent" to 2_000L))))
+
+        assertEquals(2_000L, store.pendingActions().single().records.single()["amountCent"])
+    }
+
+    @Test
     fun suggestionProviderReturnsDynamicShortSuggestions() {
         val suggestions = AgentSuggestionProvider().buildLocalSuggestions(
             today = "2026-05-31",

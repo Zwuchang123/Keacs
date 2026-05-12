@@ -294,10 +294,12 @@ def _resolve_account_name(request: AgentChatRequest, message: str) -> str:
     names = _matched_account_names(request, message)
     if names:
         return names[0]
-    accounts = request.local_context.accounts
-    if accounts:
-        first_name = accounts[0].get("name")
-        return str(first_name) if first_name else ""
+    for item in request.local_context.accounts:
+        if item.get("isDefaultRecordAccount") is True and item.get("name"):
+            return str(item["name"])
+    default_name = request.local_context.stats.get("defaultRecordAccountName")
+    if default_name:
+        return str(default_name)
     return ""
 
 

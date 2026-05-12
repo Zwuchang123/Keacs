@@ -19,8 +19,20 @@ import java.util.Locale
 class AgentContextProvider(
     private val repository: LocalDataRepository,
     private val scheduledRepository: ScheduledRecordRepository? = null,
+    private val defaultRecordAccountIdProvider: suspend () -> Long? = { null },
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) {
+    suspend fun buildEditOptions(): AgentEditOptions {
+        val categories = repository.getCategories()
+            .filter { it.isEnabled && it.direction in accountOrRecordDirections }
+            .sortedWith(compareBy<CategoryEntity> { it.direction }.thenBy { it.sortOrder })
+            .map { AgentFieldOption(id = it.id, name = it.name, direction = it.direction) }
+        val accounts = repository.getAccounts()
+            .filter { it.isEnabled }
+            .map { AgentFieldOption(id = it.id, name = it.name, direction = it.nature) }
+        return AgentEditOptions(categories = categories, accounts = accounts)
+    }
+
     suspend fun buildSuggestionSummary(): Map<String, Any?> {
         val categories = repository.getCategories()
         val records = repository.getRecords()
@@ -69,6 +81,10 @@ class AgentContextProvider(
     suspend fun buildForMessage(message: String): AgentLocalContext {
         val categories = repository.getCategories()
         val accounts = repository.getAccounts()
+        val defaultRecordAccountId = defaultRecordAccountIdProvider()
+        val defaultRecordAccount = accounts.firstOrNull {
+            it.isEnabled && it.id == defaultRecordAccountId
+        }
         val records = repository.getRecords()
         val range = rangeForMessage(message, records)
         val rangeRecords = records.filter { it.occurredAt in range.start until range.endExclusive }
@@ -95,9 +111,9 @@ class AgentContextProvider(
                 .map { it.toAgentMap() },
             accounts = accounts
                 .filter { it.isEnabled }
-                .map { it.toAgentMap(records) },
+                .map { it.toAgentMap(records, defaultRecordAccount?.id) },
             records = selectedRecords.map { it.toAgentMap(categories, accounts) },
-            stats = rangeRecords.toStatsMap(range, categories, accounts, records),
+            stats = rangeRecords.toStatsMap(range, categories, accounts, records, defaultRecordAccount),
             scheduledRecords = schedules.map { it.toAgentMap(categories, accounts) },
         )
     }
@@ -256,12 +272,16 @@ class AgentContextProvider(
         "direction" to direction,
     )
 
-    private fun AccountEntity.toAgentMap(records: List<RecordEntity>): Map<String, Any?> = mapOf(
+    private fun AccountEntity.toAgentMap(
+        records: List<RecordEntity>,
+        defaultRecordAccountId: Long?,
+    ): Map<String, Any?> = mapOf(
         "id" to id,
         "name" to name,
         "nature" to nature,
         "type" to type,
         "balanceCent" to balanceFor(this, records),
+        "isDefaultRecordAccount" to (id == defaultRecordAccountId),
     )
 
     private fun RecordEntity.toAgentMap(
@@ -284,6 +304,7 @@ class AgentContextProvider(
         categories: List<CategoryEntity>,
         accounts: List<AccountEntity>,
         allRecords: List<RecordEntity>,
+        defaultRecordAccount: AccountEntity?,
     ): Map<String, Any?> {
         val categoryNameById = categories.associate { it.id to it.name }
         val accountSummary = accounts
@@ -294,6 +315,7 @@ class AgentContextProvider(
                     "name" to it.name,
                     "nature" to it.nature,
                     "balanceCent" to balanceFor(it, allRecords),
+                    "isDefaultRecordAccount" to (it.id == defaultRecordAccount?.id),
                 )
             }
         return mapOf(
@@ -303,6 +325,8 @@ class AgentContextProvider(
             "incomeCent" to totalIncome(this),
             "expenseCent" to totalExpense(this),
             "balanceCent" to totalIncome(this) - totalExpense(this),
+            "defaultRecordAccountId" to defaultRecordAccount?.id,
+            "defaultRecordAccountName" to defaultRecordAccount?.name,
             "categoryTotals" to filter { it.type == RecordType.INCOME || it.type == RecordType.EXPENSE }
                 .groupBy { it.categoryId }
                 .map { (categoryId, records) ->

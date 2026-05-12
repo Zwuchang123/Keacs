@@ -105,6 +105,12 @@ class AgentRunStore {
     fun pendingActions(): List<AgentActionPreview> =
         pendingActions.values.map { it.action }
 
+    fun updatePendingAction(action: AgentActionPreview) {
+        val actionId = action.onceActionId()
+        val stored = pendingActions[actionId] ?: return
+        pendingActions[actionId] = stored.copy(action = action.copy(actionId = actionId))
+    }
+
     fun markActionConfirmed(actionId: String): Boolean =
         consume(actionId)
 
@@ -143,6 +149,17 @@ data class AgentUserMemory(
 data class AgentSuggestion(
     val text: String,
     val reason: String,
+)
+
+data class AgentEditOptions(
+    val categories: List<AgentFieldOption> = emptyList(),
+    val accounts: List<AgentFieldOption> = emptyList(),
+)
+
+data class AgentFieldOption(
+    val id: Long?,
+    val name: String,
+    val direction: String = "",
 )
 
 class AgentSuggestionProvider {
