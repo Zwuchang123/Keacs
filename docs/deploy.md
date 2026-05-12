@@ -6,15 +6,14 @@
 
 核心规则：验收失败不合并、不发版；验收通过后合并到 `master` 并删除短分支；是否发版只看是否要发布 APK。
 
-| 场景                 | 发版      | 合并 `master`                              | 删除短分支   | 必做记录                             |
-| ------------------ | ------- | ---------------------------------------- | ------- | -------------------------------- |
-| 非代码开发任务            | 不发版     | 验收通过后合并                                  | 合并后删除   | 按需更新相关文档                         |
-| 小功能优化，暂不上线         | 不发版     | 验收通过后合并                                  | 合并后删除   | 写入 `docs\releases\next.md`       |
-| BUG 修复，可等待发版       | 不发版     | 验收通过后合并                                  | 合并后删除   | 写入 `docs\releases\next.md`       |
-| BUG 修复，需要立刻给用户更新   | 发补丁版本   | 发版准备完成后合并                                | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md`     |
-| 小功能优化，确认上线         | 发补丁或小版本 | 发版准备完成后合并                                | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md`     |
-| 大功能迭代              | 默认发版    | 发版准备完成后合并                                | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md`     |
-| Keacs Agent 助手开发任务 | 不发版     | 在 `Keacs-agent` 分支完成全部开发任务，全部验收通过后等用户要求合并 | 需用户要求删除 | 每个阶段完成都需要更新 `docs\agents-plan.md` |
+| 场景               | 发版      | 合并 `master` | 删除短分支   | 必做记录                         |
+| ---------------- | ------- | ----------- | ------- | ---------------------------- |
+| 非代码开发任务          | 不发版     | 验收通过后合并     | 合并后删除   | 按需更新相关文档                     |
+| 小功能优化，暂不上线       | 不发版     | 验收通过后合并     | 合并后删除   | 写入 `docs\releases\next.md`   |
+| BUG 修复，可等待发版     | 不发版     | 验收通过后合并     | 合并后删除   | 写入 `docs\releases\next.md`   |
+| BUG 修复，需要立刻给用户更新 | 发补丁版本   | 发版准备完成后合并   | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md` |
+| 小功能优化，确认上线       | 发补丁或小版本 | 发版准备完成后合并   | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md` |
+| 大功能迭代            | 默认发版    | 发版准备完成后合并   | 标签推送后删除 | 写入 `docs\releases\vX.Y.Z.md` |
 
 ## 2. 分支、版本和记录
 
@@ -84,7 +83,7 @@ GitHub Release 需要以下 Secrets：
 ssh keacs-prod 'sudo mkdir -p /opt/keacs && sudo chown $USER:$USER /opt/keacs'
 ```
 
-2. 在服务器拉取仓库代码：
+1. 在服务器拉取仓库代码：
 
 ```powershell
 ssh keacs-prod "cd /opt/keacs && git clone <仓库地址> ."
@@ -92,7 +91,7 @@ ssh keacs-prod "cd /opt/keacs && git clone <仓库地址> ."
 
 如果服务器不能直接访问仓库，可以只上传 `server` 目录，但仍以 `/opt/keacs/server` 作为运行目录。
 
-3. 在服务器创建 `/opt/keacs/server/.env`，字段参考 `server/.env.example`。必须配置：
+1. 在服务器创建 `/opt/keacs/server/.env`，字段参考 `server/.env.example`。必须配置：
 
 ```text
 KEACS_AGENT_DOMAIN=<正式域名>
@@ -103,13 +102,13 @@ KEACS_MODEL_REASONING_SPLIT=true
 KEACS_MODEL_API_KEY=<服务器上的真实模型 API Key>
 ```
 
-4. 启动服务：
+1. 启动服务：
 
 ```powershell
 ssh keacs-prod "cd /opt/keacs/server && docker compose up -d --build"
 ```
 
-5. 验证容器和健康检查：
+1. 验证容器和健康检查：
 
 ```powershell
 ssh keacs-prod "cd /opt/keacs/server && docker compose ps"
@@ -132,14 +131,14 @@ ssh keacs-prod "curl -fsS https://<正式域名>/health"
 ssh keacs-prod "cd /opt/keacs && git fetch --all --tags && git checkout <分支或标签> && cd server && docker compose up -d --build"
 ```
 
-4. 检查运行状态和最近日志：
+1. 检查运行状态和最近日志：
 
 ```powershell
 ssh keacs-prod "cd /opt/keacs/server && docker compose ps"
 ssh keacs-prod "cd /opt/keacs/server && docker compose logs --tail 200"
 ```
 
-5. 再次访问健康检查，并用 App 官方服务主路径做一次连接验证。
+1. 再次访问健康检查，并用 App 官方服务主路径做一次连接验证。
 
 ## 8. 后端回滚
 
@@ -153,8 +152,8 @@ ssh keacs-prod "cd /opt/keacs/server && docker compose logs --tail 200"
 ssh keacs-prod "cd /opt/keacs && git checkout <上一个可用标签或提交> && cd server && docker compose up -d --build"
 ```
 
-2. 检查容器和健康检查。
-3. 如果是环境变量错误，只修改服务器 `/opt/keacs/server/.env` 后重启：
+1. 检查容器和健康检查。
+2. 如果是环境变量错误，只修改服务器 `/opt/keacs/server/.env` 后重启：
 
 ```powershell
 ssh keacs-prod "cd /opt/keacs/server && docker compose up -d"
@@ -196,3 +195,4 @@ ssh keacs-prod "sudo nginx -t && sudo systemctl reload nginx"
 scp 本地文件 keacs-prod:/目标目录/
 scp keacs-prod:/远程文件 本地目录
 ```
+

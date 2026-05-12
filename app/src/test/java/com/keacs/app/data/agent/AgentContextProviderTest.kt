@@ -85,6 +85,47 @@ class AgentContextProviderTest {
         assertEquals(2, repository.getRecords().size)
     }
 
+    @Test
+    fun yearAnalysisIncludesCurrentYearRecords() = runTest {
+        repository.initializePresets()
+        val food = repository.getCategories().first { it.name == "餐饮" }
+        val cash = repository.getAccounts().first { it.name == "现金" }
+
+        repository.saveRecord(null, RecordType.EXPENSE, 1_800, dateMillis(2026, 5, 10), food.id, cash.id, null, "今年午饭")
+        repository.saveRecord(null, RecordType.EXPENSE, 900, dateMillis(2025, 12, 20), food.id, cash.id, null, "去年午饭")
+
+        val context = AgentContextProvider(
+            repository = repository,
+            scheduledRepository = scheduledRepository,
+            clock = { dateMillis(2026, 5, 11) },
+        ).buildForMessage("今年帮我分析消费习惯")
+
+        assertEquals("今年", context.stats["rangeLabel"])
+        assertEquals(1, context.records.size)
+        assertEquals("今年午饭", context.records.single()["note"])
+    }
+
+    @Test
+    fun fullHistoryQuestionIncludesAllRecords() = runTest {
+        repository.initializePresets()
+        val food = repository.getCategories().first { it.name == "餐饮" }
+        val cash = repository.getAccounts().first { it.name == "现金" }
+
+        repository.saveRecord(null, RecordType.EXPENSE, 1_800, dateMillis(2026, 5, 10), food.id, cash.id, null, "今年午饭")
+        repository.saveRecord(null, RecordType.EXPENSE, 900, dateMillis(2025, 12, 20), food.id, cash.id, null, "去年午饭")
+
+        val context = AgentContextProvider(
+            repository = repository,
+            scheduledRepository = scheduledRepository,
+            clock = { dateMillis(2026, 5, 11) },
+        ).buildForMessage("全部账单帮我分析消费习惯")
+
+        assertEquals("全部账单", context.stats["rangeLabel"])
+        assertEquals(2, context.records.size)
+        assertTrue(context.records.map { it["note"] }.contains("今年午饭"))
+        assertTrue(context.records.map { it["note"] }.contains("去年午饭"))
+    }
+
     private fun dateMillis(year: Int, month: Int, day: Int): Long =
         Calendar.getInstance(Locale.getDefault()).apply {
             set(year, month - 1, day, 12, 0, 0)

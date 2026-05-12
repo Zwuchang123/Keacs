@@ -13,17 +13,27 @@ services:
       KEACS_RATE_LIMIT_PER_MINUTE: ${KEACS_RATE_LIMIT_PER_MINUTE:-20}
       KEACS_RATE_LIMIT_PER_DAY: ${KEACS_RATE_LIMIT_PER_DAY:-200}
       KEACS_MAX_MESSAGE_LENGTH: ${KEACS_MAX_MESSAGE_LENGTH:-1000}
-      KEACS_MAX_CONTEXT_ITEMS: ${KEACS_MAX_CONTEXT_ITEMS:-200}
+      KEACS_MAX_CONTEXT_ITEMS: ${KEACS_MAX_CONTEXT_ITEMS:-10000}
+      KEACS_MODEL_REQUEST_TIMEOUT_SECONDS: ${KEACS_MODEL_REQUEST_TIMEOUT_SECONDS:-90}
+      KEACS_MODEL_MAX_RETRIES: ${KEACS_MODEL_MAX_RETRIES:-2}
+      KEACS_MODEL_MAX_COMPLETION_TOKENS: ${KEACS_MODEL_MAX_COMPLETION_TOKENS:-700}
     volumes:
       - keacs-agent-data:/data
     expose:
       - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   caddy:
     image: caddy:2
     restart: unless-stopped
     depends_on:
-      - keacs-agent
+      keacs-agent:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"

@@ -25,15 +25,9 @@ class AgentContextProvider(
         val categories = repository.getCategories()
         val accounts = repository.getAccounts()
         val records = repository.getRecords()
-        val range = rangeForMessage(message)
+        val range = rangeForMessage(message, records)
         val rangeRecords = records.filter { it.occurredAt in range.start until range.endExclusive }
-        val candidateRecords = if (message.needsRecordCandidates()) {
-            rangeRecords
-                .sortedByDescending { it.occurredAt }
-                .take(MAX_RECORD_CANDIDATES)
-        } else {
-            emptyList()
-        }
+        val selectedRecords = message.selectRecordsForContext(range, rangeRecords)
         val schedules = if (message.needsSchedules()) {
             scheduledRepository?.getSchedules().orEmpty().take(MAX_SCHEDULES)
         } else {
@@ -57,16 +51,26 @@ class AgentContextProvider(
             accounts = accounts
                 .filter { it.isEnabled }
                 .map { it.toAgentMap(records) },
-            records = candidateRecords.map { it.toAgentMap(categories, accounts) },
+            records = selectedRecords.map { it.toAgentMap(categories, accounts) },
             stats = rangeRecords.toStatsMap(range, categories, accounts, records),
             scheduledRecords = schedules.map { it.toAgentMap(categories, accounts) },
         )
     }
 
-    private fun rangeForMessage(message: String): ContextRange {
+    private fun rangeForMessage(message: String, records: List<RecordEntity>): ContextRange {
         val now = clock()
         val lowerMessage = message.lowercase()
         return when {
+            lowerMessage.containsAny("全部", "所有", "历史", "累计", "从开始", "总共", "整体") ->
+                fullRange(now, records, "全部账单")
+            lowerMessage.contains("去年") || lowerMessage.contains("上一年") -> yearRange(now, -1, "去年")
+            lowerMessage.contains("今年") || lowerMessage.contains("本年") -> yearRange(now, 0, "今年")
+            lowerMessage.containsAny("最近一年", "近一年", "过去一年") -> rollingRange(now, 365, "最近一年")
+            lowerMessage.containsAny("最近半年", "近半年", "过去半年") -> rollingRange(now, 180, "最近半年")
+            lowerMessage.containsAny("最近三个月", "近三个月", "过去三个月") -> rollingRange(now, 90, "最近三个月")
+            lowerMessage.containsAny("最近30天", "近30天", "过去30天") -> rollingRange(now, 30, "最近30天")
+            lowerMessage.contains("上周") -> weekRange(now, -1, "上周")
+            lowerMessage.contains("本周") || lowerMessage.contains("这周") -> weekRange(now, 0, "本周")
             lowerMessage.contains("昨天") || lowerMessage.contains("昨日") -> dayRange(now, -1, "昨天")
             lowerMessage.contains("今天") -> dayRange(now, 0, "今天")
             lowerMessage.contains("最近") || lowerMessage.contains("近7天") || lowerMessage.contains("近七天") ->
@@ -106,6 +110,46 @@ class AgentContextProvider(
         return ContextRange(start, end, label)
     }
 
+    private fun yearRange(now: Long, offsetYears: Int, label: String): ContextRange {
+        val startCalendar = Calendar.getInstance(Locale.getDefault()).apply {
+            timeInMillis = now
+            add(Calendar.YEAR, offsetYears)
+            set(Calendar.MONTH, Calendar.JANUARY)
+            set(Calendar.DAY_OF_MONTH, 1)
+            setDayStart()
+        }
+        val start = startCalendar.timeInMillis
+        val end = (startCalendar.clone() as Calendar).apply { add(Calendar.YEAR, 1) }.timeInMillis
+        return ContextRange(start, end, label)
+    }
+
+    private fun weekRange(now: Long, offsetWeeks: Int, label: String): ContextRange {
+        val startCalendar = Calendar.getInstance(Locale.getDefault()).apply {
+            timeInMillis = now
+            add(Calendar.WEEK_OF_YEAR, offsetWeeks)
+            firstDayOfWeek = Calendar.MONDAY
+            set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            setDayStart()
+        }
+        val start = startCalendar.timeInMillis
+        val end = (startCalendar.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 7) }.timeInMillis
+        return ContextRange(start, end, label)
+    }
+
+    private fun fullRange(now: Long, records: List<RecordEntity>, label: String): ContextRange {
+        val firstRecordTime = records.minOfOrNull { it.occurredAt } ?: now
+        val start = Calendar.getInstance(Locale.getDefault()).apply {
+            timeInMillis = firstRecordTime
+            setDayStart()
+        }.timeInMillis
+        val end = Calendar.getInstance(Locale.getDefault()).apply {
+            timeInMillis = now
+            add(Calendar.DAY_OF_YEAR, 1)
+            setDayStart()
+        }.timeInMillis
+        return ContextRange(start, end, label, isFull = true)
+    }
+
     private fun Calendar.setDayStart() {
         set(Calendar.HOUR_OF_DAY, 0)
         set(Calendar.MINUTE, 0)
@@ -115,6 +159,48 @@ class AgentContextProvider(
 
     private fun String.needsRecordCandidates(): Boolean =
         listOf("改", "删", "那笔", "账目", "大额", "最近", "明细", "消费").any { contains(it) }
+
+    private fun String.needsRecordDetails(): Boolean =
+        containsAny(
+            "全部",
+            "所有",
+            "历史",
+            "累计",
+            "从开始",
+            "今年",
+            "去年",
+            "本年",
+            "最近一年",
+            "近一年",
+            "最近半年",
+            "近半年",
+            "最近三个月",
+            "近三个月",
+            "最近30天",
+            "近30天",
+            "分析",
+            "复盘",
+            "习惯",
+            "结构",
+            "趋势",
+            "排行",
+            "异常",
+            "大额",
+            "明细",
+        )
+
+    private fun String.selectRecordsForContext(
+        range: ContextRange,
+        rangeRecords: List<RecordEntity>,
+    ): List<RecordEntity> {
+        val sortedRecords = rangeRecords.sortedByDescending { it.occurredAt }
+        return when {
+            needsRecordDetails() && range.isFull -> sortedRecords
+            needsRecordDetails() -> sortedRecords.take(MAX_ANALYSIS_RECORDS)
+            needsRecordCandidates() -> sortedRecords.take(MAX_RECORD_CANDIDATES)
+            else -> emptyList()
+        }
+    }
 
     private fun String.needsSchedules(): Boolean =
         listOf("定时", "每周", "每月", "每年", "房租").any { contains(it) }
@@ -209,10 +295,12 @@ class AgentContextProvider(
         val start: Long,
         val endExclusive: Long,
         val label: String,
+        val isFull: Boolean = false,
     )
 
     private companion object {
         const val MAX_RECORD_CANDIDATES = 60
+        const val MAX_ANALYSIS_RECORDS = 500
         const val MAX_SCHEDULES = 30
         const val DAY_MILLIS = 24L * 60L * 60L * 1000L
         val accountOrRecordDirections = setOf(
@@ -223,3 +311,6 @@ class AgentContextProvider(
         )
     }
 }
+
+private fun String.containsAny(vararg terms: String): Boolean =
+    terms.any { contains(it) }

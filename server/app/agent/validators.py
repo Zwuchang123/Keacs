@@ -4,7 +4,8 @@ from app.agent.schemas import AgentChatResponse
 
 def count_context_items(context: LocalContext) -> int:
     return (
-        len(context.categories)
+        len(context.time_context)
+        + len(context.categories)
         + len(context.accounts)
         + len(context.records)
         + len(context.scheduled_records)

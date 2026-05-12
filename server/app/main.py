@@ -1,3 +1,6 @@
+from contextlib import asynccontextmanager
+
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
@@ -8,12 +11,23 @@ from app.config import Settings
 from app.storage.audit_log import AuditLog
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    timeout = httpx.Timeout(app.state.settings.model_request_timeout_seconds)
+    limits = httpx.Limits(max_connections=50, max_keepalive_connections=20)
+    app.state.model_http_client = httpx.AsyncClient(timeout=timeout, limits=limits)
+    try:
+        yield
+    finally:
+        await app.state.model_http_client.aclose()
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     app_settings = settings or Settings.from_env()
     app_settings.ensure_storage_parent()
     audit_log = AuditLog(app_settings.audit_db_path)
 
-    app = FastAPI(title=app_settings.app_name)
+    app = FastAPI(title=app_settings.app_name, lifespan=lifespan)
     app.state.settings = app_settings
     app.state.audit_log = audit_log
 

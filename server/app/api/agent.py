@@ -1,8 +1,10 @@
 from time import perf_counter
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request, status
 
 from app.agent.model_client import ModelProviderClient
+from app.agent.fallback import build_fallback_response
 from app.agent.orchestrator import AgentOrchestrator
 from app.agent.schemas import AgentChatRequest, AgentChatResponse, AgentFeedbackRequest
 from app.agent.validators import count_context_items, extract_action_types
@@ -14,14 +16,19 @@ from app.storage.audit_log import AuditLog
 def create_agent_router(settings: Settings, audit_log: AuditLog) -> APIRouter:
     router = APIRouter(prefix="/api/agent", tags=["agent"])
     rate_limiter = DeviceRateLimiter(settings.request_per_minute_limit, settings.request_per_day_limit)
-    model_client = ModelProviderClient(settings)
-    orchestrator = AgentOrchestrator(model_client)
 
     @router.post("/chat", response_model=AgentChatResponse)
     async def chat(payload: AgentChatRequest, request: Request) -> AgentChatResponse:
         started_at = perf_counter()
         error_type = ""
         action_types: list[str] = []
+        owned_client: httpx.AsyncClient | None = None
+        shared_client = getattr(request.app.state, "model_http_client", None)
+        if shared_client is None:
+            owned_client = httpx.AsyncClient(timeout=settings.model_request_timeout_seconds)
+            shared_client = owned_client
+        model_client = ModelProviderClient(settings, shared_client)
+        orchestrator = AgentOrchestrator(model_client)
         try:
             _validate_chat_request(payload, settings)
             rate_result = rate_limiter.check(payload.device_id_hash)
@@ -32,7 +39,7 @@ def create_agent_router(settings: Settings, audit_log: AuditLog) -> APIRouter:
                     detail=rate_result.message,
                     headers={"Retry-After": str(rate_result.retry_after_seconds)},
                 )
-            response = await orchestrator.handle_chat(payload)
+            response = await orchestrator.handle_chat(payload, request)
             action_types = extract_action_types(response.actions)
             return response
         except HTTPException as exc:
@@ -40,13 +47,12 @@ def create_agent_router(settings: Settings, audit_log: AuditLog) -> APIRouter:
             raise exc
         except Exception:
             error_type = "model_call_failed"
-            return AgentChatResponse(
-                reply="我没有拿到稳定的结果，不会写入账本。你可以继续补充金额、日期、分类或账户，我会结合上下文重新判断。",
-                needs_more_context=False,
-                context_requests=[],
-                actions=[],
-                warnings=[],
+            response = build_fallback_response(
+                payload,
+                warning="模型服务暂时不稳定，已使用本地规则生成结果。",
             )
+            action_types = extract_action_types(response.actions)
+            return response
         finally:
             audit_log.record(
                 endpoint=str(request.url.path),
@@ -57,6 +63,8 @@ def create_agent_router(settings: Settings, audit_log: AuditLog) -> APIRouter:
                 action_types=action_types,
                 error_type=error_type,
             )
+            if owned_client is not None:
+                await owned_client.aclose()
 
     @router.post("/feedback")
     async def feedback(payload: AgentFeedbackRequest, request: Request) -> dict[str, str]:

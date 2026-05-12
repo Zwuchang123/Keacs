@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class LocalContext(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
+    time_context: dict[str, str] = Field(default_factory=dict, alias="timeContext")
     categories: list[dict[str, Any]] = Field(default_factory=list)
     accounts: list[dict[str, Any]] = Field(default_factory=list)
     records: list[dict[str, Any]] = Field(default_factory=list)

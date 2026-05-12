@@ -153,6 +153,7 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
 
     private fun AgentLocalContext.toJson(): JSONObject =
         JSONObject()
+            .put("timeContext", JSONObject(timeContext))
             .put("categories", categories.toJsonArray())
             .put("accounts", accounts.toJsonArray())
             .put("records", records.toJsonArray())
