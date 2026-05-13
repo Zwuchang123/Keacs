@@ -1,6 +1,7 @@
 package com.keacs.app.ui.agent
 
 import com.keacs.app.data.agent.AgentActionPreview
+import com.keacs.app.data.agent.AgentReplySource
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -28,18 +29,24 @@ private fun AgentMessage.toJson(): JSONObject =
         .put("warnings", JSONArray(warnings))
         .put("elapsedMillis", elapsedMillis ?: JSONObject.NULL)
         .put("feedback", feedback)
+        .put("replySource", replySource?.name ?: JSONObject.NULL)
 
-private fun JSONObject.toAgentMessage(): AgentMessage =
-    AgentMessage(
+private fun JSONObject.toAgentMessage(): AgentMessage {
+    val role = runCatching { AgentMessageRole.valueOf(optString("role")) }
+        .getOrDefault(AgentMessageRole.ASSISTANT)
+    val replySource = runCatching { AgentReplySource.valueOf(optString("replySource")) }.getOrNull()
+        ?: if (role == AgentMessageRole.ASSISTANT) AgentReplySource.MODEL else null
+    return AgentMessage(
         id = optLong("id"),
-        role = runCatching { AgentMessageRole.valueOf(optString("role")) }
-            .getOrDefault(AgentMessageRole.ASSISTANT),
+        role = role,
         text = optString("text"),
         actions = optJSONArray("actions").toActionPreviews(),
         warnings = optJSONArray("warnings").toStringList(),
         elapsedMillis = if (isNull("elapsedMillis")) null else optLong("elapsedMillis"),
         feedback = optString("feedback"),
+        replySource = replySource,
     )
+}
 
 private fun List<AgentActionPreview>.toJsonArray(): JSONArray =
     JSONArray().also { array ->

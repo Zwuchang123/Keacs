@@ -39,9 +39,6 @@ class AgentRepository(
         if (message.isBlank()) {
             return AgentCallResult.ConfigurationRequired("请输入要发送的内容。")
         }
-        if (message.isHighRiskAdvice()) {
-            return AgentCallResult.Success(boundaryResponse())
-        }
 
         val request = AgentChatRequest(
             clientRequestId = java.util.UUID.randomUUID().toString(),
@@ -51,16 +48,20 @@ class AgentRepository(
             conversationHistory = conversationHistory.trimForRequest(),
             appVersion = com.keacs.app.BuildConfig.VERSION_NAME,
         )
+        if (message.isHighRiskAdvice()) {
+            return AgentCallResult.Success(boundaryResponse().copy(clientRequestId = request.clientRequestId))
+        }
         return when (val result = client.chat(settings, request)) {
             is AgentCallResult.Success -> AgentCallResult.Success(
-                response = result.response.toUserFacingResponse().copy(clientRequestId = request.clientRequestId),
+                response = result.response.toUserFacingResponse().copy(
+                    clientRequestId = request.clientRequestId,
+                    replySource = AgentReplySource.MODEL,
+                ),
             )
-            is AgentCallResult.NetworkFailure -> localFallback(message, localContext, null)
-                ?.let { AgentCallResult.Success(it.copy(clientRequestId = request.clientRequestId)) }
-                ?: AgentCallResult.NetworkFailure("服务连接失败。已保留输入内容，可以稍后重试或检查配置。")
-            is AgentCallResult.InvalidResponse -> localFallback(message, localContext, null)
-                ?.let { AgentCallResult.Success(it.copy(clientRequestId = request.clientRequestId)) }
-                ?: AgentCallResult.InvalidResponse("没有返回清晰内容。已保留输入内容，可以换个说法再试。")
+            is AgentCallResult.Timeout -> AgentCallResult.Success(
+                response = timeoutFallback(message, localContext)
+                    .copy(clientRequestId = request.clientRequestId),
+            )
             else -> result
         }
     }
@@ -152,11 +153,17 @@ data class AgentLocalContext(
 data class AgentChatResponse(
     val clientRequestId: String = "",
     val reply: String,
+    val replySource: AgentReplySource = AgentReplySource.MODEL,
     val needsMoreContext: Boolean = false,
     val contextRequests: List<AgentContextRequest> = emptyList(),
     val actions: List<AgentActionPreview> = emptyList(),
     val warnings: List<String> = emptyList(),
 )
+
+enum class AgentReplySource {
+    MODEL,
+    AUTO,
+}
 
 data class AgentFeedbackRequest(
     val clientRequestId: String,
@@ -196,6 +203,7 @@ sealed interface AgentCallResult {
     data class ConfigurationRequired(val message: String) : AgentCallResult
     data class NetworkFailure(val message: String) : AgentCallResult
     data class InvalidResponse(val message: String) : AgentCallResult
+    data class Timeout(val message: String) : AgentCallResult
 }
 
 fun AgentActionPreview.requiresConfirmation(): Boolean =
@@ -232,6 +240,7 @@ private fun String.isHighRiskAdvice(): Boolean {
 private fun boundaryResponse(): AgentChatResponse =
     AgentChatResponse(
         reply = "**不能处理这类建议**\n\n我可以帮你看账本记录、支出结构和消费习惯。",
+        replySource = AgentReplySource.AUTO,
         actions = listOf(
             AgentActionPreview(
                 type = "answer_only",
@@ -285,6 +294,17 @@ private fun localFallback(
         ?: buildLocalScheduledPreview(message, localContext, warning)
         ?: buildLocalRecordPreview(message, localContext, warning)
         ?: buildLocalStatsReply(message, localContext, warning)
+
+private fun timeoutFallback(
+    message: String,
+    localContext: AgentLocalContext,
+): AgentChatResponse =
+    localFallback(message, localContext, null)
+        ?.copy(replySource = AgentReplySource.AUTO)
+        ?: AgentChatResponse(
+            reply = "**自动回复**\n\n大模型 60 秒内没有返回回复，你可以稍后再试，或换个说法继续。",
+            replySource = AgentReplySource.AUTO,
+        )
 
 private fun buildLocalOperationPreview(
     message: String,

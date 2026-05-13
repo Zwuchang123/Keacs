@@ -10,6 +10,7 @@ import com.keacs.app.data.agent.AgentConversationTurn
 import com.keacs.app.data.agent.AgentContextProvider
 import com.keacs.app.data.agent.AgentExecutionResult
 import com.keacs.app.data.agent.AgentEditOptions
+import com.keacs.app.data.agent.AgentReplySource
 import com.keacs.app.data.agent.AgentRepository
 import com.keacs.app.data.agent.AgentRunStore
 import com.keacs.app.data.agent.requiresConfirmation
@@ -45,6 +46,7 @@ data class AgentMessage(
     val warnings: List<String> = emptyList(),
     val elapsedMillis: Long? = null,
     val feedback: String = "",
+    val replySource: AgentReplySource? = null,
 )
 
 enum class AgentMessageRole {
@@ -135,6 +137,7 @@ class AgentViewModel(
                             actions = actions,
                             warnings = result.response.warnings,
                             elapsedMillis = System.currentTimeMillis() - startedAt,
+                            replySource = result.response.replySource,
                         )).takeLast(MAX_STORED_MESSAGES)
                         current.copy(
                             isSending = false,
@@ -150,6 +153,7 @@ class AgentViewModel(
                 is AgentCallResult.ConfigurationRequired -> keepInputAndShowError(message, result.message)
                 is AgentCallResult.NetworkFailure -> keepInputAndShowError(message, result.message)
                 is AgentCallResult.InvalidResponse -> keepInputAndShowError(message, result.message)
+                is AgentCallResult.Timeout -> keepInputAndShowError(message, result.message)
             }
         }
     }
@@ -314,6 +318,7 @@ class AgentViewModel(
                             actions = actions,
                             warnings = result.response.warnings,
                             elapsedMillis = System.currentTimeMillis() - startedAt,
+                            replySource = result.response.replySource,
                         )
                         current.copy(
                             isSending = false,
@@ -329,6 +334,7 @@ class AgentViewModel(
                 is AgentCallResult.ConfigurationRequired -> replaceRegeneratedMessageWithError(message.id, result.message, startedAt)
                 is AgentCallResult.NetworkFailure -> replaceRegeneratedMessageWithError(message.id, result.message, startedAt)
                 is AgentCallResult.InvalidResponse -> replaceRegeneratedMessageWithError(message.id, result.message, startedAt)
+                is AgentCallResult.Timeout -> replaceRegeneratedMessageWithError(message.id, result.message, startedAt)
             }
         }
     }

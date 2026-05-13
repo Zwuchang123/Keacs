@@ -44,8 +44,13 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
                 return@withContext AgentCallResult.NetworkFailure(status.toUserMessage(responseBody))
             }
             parseResponse(settings.serviceMode, responseBody)
-        } catch (_: SocketTimeoutException) {
-            AgentCallResult.NetworkFailure("助手响应超时，请稍后再试。")
+        } catch (e: SocketTimeoutException) {
+            val isReadTimeout = e.message?.contains("Read timed out", ignoreCase = true) == true
+            if (isReadTimeout) {
+                AgentCallResult.Timeout("助手响应超时，请稍后再试。")
+            } else {
+                AgentCallResult.NetworkFailure("服务器暂时无法连接，请稍后再试。")
+            }
         } catch (_: IOException) {
             AgentCallResult.NetworkFailure("服务器暂时无法连接，请稍后再试。")
         } catch (_: RuntimeException) {
@@ -410,7 +415,7 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
 
     private companion object {
         const val CONNECT_TIMEOUT_MILLIS = 15_000
-        const val CHAT_READ_TIMEOUT_MILLIS = 90_000
+        const val CHAT_READ_TIMEOUT_MILLIS = 60_000
         const val FEEDBACK_READ_TIMEOUT_MILLIS = 10_000
     }
 }

@@ -1,6 +1,7 @@
 package com.keacs.app.ui.agent
 
 import com.keacs.app.data.agent.AgentActionPreview
+import com.keacs.app.data.agent.AgentReplySource
 
 internal const val AgentFeedbackLike = "like"
 internal const val AgentFeedbackDislike = "dislike"
@@ -36,6 +37,7 @@ internal fun List<AgentMessage>.replaceAssistantMessage(
     actions: List<AgentActionPreview> = emptyList(),
     warnings: List<String> = emptyList(),
     elapsedMillis: Long? = null,
+    replySource: AgentReplySource? = null,
 ): List<AgentMessage> =
     map { message ->
         if (message.id == messageId && message.role == AgentMessageRole.ASSISTANT) {
@@ -44,6 +46,7 @@ internal fun List<AgentMessage>.replaceAssistantMessage(
                 actions = actions,
                 warnings = warnings,
                 elapsedMillis = elapsedMillis,
+                replySource = replySource,
                 feedback = "",
             )
         } else {

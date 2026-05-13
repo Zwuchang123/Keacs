@@ -37,6 +37,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.agent.AgentActionPreview
 import com.keacs.app.data.agent.AgentEditOptions
+import com.keacs.app.data.agent.AgentReplySource
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
 
@@ -189,8 +190,22 @@ private fun AgentMessageBubble(
                 )
             }
             message.elapsedMillis?.let { elapsed ->
+                val sourceLabel = if (message.role == AgentMessageRole.ASSISTANT) {
+                    when (message.replySource) {
+                        AgentReplySource.AUTO -> "自动回复"
+                        AgentReplySource.MODEL -> "大模型"
+                        else -> ""
+                    }
+                } else {
+                    ""
+                }
+                val elapsedText = if (sourceLabel.isBlank()) {
+                    elapsed.formatElapsed()
+                } else {
+                    "$sourceLabel ${elapsed.formatElapsed()}"
+                }
                 Text(
-                    text = elapsed.formatElapsed(),
+                    text = elapsedText,
                     color = if (isUser) KeacsColors.TextSecondary else KeacsColors.TextTertiary,
                     style = MaterialTheme.typography.bodySmall,
                 )
