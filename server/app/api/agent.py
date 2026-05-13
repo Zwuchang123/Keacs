@@ -117,6 +117,13 @@ def create_agent_router(settings: Settings, audit_log: AuditLog) -> APIRouter:
         error_type = ""
         run_id = str(uuid4())
         action_types: list[str] = []
+        owned_client: httpx.AsyncClient | None = None
+        shared_client = getattr(request.app.state, "model_http_client", None)
+        if shared_client is None:
+            owned_client = httpx.AsyncClient(timeout=settings.model_request_timeout_seconds)
+            shared_client = owned_client
+        model_client = ModelProviderClient(settings, shared_client)
+        orchestrator = AgentOrchestrator(model_client)
         try:
             _validate_run_request(payload, settings)
             rate_result = rate_limiter.check(payload.device_id_hash)
@@ -135,7 +142,16 @@ def create_agent_router(settings: Settings, audit_log: AuditLog) -> APIRouter:
                     message=payload.message,
                 )
             )
-            events = _build_stream_events(run_id, payload)
+            chat_request = _chat_request_from_run(payload)
+            try:
+                response = await orchestrator.handle_chat(chat_request, request)
+            except Exception:
+                error_type = "model_call_failed"
+                response = build_fallback_response(
+                    chat_request,
+                    warning="模型服务暂时不稳定，已使用本地规则生成结果。",
+                )
+            events = _build_stream_events(run_id, payload, response)
             preview_actions = [
                 action
                 for event in events
@@ -168,6 +184,8 @@ def create_agent_router(settings: Settings, audit_log: AuditLog) -> APIRouter:
                 action_types=action_types,
                 error_type=error_type,
             )
+            if owned_client is not None:
+                await owned_client.aclose()
 
     @router.post("/runs/{run_id}/context")
     async def continue_context(run_id: str, payload: AgentRunContextRequest) -> dict[str, str]:
@@ -224,19 +242,27 @@ def _validate_run_request(payload: AgentRunRequest, settings: Settings) -> None:
         raise HTTPException(status_code=400, detail="对话内容过长，请先清空对话后再继续。")
 
 
-def _build_stream_events(run_id: str, payload: AgentRunRequest) -> list[dict]:
-    context_requests = _context_requests_for(payload.message)
-    local_context = _local_context_for_run(payload)
-    chat_request = AgentChatRequest(
+def _chat_request_from_run(payload: AgentRunRequest) -> AgentChatRequest:
+    return AgentChatRequest(
         clientRequestId=payload.client_request_id,
         deviceIdHash=payload.device_id_hash,
         message=payload.message,
-        localContext=local_context,
+        localContext=_local_context_for_run(payload),
         conversationHistory=payload.conversation_history,
         timezone=payload.timezone,
         appVersion=payload.app_version,
     )
-    response = build_fallback_response(chat_request)
+
+
+def _build_stream_events(
+    run_id: str,
+    payload: AgentRunRequest,
+    response: AgentChatResponse,
+) -> list[dict]:
+    context_requests = [
+        item.model_dump(by_alias=True)
+        for item in response.context_requests
+    ] or _context_requests_for(payload.message)
     events: list[dict] = [
         {"type": "run_started", "runId": run_id},
         {"type": "stage_changed", "stage": "understanding"},

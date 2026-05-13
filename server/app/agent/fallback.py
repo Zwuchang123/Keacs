@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from calendar import monthrange
 from datetime import datetime, time, timedelta, timezone
 import re
 from typing import Any
@@ -16,9 +17,9 @@ def build_fallback_response(request: AgentChatRequest, warning: str = "") -> Age
     message = request.message.strip()
     response = (
         _build_record_operation_response(request, message)
+        or _build_scheduled_response(request, message)
         or _build_record_creation_response(request, message)
         or _build_stats_response(request, message)
-        or _build_scheduled_response(request, message)
         or _build_general_response(message)
     )
     if warning:
@@ -32,13 +33,11 @@ def should_replace_model_response(request: AgentChatRequest, response: AgentChat
     message = request.message.strip()
     if _extract_amount_cent(message) is not None and _looks_like_record_creation(message):
         return True
+    if _looks_like_agent_task(message) and _looks_like_generic_model_reply(response.reply):
+        return True
     confusing_reply_terms = ("乱码", "没能理解", "无法理解", "不清楚", "换个说法")
     if any(term in response.reply for term in confusing_reply_terms):
-        return (
-            _looks_like_record_creation(message)
-            or _contains_any(message, ("多少", "花了", "支出", "收入", "结余", "复盘", "分析", "全部", "历史"))
-            or _contains_any(message, ("改", "删", "删除", "定时", "每周", "每月"))
-        )
+        return _looks_like_agent_task(message)
     return False
 
 
@@ -190,7 +189,28 @@ def _build_record_operation_response(request: AgentChatRequest, message: str) ->
     if _contains_any(message, ("改", "修改", "调成", "改成")):
         if not records:
             return _ask_user_response("没有找到可修改的账目", "请补充日期、金额、分类或账户后再试。")
-        return _ask_user_response("需要先确认账目", "我找到了候选账目，请补充要修改哪一笔和修改后的内容。")
+        if len(records) > 1:
+            return _ask_user_response("匹配到多笔账目", "请先说明要修改哪一笔，或补充更明确的日期、金额、分类。")
+        updated_record = _record_with_updates(request, records[0], message)
+        if updated_record is None:
+            return _ask_user_response("还缺少修改内容", "请说明要改金额、分类、账户、日期还是备注。")
+        return AgentChatResponse(
+            reply="请确认这笔修改。\n\n确认后才会更新本机账本。",
+            needs_more_context=False,
+            context_requests=[],
+            actions=[
+                AgentActionPreview(
+                    type="update_record",
+                    title="修改账目",
+                    description="修改 1 笔账目。",
+                    impact_count=1,
+                    records=[updated_record],
+                    scheduled_records=[],
+                    risk_notice="请核对修改后的金额、日期、分类和账户。",
+                )
+            ],
+            warnings=[],
+        )
     return None
 
 
@@ -202,10 +222,74 @@ def _build_scheduled_response(request: AgentChatRequest, message: str) -> AgentC
         schedules = request.local_context.scheduled_records
         if not schedules:
             return _ask_user_response("没有找到定时记账", "请补充定时记账名称、金额或周期后再试。")
-        return _ask_user_response("需要确认定时记账", "请说明要停用哪一条定时记账。")
+        if len(schedules) > 1:
+            return _ask_user_response("匹配到多条定时记账", "请说明要停用哪一条定时记账。")
+        return AgentChatResponse(
+            reply="请确认是否停用这条定时记账。\n\n确认后不再自动生成。",
+            needs_more_context=False,
+            context_requests=[],
+            actions=[
+                AgentActionPreview(
+                    type="disable_scheduled_record",
+                    title="停用定时记账",
+                    description="停用 1 条定时记账。",
+                    impact_count=1,
+                    records=[],
+                    scheduled_records=[schedules[0]],
+                    risk_notice="停用后可在定时记账页重新开启。",
+                )
+            ],
+            warnings=[],
+        )
     if amount_cent is None:
         return _ask_user_response("还缺少金额", "请补充定时记账的金额。")
-    return _ask_user_response("还缺少定时规则", "请补充周期和生成日期，例如“每月 1 号房租 2500”。")
+    frequency = _resolve_frequency(message)
+    if frequency is None:
+        return _ask_user_response("还缺少定时规则", "请补充周期和生成日期，例如“每月 1 号房租 2500”。")
+    record_type = _resolve_record_type(message)
+    category_name = _resolve_category_name(request, record_type, message)
+    if record_type != TRANSFER and not category_name:
+        return _ask_user_response("还缺少分类", "请补充这条定时记账的分类。")
+    account_name = _resolve_account_name(request, message)
+    next_run_at = _resolve_next_run_at(request, message, frequency)
+    schedule: dict[str, Any] = {
+        "type": record_type,
+        "amountCent": amount_cent,
+        "frequency": frequency,
+        "nextRunAt": next_run_at,
+        "note": message[:40],
+        "isEnabled": True,
+    }
+    if record_type == TRANSFER:
+        matched_accounts = _matched_account_names(request, message)
+        if len(matched_accounts) < 2:
+            return _ask_user_response("还缺少转账账户", "请说明转出账户和转入账户。")
+        schedule["fromAccountName"] = matched_accounts[0]
+        schedule["toAccountName"] = matched_accounts[1]
+    else:
+        schedule["categoryName"] = category_name
+        if record_type == INCOME:
+            if account_name:
+                schedule["toAccountName"] = account_name
+        elif account_name:
+            schedule["fromAccountName"] = account_name
+    return AgentChatResponse(
+        reply="请确认这条定时记账。\n\n确认后会按周期自动生成账目。",
+        needs_more_context=False,
+        context_requests=[],
+        actions=[
+            AgentActionPreview(
+                type="create_scheduled_record",
+                title="新增定时记账",
+                description="新增 1 条定时记账。",
+                impact_count=1,
+                records=[],
+                scheduled_records=[schedule],
+                risk_notice="请核对金额、周期、分类、账户和下次生成时间。",
+            )
+        ],
+        warnings=[],
+    )
 
 
 def _build_general_response(message: str) -> AgentChatResponse:
@@ -254,8 +338,155 @@ def _resolve_record_type(message: str) -> str:
     return EXPENSE
 
 
+def _record_with_updates(
+    request: AgentChatRequest,
+    record: dict[str, Any],
+    message: str,
+) -> dict[str, Any] | None:
+    updated = dict(record)
+    changed = False
+    amount_cent = _extract_update_amount_cent(message)
+    if amount_cent is not None:
+        updated["amountCent"] = amount_cent
+        changed = True
+    category_name = _resolve_target_category_name(request, str(updated.get("type") or EXPENSE), message)
+    if category_name:
+        updated["categoryName"] = category_name
+        changed = True
+    account_name = _resolve_target_account_name(request, message)
+    if account_name:
+        if str(updated.get("type")) == INCOME:
+            updated["toAccountName"] = account_name
+        else:
+            updated["fromAccountName"] = account_name
+        changed = True
+    occurred_at, date_label = _resolve_update_date(request, message)
+    if occurred_at is not None:
+        updated["occurredAt"] = occurred_at
+        updated["date"] = date_label
+        changed = True
+    return updated if changed else None
+
+
+def _extract_update_amount_cent(message: str) -> int | None:
+    match = re.search(r"(?:改成|调成|改为|变成|改到)\s*(\d+(?:\.\d{1,2})?)\s*(?:元|块)?", message)
+    if match:
+        amount = round(float(match.group(1)) * 100)
+        return amount if amount > 0 else None
+    return _extract_amount_cent(message)
+
+
+def _resolve_target_category_name(request: AgentChatRequest, record_type: str, message: str) -> str:
+    direction = INCOME if record_type == INCOME else EXPENSE
+    names = [
+        str(item.get("name"))
+        for item in request.local_context.categories
+        if str(item.get("direction", "")).upper() == direction and item.get("name")
+    ]
+    tail = _text_after_update_keyword(message)
+    for name in names:
+        if name and name in tail:
+            return name
+    return ""
+
+
+def _resolve_target_account_name(request: AgentChatRequest, message: str) -> str:
+    tail = _text_after_update_keyword(message)
+    for item in request.local_context.accounts:
+        name = item.get("name")
+        if name and str(name) in tail:
+            return str(name)
+    return ""
+
+
+def _text_after_update_keyword(message: str) -> str:
+    for keyword in ("改成", "调成", "改为", "变成", "改到"):
+        if keyword in message:
+            return message.split(keyword, 1)[1]
+    return message
+
+
+def _resolve_update_date(request: AgentChatRequest, message: str) -> tuple[int | None, str]:
+    if not _contains_any(message, ("今天", "昨天", "昨日", "前天")):
+        return None, ""
+    return _resolve_occurred_at(request, message)
+
+
+def _resolve_frequency(message: str) -> str | None:
+    if _contains_any(message, ("每周", "周一", "周二", "周三", "周四", "周五", "周六", "周日", "星期")):
+        return "WEEKLY"
+    if _contains_any(message, ("每年", "每一年", "每逢")):
+        return "YEARLY"
+    if _contains_any(message, ("每月", "每个月", "月初", "月末", "房租")):
+        return "MONTHLY"
+    return None
+
+
+def _resolve_next_run_at(request: AgentChatRequest, message: str, frequency: str) -> int:
+    today_text = request.local_context.time_context.get("today") or datetime.now().strftime("%Y-%m-%d")
+    base_date = datetime.strptime(today_text, "%Y-%m-%d").date()
+    timezone_value = _safe_timezone(request.timezone)
+    if frequency == "WEEKLY":
+        target_weekday = _resolve_weekday(message)
+        days = (target_weekday - base_date.weekday()) % 7
+        if days == 0:
+            days = 7
+        next_date = base_date + timedelta(days=days)
+    elif frequency == "YEARLY":
+        next_date = base_date.replace(year=base_date.year + 1)
+    else:
+        day = _resolve_month_day(message)
+        year = base_date.year
+        month = base_date.month
+        if base_date.day >= day:
+            month += 1
+            if month > 12:
+                month = 1
+                year += 1
+        next_date = base_date.replace(year=year, month=month, day=min(day, monthrange(year, month)[1]))
+    return int(datetime.combine(next_date, time(hour=9), tzinfo=timezone_value).timestamp() * 1000)
+
+
+def _resolve_month_day(message: str) -> int:
+    match = re.search(r"(\d{1,2})\s*号", message)
+    if match:
+        return max(1, min(28, int(match.group(1))))
+    if "月末" in message:
+        return 28
+    return 1
+
+
+def _resolve_weekday(message: str) -> int:
+    mapping = {
+        "一": 0,
+        "二": 1,
+        "三": 2,
+        "四": 3,
+        "五": 4,
+        "六": 5,
+        "日": 6,
+        "天": 6,
+    }
+    for key, value in mapping.items():
+        if f"周{key}" in message or f"星期{key}" in message:
+            return value
+    return 0
+
+
 def _looks_like_record_creation(message: str) -> bool:
     return _contains_any(message, ("记", "花", "买", "饭", "餐", "工资", "收入", "支出", "转", "报销", "消费", "付款", "收款"))
+
+
+def _looks_like_agent_task(message: str) -> bool:
+    return (
+        _looks_like_record_creation(message)
+        or _contains_any(message, ("多少", "花了", "支出", "收入", "结余", "复盘", "分析", "全部", "历史", "总结"))
+        or _contains_any(message, ("改", "删", "删除", "定时", "每周", "每月", "每年", "房租"))
+    )
+
+
+def _looks_like_generic_model_reply(reply: str) -> bool:
+    return _contains_any(reply, ("已收到", "mock 模型", "仅回复", "结构化结果"))
 
 
 def _looks_like_analysis_request(message: str) -> bool:
@@ -337,11 +568,14 @@ def _safe_timezone(name: str) -> timezone:
 
 
 def _extract_amount_cent(message: str) -> int | None:
-    match = re.search(r"(\d+(?:\.\d{1,2})?)\s*(?:元|块)?", message)
-    if not match:
-        return None
-    amount = round(float(match.group(1)) * 100)
-    return amount if amount > 0 else None
+    for match in re.finditer(r"(\d+(?:\.\d{1,2})?)\s*(?:元|块)?", message):
+        next_text = message[match.end() : match.end() + 1]
+        if next_text == "号":
+            continue
+        amount = round(float(match.group(1)) * 100)
+        if amount > 0:
+            return amount
+    return None
 
 
 def _as_int(value: Any) -> int | None:

@@ -281,8 +281,132 @@ private fun localFallback(
     localContext: AgentLocalContext,
     warning: String?,
 ): AgentChatResponse? =
-    buildLocalRecordPreview(message, localContext, warning)
+    buildLocalOperationPreview(message, localContext, warning)
+        ?: buildLocalScheduledPreview(message, localContext, warning)
+        ?: buildLocalRecordPreview(message, localContext, warning)
         ?: buildLocalStatsReply(message, localContext, warning)
+
+private fun buildLocalOperationPreview(
+    message: String,
+    localContext: AgentLocalContext,
+    warning: String?,
+): AgentChatResponse? {
+    if (message.containsAny("删", "删除", "去掉")) {
+        val records = localContext.records
+        if (records.isEmpty()) {
+            return askUserResponse("没有找到可删除的账目", "请补充日期、金额、分类或账户后再试。", warning)
+        }
+        if (records.size > 1) {
+            return askUserResponse("匹配到多笔账目", "请先说明要删除哪一笔。", warning)
+        }
+        return AgentChatResponse(
+            reply = "**请确认删除**\n\n删除前请核对明细。",
+            actions = listOf(
+                AgentActionPreview(
+                    type = "delete_record",
+                    title = "删除账目",
+                    description = "删除 1 笔账目。",
+                    impactCount = 1,
+                    records = records,
+                    riskNotice = "删除后无法在助手里直接恢复。",
+                ),
+            ),
+            warnings = listOfNotNull(warning),
+        )
+    }
+    if (message.containsAny("改", "修改", "调成", "改成")) {
+        val records = localContext.records
+        if (records.isEmpty()) {
+            return askUserResponse("没有找到可修改的账目", "请补充日期、金额、分类或账户后再试。", warning)
+        }
+        if (records.size > 1) {
+            return askUserResponse("匹配到多笔账目", "请先说明要修改哪一笔。", warning)
+        }
+        val updated = localContext.updatedRecord(records.single(), message)
+            ?: return askUserResponse("还缺少修改内容", "请说明要改金额、分类、账户、日期还是备注。", warning)
+        return AgentChatResponse(
+            reply = "**请确认修改**\n\n确认后才会更新本机账本。",
+            actions = listOf(
+                AgentActionPreview(
+                    type = "update_record",
+                    title = "修改账目",
+                    description = "修改 1 笔账目。",
+                    impactCount = 1,
+                    records = listOf(updated),
+                    riskNotice = "请核对修改后的金额、日期、分类和账户。",
+                ),
+            ),
+            warnings = listOfNotNull(warning),
+        )
+    }
+    return null
+}
+
+private fun buildLocalScheduledPreview(
+    message: String,
+    localContext: AgentLocalContext,
+    warning: String?,
+): AgentChatResponse? {
+    if (!message.containsAny("定时", "每周", "每月", "每年", "周期", "房租")) return null
+    if (message.containsAny("停用", "关闭", "取消")) {
+        val schedules = localContext.scheduledRecords
+        if (schedules.isEmpty()) {
+            return askUserResponse("没有找到定时记账", "请补充定时记账名称、金额或周期后再试。", warning)
+        }
+        if (schedules.size > 1) {
+            return askUserResponse("匹配到多条定时记账", "请说明要停用哪一条。", warning)
+        }
+        return AgentChatResponse(
+            reply = "**请确认停用**\n\n确认后这条定时记账不再自动生成。",
+            actions = listOf(
+                AgentActionPreview(
+                    type = "disable_scheduled_record",
+                    title = "停用定时记账",
+                    description = "停用 1 条定时记账。",
+                    impactCount = 1,
+                    scheduledRecords = schedules,
+                    riskNotice = "停用后可在定时记账页重新开启。",
+                ),
+            ),
+            warnings = listOfNotNull(warning),
+        )
+    }
+    val amountCent = message.extractAmountCent()
+        ?: return askUserResponse("还缺少金额", "请补充定时记账的金额。", warning)
+    val frequency = message.resolveFrequency()
+        ?: return askUserResponse("还缺少定时规则", "请补充周期和生成日期，例如“每月 1 号房租 2500”。", warning)
+    val type = if (message.looksLikeIncome()) RecordTypeIncome else RecordTypeExpense
+    val categoryName = localContext.resolveCategoryName(type, message)
+    val accountName = localContext.resolveAccountName(message)
+    val schedule = mutableMapOf<String, Any?>(
+        "type" to type,
+        "amountCent" to amountCent,
+        "frequency" to frequency,
+        "nextRunAt" to message.resolveNextRunAt(frequency),
+        "categoryName" to categoryName,
+        "note" to message.take(40),
+        "isEnabled" to true,
+    )
+    if (type == RecordTypeIncome) {
+        schedule["toAccountName"] = accountName
+    } else {
+        schedule["fromAccountName"] = accountName
+    }
+    return AgentChatResponse(
+        reply = "**请确认这条定时记账**\n\n确认后会按周期自动生成账目。",
+        actions = listOf(
+            AgentActionPreview(
+                type = "create_scheduled_record",
+                title = "新增定时记账",
+                description = "新增 1 条定时记账。",
+                impactCount = 1,
+                scheduledRecords = listOf(schedule),
+                riskNotice = "请核对金额、周期、分类、账户和下次生成时间。",
+            ),
+        ),
+        warnings = listOfNotNull(warning),
+    )
+}
 
 private fun buildLocalRecordPreview(
     message: String,
@@ -353,14 +477,36 @@ private fun String.looksLikeStatsQuestion(): Boolean =
     listOf("多少", "花了", "支出", "收入", "结余", "总结", "复盘", "本月", "这个月", "最近").any { contains(it) }
 
 private fun String.extractAmountCent(): Long? {
-    val match = Regex("""(\d+(?:\.\d{1,2})?)\s*(元|块)?""").find(this) ?: return null
-    return runCatching {
-        BigDecimal(match.groupValues[1])
-            .multiply(BigDecimal(100))
-            .setScale(0, RoundingMode.HALF_UP)
-            .toLong()
-            .takeIf { it > 0 }
-    }.getOrNull()
+    Regex("""(\d+(?:\.\d{1,2})?)\s*(元|块)?""").findAll(this).forEach { match ->
+        if (getOrNull(match.range.last + 1) == '号') {
+            return@forEach
+        }
+        val amountCent = runCatching {
+            BigDecimal(match.groupValues[1])
+                .multiply(BigDecimal(100))
+                .setScale(0, RoundingMode.HALF_UP)
+                .toLong()
+                .takeIf { it > 0 }
+        }.getOrNull()
+        if (amountCent != null) {
+            return amountCent
+        }
+    }
+    return null
+}
+
+private fun String.extractUpdateAmountCent(): Long? {
+    val match = Regex("""(?:改成|调成|改为|变成|改到)\s*(\d+(?:\.\d{1,2})?)\s*(元|块)?""").find(this)
+    if (match != null) {
+        return runCatching {
+            BigDecimal(match.groupValues[1])
+                .multiply(BigDecimal(100))
+                .setScale(0, RoundingMode.HALF_UP)
+                .toLong()
+                .takeIf { it > 0 }
+        }.getOrNull()
+    }
+    return extractAmountCent()
 }
 
 private fun String.resolveOccurredAt(): Long {
@@ -373,6 +519,69 @@ private fun String.resolveOccurredAt(): Long {
     return calendar.timeInMillis
 }
 
+private fun String.resolveFrequency(): String? =
+    when {
+        containsAny("每周", "周一", "周二", "周三", "周四", "周五", "周六", "周日", "星期") -> "WEEKLY"
+        containsAny("每年", "每一年") -> "YEARLY"
+        containsAny("每月", "每个月", "月初", "月末", "房租") -> "MONTHLY"
+        else -> null
+    }
+
+private fun String.resolveNextRunAt(frequency: String): Long {
+    val calendar = Calendar.getInstance(Locale.getDefault())
+    when (frequency) {
+        "WEEKLY" -> {
+            val target = resolveWeekday()
+            val current = (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7
+            var delta = (target - current + 7) % 7
+            if (delta == 0) delta = 7
+            calendar.add(Calendar.DAY_OF_YEAR, delta)
+        }
+        "YEARLY" -> calendar.add(Calendar.YEAR, 1)
+        else -> {
+            val day = resolveMonthDay()
+            if (calendar.get(Calendar.DAY_OF_MONTH) >= day) {
+                calendar.add(Calendar.MONTH, 1)
+            }
+            calendar.set(Calendar.DAY_OF_MONTH, day.coerceIn(1, 28))
+        }
+    }
+    calendar.set(Calendar.HOUR_OF_DAY, 9)
+    calendar.set(Calendar.MINUTE, 0)
+    calendar.set(Calendar.SECOND, 0)
+    calendar.set(Calendar.MILLISECOND, 0)
+    return calendar.timeInMillis
+}
+
+private fun String.resolveMonthDay(): Int =
+    Regex("""(\d{1,2})\s*号""").find(this)?.groupValues?.getOrNull(1)?.toIntOrNull()
+        ?: if (contains("月末")) 28 else 1
+
+private fun String.resolveWeekday(): Int {
+    val mapping = listOf("一" to 0, "二" to 1, "三" to 2, "四" to 3, "五" to 4, "六" to 5, "日" to 6, "天" to 6)
+    return mapping.firstOrNull { (label, _) -> contains("周$label") || contains("星期$label") }?.second ?: 0
+}
+
+private fun AgentLocalContext.updatedRecord(record: Map<String, Any?>, message: String): Map<String, Any?>? {
+    val updates = mutableMapOf<String, Any?>()
+    message.extractUpdateAmountCent()?.let { updates["amountCent"] = it }
+    val type = record["type"]?.toString().orEmpty().ifBlank { RecordTypeExpense }
+    resolveTargetCategoryName(type, message)?.let { updates["categoryName"] = it }
+    resolveTargetAccountName(message)?.let { accountName ->
+        if (type == RecordTypeIncome) {
+            updates["toAccountName"] = accountName
+        } else {
+            updates["fromAccountName"] = accountName
+        }
+    }
+    if (message.containsAny("今天", "昨天", "昨日")) {
+        val occurredAt = message.resolveOccurredAt()
+        updates["occurredAt"] = occurredAt
+        updates["date"] = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(occurredAt)
+    }
+    return if (updates.isEmpty()) null else record + updates
+}
+
 private fun AgentLocalContext.resolveCategoryName(type: String, message: String): String {
     val direction = if (type == RecordTypeIncome) PresetSeedData.CATEGORY_INCOME else PresetSeedData.CATEGORY_EXPENSE
     val names = categories
@@ -381,6 +590,12 @@ private fun AgentLocalContext.resolveCategoryName(type: String, message: String)
     names.firstOrNull { message.contains(it) }?.let { return it }
     if (type == RecordTypeExpense && listOf("饭", "餐", "咖啡", "早餐", "午饭", "晚饭").any { message.contains(it) }) {
         names.firstOrNull { it == "餐饮" }?.let { return it }
+    }
+    if (type == RecordTypeExpense && listOf("打车", "地铁", "公交", "车费").any { message.contains(it) }) {
+        names.firstOrNull { it == "交通" }?.let { return it }
+    }
+    if (type == RecordTypeExpense && listOf("房租", "租房", "物业").any { message.contains(it) }) {
+        names.firstOrNull { it == "住房" }?.let { return it }
     }
     if (type == RecordTypeIncome && message.contains("工资")) {
         names.firstOrNull { it == "工资" }?.let { return it }
@@ -398,6 +613,38 @@ private fun AgentLocalContext.resolveAccountName(message: String): String? {
         ?.let { return it }
     return stats["defaultRecordAccountName"]?.toString()?.takeIf { it.isNotBlank() }
 }
+
+private fun AgentLocalContext.resolveTargetCategoryName(type: String, message: String): String? {
+    val direction = if (type == RecordTypeIncome) PresetSeedData.CATEGORY_INCOME else PresetSeedData.CATEGORY_EXPENSE
+    val tail = message.textAfterUpdateKeyword()
+    return categories
+        .filter { it["direction"] == direction }
+        .mapNotNull { it["name"]?.toString() }
+        .firstOrNull { tail.contains(it) }
+}
+
+private fun AgentLocalContext.resolveTargetAccountName(message: String): String? {
+    val tail = message.textAfterUpdateKeyword()
+    return accounts
+        .mapNotNull { it["name"]?.toString() }
+        .firstOrNull { tail.contains(it) }
+}
+
+private fun String.textAfterUpdateKeyword(): String {
+    listOf("改成", "调成", "改为", "变成", "改到").forEach { keyword ->
+        if (contains(keyword)) return substringAfter(keyword)
+    }
+    return this
+}
+
+private fun String.containsAny(vararg terms: String): Boolean =
+    terms.any { contains(it) }
+
+private fun askUserResponse(title: String, description: String, warning: String?): AgentChatResponse =
+    AgentChatResponse(
+        reply = "**$title**\n\n$description",
+        warnings = listOfNotNull(warning),
+    )
 
 private fun Map<String, Any?>.longValue(key: String): Long? =
     when (val value = this[key]) {

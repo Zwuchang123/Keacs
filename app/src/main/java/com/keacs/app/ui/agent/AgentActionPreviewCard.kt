@@ -6,11 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
 import androidx.compose.material.icons.Icons
@@ -36,7 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.agent.AgentActionPreview
 import com.keacs.app.data.agent.AgentEditOptions
@@ -59,21 +56,24 @@ internal fun AgentActionCard(
 ) {
     var editRequest by remember(action.onceActionId()) { mutableStateOf<AgentEditRequest?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val maxCardHeight = LocalConfiguration.current.screenHeightDp.dp / 3
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(max = maxCardHeight)
             .clip(MaterialTheme.shapes.medium)
             .background(KeacsColors.SurfaceSubtle)
-            .verticalScroll(rememberScrollState())
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(action.title, color = KeacsColors.TextPrimary, style = MaterialTheme.typography.titleMedium)
         if (action.description.isNotBlank()) {
-            Text(action.description, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
+            Text(
+                text = action.description,
+                color = KeacsColors.TextSecondary,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         PreviewItems(
             action = action,
@@ -82,7 +82,13 @@ internal fun AgentActionCard(
             onEditRequest = { editRequest = it },
         )
         if (action.riskNotice.isNotBlank()) {
-            Text(action.riskNotice, color = KeacsColors.Warning, style = MaterialTheme.typography.bodySmall)
+            Text(
+                text = action.riskNotice,
+                color = KeacsColors.Warning,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
         if (action.requiresConfirmation()) {
             Row(
@@ -128,13 +134,15 @@ private fun PreviewItems(
         return
     }
 
-    PreviewSwitcher(
-        label = items[safeIndex].pageLabel,
-        canGoPrevious = safeIndex > 0,
-        canGoNext = safeIndex < items.lastIndex,
-        onPrevious = { selectedIndex = (safeIndex - 1).coerceAtLeast(0) },
-        onNext = { selectedIndex = (safeIndex + 1).coerceAtMost(items.lastIndex) },
-    )
+    if (items.size > 1) {
+        PreviewSwitcher(
+            label = items[safeIndex].pageLabel,
+            canGoPrevious = safeIndex > 0,
+            canGoNext = safeIndex < items.lastIndex,
+            onPrevious = { selectedIndex = (safeIndex - 1).coerceAtLeast(0) },
+            onNext = { selectedIndex = (safeIndex + 1).coerceAtMost(items.lastIndex) },
+        )
+    }
     Column(
         modifier = Modifier.pointerInput(items.size, safeIndex) {
             var totalDrag = 0f

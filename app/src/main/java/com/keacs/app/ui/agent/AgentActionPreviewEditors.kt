@@ -1,26 +1,28 @@
 package com.keacs.app.ui.agent
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EventRepeat
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.SyncAlt
 import androidx.compose.material.icons.rounded.ToggleOn
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -30,7 +32,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.keacs.app.data.agent.AgentActionPreview
 import com.keacs.app.data.agent.AgentEditOptions
 import com.keacs.app.data.agent.AgentFieldOption
+import com.keacs.app.ui.components.FormFieldRow
 import com.keacs.app.ui.components.formatCent
 import com.keacs.app.ui.theme.KeacsColors
 import java.math.BigDecimal
@@ -150,20 +152,28 @@ internal fun EditableScheduleFields(
 @Composable
 internal fun AgentEditBottomSheet(request: AgentEditRequest, onDismiss: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("修改${request.label}", color = KeacsColors.TextPrimary, style = MaterialTheme.typography.titleMedium)
         if (request.options.isNotEmpty()) {
-            request.options.forEach { option ->
-                TextButton(
-                    onClick = {
-                        request.onSelect?.invoke(option)
-                        onDismiss()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(option.name)
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 320.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                items(request.options) { option ->
+                    TextButton(
+                        onClick = {
+                            request.onSelect?.invoke(option)
+                            onDismiss()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(option.name)
+                    }
                 }
             }
         } else {
@@ -238,26 +248,12 @@ private fun EditableInputRow(
 
 @Composable
 private fun EditableSummaryRow(icon: ImageVector, label: String, value: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(icon, contentDescription = null, tint = KeacsColors.TextSecondary, modifier = Modifier.size(18.dp))
-            Column {
-                Text(label, color = KeacsColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
-                Text(value.ifBlank { "未填写" }, color = KeacsColors.TextPrimary, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-        IconButton(onClick = onClick) {
-            Icon(Icons.Rounded.Edit, contentDescription = "修改$label", tint = KeacsColors.Primary, modifier = Modifier.size(18.dp))
-        }
-    }
+    FormFieldRow(
+        icon = icon,
+        title = label,
+        value = value.ifBlank { "未填写" },
+        modifier = Modifier.clickable(onClick = onClick),
+    )
 }
 
 private fun AgentActionPreview.updateRecord(index: Int, updates: Map<String, Any?>): AgentActionPreview =

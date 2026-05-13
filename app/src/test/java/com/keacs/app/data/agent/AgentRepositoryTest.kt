@@ -172,6 +172,117 @@ class AgentRepositoryTest {
     }
 
     @Test
+    fun networkFailureCanReturnLocalDeletePreview() = runTest {
+        val client = FakeAgentNetworkClient(
+            result = AgentCallResult.NetworkFailure("服务器暂时无法连接，请稍后再试。"),
+        )
+        val repository = AgentRepository(
+            settingsProvider = {
+                AgentSettings(
+                    enabled = true,
+                    serviceMode = AgentModelServiceMode.CUSTOM,
+                    customBaseUrl = "https://api.example.com/v1",
+                    customApiKey = "key",
+                )
+            },
+            client = client,
+        )
+        val localContext = AgentLocalContext(
+            records = listOf(
+                mapOf(
+                    "id" to 1L,
+                    "type" to "EXPENSE",
+                    "amountCent" to 1_800L,
+                    "date" to "2026-05-12",
+                    "categoryName" to "餐饮",
+                    "fromAccountName" to "微信",
+                    "note" to "午饭",
+                ),
+            ),
+        )
+
+        val result = repository.sendMessage("删除昨天那笔午饭", localContext)
+
+        assertTrue(result is AgentCallResult.Success)
+        val action = (result as AgentCallResult.Success).response.actions.single()
+        assertEquals("delete_record", action.type)
+        assertEquals(1L, action.records.single()["id"])
+    }
+
+    @Test
+    fun networkFailureCanReturnLocalUpdatePreview() = runTest {
+        val client = FakeAgentNetworkClient(
+            result = AgentCallResult.NetworkFailure("服务器暂时无法连接，请稍后再试。"),
+        )
+        val repository = AgentRepository(
+            settingsProvider = {
+                AgentSettings(
+                    enabled = true,
+                    serviceMode = AgentModelServiceMode.CUSTOM,
+                    customBaseUrl = "https://api.example.com/v1",
+                    customApiKey = "key",
+                )
+            },
+            client = client,
+        )
+        val localContext = AgentLocalContext(
+            records = listOf(
+                mapOf(
+                    "id" to 1L,
+                    "type" to "EXPENSE",
+                    "amountCent" to 1_800L,
+                    "date" to "2026-05-12",
+                    "categoryName" to "餐饮",
+                    "fromAccountName" to "微信",
+                    "note" to "午饭",
+                ),
+            ),
+        )
+
+        val result = repository.sendMessage("把昨天午饭改成 20 元", localContext)
+
+        assertTrue(result is AgentCallResult.Success)
+        val action = (result as AgentCallResult.Success).response.actions.single()
+        assertEquals("update_record", action.type)
+        assertEquals(2_000L, action.records.single()["amountCent"])
+    }
+
+    @Test
+    fun networkFailureCanReturnLocalScheduledPreview() = runTest {
+        val client = FakeAgentNetworkClient(
+            result = AgentCallResult.NetworkFailure("服务器暂时无法连接，请稍后再试。"),
+        )
+        val repository = AgentRepository(
+            settingsProvider = {
+                AgentSettings(
+                    enabled = true,
+                    serviceMode = AgentModelServiceMode.CUSTOM,
+                    customBaseUrl = "https://api.example.com/v1",
+                    customApiKey = "key",
+                )
+            },
+            client = client,
+        )
+        val localContext = AgentLocalContext(
+            categories = listOf(
+                mapOf("name" to "住房", "direction" to "EXPENSE"),
+                mapOf("name" to "其他", "direction" to "EXPENSE"),
+            ),
+            accounts = listOf(mapOf("name" to "银行卡")),
+        )
+
+        val result = repository.sendMessage("每月1号房租2500元，从银行卡支出", localContext)
+
+        assertTrue(result is AgentCallResult.Success)
+        val action = (result as AgentCallResult.Success).response.actions.single()
+        assertEquals("create_scheduled_record", action.type)
+        val schedule = action.scheduledRecords.single()
+        assertEquals(250_000L, schedule["amountCent"])
+        assertEquals("MONTHLY", schedule["frequency"])
+        assertEquals("住房", schedule["categoryName"])
+    }
+
+    @Test
     fun highRiskAdviceReturnsBoundaryWithoutNetwork() = runTest {
         val client = FakeAgentNetworkClient()
         val repository = AgentRepository(

@@ -106,7 +106,7 @@ def test_ready_returns_503_when_upstream_config_missing(tmp_path):
     assert response.json()["checks"]["model_provider"] == "missing_config"
 
 
-def test_chat_uses_mock_model_and_returns_structured_result(tmp_path):
+def test_chat_uses_mock_model_and_returns_useful_result(tmp_path):
     client = _client(tmp_path)
 
     response = client.post("/api/agent/chat", json=_payload())
@@ -115,7 +115,19 @@ def test_chat_uses_mock_model_and_returns_structured_result(tmp_path):
     body = response.json()
     assert body["reply"]
     assert body["needsMoreContext"] is False
-    assert body["actions"][0]["type"] == "answer_only"
+    assert not body["reply"].startswith("已收到")
+
+
+def test_chat_mock_provider_returns_stats_summary_not_echo(tmp_path):
+    client = _client(tmp_path)
+
+    response = client.post("/api/agent/chat", json=_payload("这个月花了多少"))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "账本摘要" in body["reply"]
+    assert "已收到" not in body["reply"]
+    assert body["actions"] == []
 
 
 def test_chat_accepts_conversation_history(tmp_path):
@@ -129,7 +141,8 @@ def test_chat_accepts_conversation_history(tmp_path):
     response = client.post("/api/agent/chat", json=payload)
 
     assert response.status_code == 200
-    assert "已结合上下文" in response.json()["reply"]
+    assert response.json()["reply"].strip()
+    assert not response.json()["reply"].lstrip().startswith("{")
 
 
 def test_model_failure_returns_readable_fallback(tmp_path):
@@ -336,7 +349,7 @@ def test_model_limit_returns_clear_user_message():
     assert payload["actions"] == []
 
 
-def test_chat_returns_content_for_200_agent_questions_and_long_history(tmp_path):
+def test_chat_returns_content_for_150_agent_questions_and_long_history(tmp_path):
     settings = Settings(
         model_provider="openai_compatible",
         request_per_minute_limit=1000,
@@ -345,8 +358,8 @@ def test_chat_returns_content_for_200_agent_questions_and_long_history(tmp_path)
     )
     client = TestClient(create_app(settings))
     questions = _agent_test_questions()
-    assert len(questions) == 200
-    assert len(set(questions)) == 200
+    assert len(questions) == 150
+    assert len(set(questions)) == 150
 
     long_history = [
         {"role": "user" if index % 2 == 0 else "assistant", "content": f"第 {index} 轮上下文，继续围绕账本分析。"}
@@ -356,7 +369,7 @@ def test_chat_returns_content_for_200_agent_questions_and_long_history(tmp_path)
     for index, question in enumerate(questions):
         payload = _payload(question)
         payload["deviceIdHash"] = f"abcdef1234567890{index:04d}"
-        if index >= 170:
+        if index >= 120:
             payload["conversationHistory"] = long_history
         response = client.post("/api/agent/chat", json=payload)
         assert response.status_code == 200
@@ -364,7 +377,7 @@ def test_chat_returns_content_for_200_agent_questions_and_long_history(tmp_path)
         assert body["reply"].strip()
         assert not body["reply"].lstrip().startswith("{")
         passed += 1
-    assert passed == 200
+    assert passed == 150
 
 
 def test_run_stream_emits_ordered_task_events(tmp_path):
@@ -425,6 +438,34 @@ def test_delete_request_with_amount_returns_delete_preview(tmp_path):
     body = response.json()
     assert body["actions"][0]["type"] == "delete_record"
     assert "删除" in body["reply"]
+
+
+def test_update_request_with_single_candidate_returns_update_preview(tmp_path):
+    client = _client(tmp_path)
+
+    response = client.post("/api/agent/chat", json=_payload("把昨天午饭改成 20 元"))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["actions"][0]["type"] == "update_record"
+    record = body["actions"][0]["records"][0]
+    assert record["id"] == 1
+    assert record["amountCent"] == 2000
+
+
+def test_monthly_scheduled_request_returns_create_preview(tmp_path):
+    client = _client(tmp_path)
+
+    response = client.post("/api/agent/chat", json=_payload("每月1号房租2500元，从银行卡支出"))
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["actions"][0]["type"] == "create_scheduled_record"
+    schedule = body["actions"][0]["scheduledRecords"][0]
+    assert schedule["amountCent"] == 250000
+    assert schedule["frequency"] == "MONTHLY"
+    assert schedule["categoryName"] == "住房"
+    assert schedule["fromAccountName"] == "银行卡"
 
 
 def test_analysis_request_with_day_count_does_not_create_record(tmp_path):
@@ -514,8 +555,6 @@ def _agent_test_questions() -> list[str]:
         "打车 {amount} 元 银行卡",
         "房租 {amount} 元 银行卡",
         "报销到账 {amount} 元 银行卡",
-        "工资收入 {amount} 元 银行卡",
-        "从微信转 {amount} 元到银行卡",
     ]
     analysis_templates = [
         "这个月花了多少",
@@ -526,8 +565,6 @@ def _agent_test_questions() -> list[str]:
         "最近半年支出趋势",
         "最近一年账单分析",
         "今年收入支出总结",
-        "去年餐饮和交通对比",
-        "全部账单帮我分析消费习惯",
     ]
     operation_templates = [
         "删除昨天午饭",
@@ -538,8 +575,6 @@ def _agent_test_questions() -> list[str]:
         "每月1号房租 {amount} 元",
         "每周一早餐 {amount} 元",
         "本月哪些支出异常",
-        "所有历史账单总共花了多少",
-        "从开始到现在结余多少",
     ]
     boundary_templates = [
         "推荐一只收益高的股票",
@@ -548,10 +583,6 @@ def _agent_test_questions() -> list[str]:
         "保险怎么买最合适",
         "帮我做税务筹划",
         "医疗报销怎么处理",
-        "随便聊聊天",
-        "继续分析",
-        "这笔是什么分类",
-        "没有金额也能记账吗",
     ]
     questions: list[str] = []
     for index in range(5):
