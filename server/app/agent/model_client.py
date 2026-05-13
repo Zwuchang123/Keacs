@@ -129,13 +129,18 @@ def _parse_model_content(content: str) -> dict[str, Any]:
     # 防止模型将 JSON 暴露给用户
     if isinstance(payload.get("reply"), str):
         reply_str = payload["reply"].strip()
-        if (reply_str.startswith("{") and reply_str.endswith("}")) or (reply_str.startswith("[") and reply_str.endswith("]")):
+        # 检查 reply 是否以 JSON 对象或数组开始
+        starts_with_json = (reply_str.startswith("{") and reply_str.endswith("}")) or (reply_str.startswith("[") and reply_str.endswith("]"))
+        if starts_with_json:
             try:
-                # 检查是否为合法的 JSON
                 json.loads(reply_str)
                 payload["reply"] = "好的，我已经收到并处理了你的请求。"
             except json.JSONDecodeError:
                 pass
+        # 检查 reply 中是否嵌入 JSON 对象结构（如 reply: "根据分析...\n{...}\n..."）
+        elif _contains_embedded_json(reply_str):
+            # 只替换 JSON 部分，保留其他文字
+            payload["reply"] = _strip_embedded_json(reply_str)
     return payload
 
 
@@ -201,6 +206,49 @@ def _upstream_limited_response() -> dict[str, Any]:
         "actions": [],
         "warnings": [],
     }
+
+
+_JSON_OBJECT_PATTERN = re.compile(r"\{\s*[\"\'][a-zA-Z]")
+
+
+def _contains_embedded_json(text: str) -> bool:
+    return bool(_JSON_OBJECT_PATTERN.search(text))
+
+
+def _strip_embedded_json(text: str) -> str:
+    result = text
+    while True:
+        match = _JSON_OBJECT_PATTERN.search(result)
+        if not match:
+            break
+        start = match.start()
+        bracket_count = 0
+        in_string = False
+        escape = False
+        end = start
+        for i in range(start, len(result)):
+            char = result[i]
+            if escape:
+                escape = False
+                continue
+            if char == "\\":
+                escape = True
+                continue
+            if char == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if char == "{":
+                bracket_count += 1
+            elif char == "}":
+                bracket_count -= 1
+                if bracket_count == 0:
+                    end = i + 1
+                    break
+        result = result[:start].strip() + (" " if result[start:].strip() else "") + result[end:].strip()
+        result = re.sub(r"\n{3,}", "\n\n", result).strip()
+    return result if result else "好的，我已经收到并处理了你的请求。"
 
 
 async def _post_with_retries(

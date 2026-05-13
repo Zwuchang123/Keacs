@@ -30,7 +30,7 @@ data class AgentUiState(
     val input: String = "",
     val messages: List<AgentMessage> = emptyList(),
     val suggestions: List<String> = emptyList(),
-    val isGuidanceVisible: Boolean = true,
+    val isGuidanceVisible: Boolean = false,
     val isSending: Boolean = false,
     val lastClientRequestId: String = "",
     val sendingStartedAtMillis: Long? = null,
