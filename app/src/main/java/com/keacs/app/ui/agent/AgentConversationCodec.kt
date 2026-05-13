@@ -26,6 +26,9 @@ private fun AgentMessage.toJson(): JSONObject =
         .put("text", text)
         .put("actions", actions.toJsonArray())
         .put("warnings", JSONArray(warnings))
+        .put("thinkingSteps", JSONArray(thinkingSteps))
+        .put("thinkingExpanded", thinkingExpanded)
+        .put("isStreaming", isStreaming)
         .put("elapsedMillis", elapsedMillis ?: JSONObject.NULL)
         .put("feedback", feedback)
 
@@ -37,6 +40,9 @@ private fun JSONObject.toAgentMessage(): AgentMessage =
         text = optString("text"),
         actions = optJSONArray("actions").toActionPreviews(),
         warnings = optJSONArray("warnings").toStringList(),
+        thinkingSteps = optJSONArray("thinkingSteps").toStringList(),
+        thinkingExpanded = optBoolean("thinkingExpanded", true),
+        isStreaming = optBoolean("isStreaming", false),
         elapsedMillis = if (isNull("elapsedMillis")) null else optLong("elapsedMillis"),
         feedback = optString("feedback"),
     )
@@ -53,7 +59,8 @@ private fun List<AgentActionPreview>.toJsonArray(): JSONArray =
                     .put("impactCount", action.impactCount)
                     .put("records", action.records.toMapJsonArray())
                     .put("scheduledRecords", action.scheduledRecords.toMapJsonArray())
-                    .put("riskNotice", action.riskNotice),
+                    .put("riskNotice", action.riskNotice)
+                    .put("status", action.status),
             )
         }
     }
@@ -71,6 +78,7 @@ private fun JSONArray?.toActionPreviews(): List<AgentActionPreview> {
                 records = item.optJSONArray("records").toMapList(),
                 scheduledRecords = item.optJSONArray("scheduledRecords").toMapList(),
                 riskNotice = item.optString("riskNotice"),
+                status = item.optString("status"),
             )
         }
     }.filterNotNull().filter { it.type.isNotBlank() && it.title.isNotBlank() }

@@ -12,6 +12,34 @@ import java.net.SocketTimeoutException
 import java.net.URL
 
 class HttpUrlConnectionAgentClient : AgentNetworkClient {
+    override suspend fun streamChat(
+        settings: AgentSettings,
+        request: AgentChatRequest,
+        onEvent: (AgentRunEvent) -> Unit,
+    ): AgentCallResult = withContext(Dispatchers.IO) {
+        if (settings.serviceMode != AgentModelServiceMode.OFFICIAL) {
+            return@withContext chat(settings, request)
+        }
+        var canRetry = true
+        while (true) {
+            try {
+                return@withContext readOfficialStream(settings, request, onEvent)
+            } catch (_: SocketTimeoutException) {
+                return@withContext AgentCallResult.NetworkFailure("助手等待时间过长，请稍后再试。")
+            } catch (_: IOException) {
+                if (canRetry) {
+                    canRetry = false
+                    continue
+                }
+                return@withContext AgentCallResult.NetworkFailure("流式连接中断，请稍后重试。")
+            } catch (_: RuntimeException) {
+                return@withContext AgentCallResult.InvalidResponse("助手返回内容无法识别，请稍后再试。")
+            }
+        }
+        @Suppress("UNREACHABLE_CODE")
+        AgentCallResult.NetworkFailure("服务器暂时无法连接，请稍后再试。")
+    }
+
     override suspend fun chat(
         settings: AgentSettings,
         request: AgentChatRequest,
@@ -134,6 +162,72 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
         }
     }
 
+    private fun readOfficialStream(
+        settings: AgentSettings,
+        request: AgentChatRequest,
+        onEvent: (AgentRunEvent) -> Unit,
+    ): AgentCallResult {
+        val connection = (URL(settings.chatUrl()).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = CONNECT_TIMEOUT_MILLIS
+            readTimeout = STREAM_READ_TIMEOUT_MILLIS
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            setRequestProperty("Accept", "text/event-stream")
+            setRequestProperty("Cache-Control", "no-cache")
+        }
+        connection.outputStream.use { output ->
+            output.write(request.toJson(settings).toString().toByteArray(Charsets.UTF_8))
+        }
+        val status = connection.responseCode
+        if (status !in 200..299) {
+            val responseBody = connection.errorStream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            connection.disconnect()
+            return AgentCallResult.NetworkFailure(status.toUserMessage(responseBody))
+        }
+
+        val events = mutableListOf<AgentRunEvent>()
+        connection.inputStream.bufferedReader(Charsets.UTF_8).useLines { lines ->
+            lines.forEach { rawLine ->
+                val line = rawLine.trim()
+                if (line.isBlank() || line.startsWith(":")) {
+                    return@forEach
+                }
+                if (!line.startsWith("data:")) {
+                    return@forEach
+                }
+                val data = line.removePrefix("data:").trim()
+                if (data == "[DONE]") {
+                    return@forEach
+                }
+                val event = JSONObject(data).toRunEvent()
+                events += event
+                onEvent(event)
+            }
+        }
+        connection.disconnect()
+        if (events.isEmpty()) {
+            return AgentCallResult.InvalidResponse("助手没有返回可展示内容。")
+        }
+        val viewState = AgentEventReducer.reduceAll(AgentRunViewState(), events)
+        if (viewState.failedMessage.isNotBlank()) {
+            return AgentCallResult.NetworkFailure(viewState.failedMessage)
+        }
+        val reply = viewState.finalMessage
+            .ifBlank { viewState.partialMessage }
+            .ifBlank { readableReplyFor(viewState.pendingActions, "") }
+        return AgentCallResult.Success(
+            AgentChatResponse(
+                clientRequestId = request.clientRequestId,
+                reply = reply,
+                needsMoreContext = false,
+                contextRequests = emptyList(),
+                actions = viewState.pendingActions,
+                warnings = viewState.warnings,
+            ),
+        )
+    }
+
     private fun parseOfficialStream(body: String): AgentCallResult {
         val events = body
             .lineSequence()
@@ -179,6 +273,44 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
             ),
         )
     }
+
+    private fun JSONObject.toRunEvent(): AgentRunEvent =
+        when (optString("type")) {
+            "run_started" -> AgentRunEvent.RunStarted(optString("runId"))
+            "stage_changed" -> AgentRunEvent.StageChanged(optString("stage").toRunStage())
+            "context_requested" -> AgentRunEvent.ContextRequested(
+                runId = optString("runId"),
+                requests = optJSONArray("requests").toContextRequests(),
+            )
+            "partial_message" -> AgentRunEvent.PartialMessage(optString("content"))
+            "action_preview" -> AgentRunEvent.ActionPreview(
+                runId = optString("runId"),
+                actions = optJSONArray("actions").toActionPreviews(),
+            )
+            "awaiting_confirmation" -> AgentRunEvent.AwaitingConfirmation(
+                runId = optString("runId"),
+                actionIds = optJSONArray("actionIds").toStringList(),
+            )
+            "final_message" -> AgentRunEvent.FinalMessage(
+                reply = optString("reply"),
+                warnings = optJSONArray("warnings").toStringList(),
+            )
+            "run_failed" -> AgentRunEvent.RunFailed(
+                message = optString("message").ifBlank { "助手处理失败，请稍后再试。" },
+                retryable = optBoolean("retryable", true),
+            )
+            else -> AgentRunEvent.PartialMessage("")
+        }
+
+    private fun String.toRunStage(): AgentRunStage =
+        when (this) {
+            "reading_context" -> AgentRunStage.READING_CONTEXT
+            "reasoning" -> AgentRunStage.REASONING
+            "validating" -> AgentRunStage.VALIDATING
+            "awaiting_confirmation" -> AgentRunStage.AWAITING_CONFIRMATION
+            "finalizing" -> AgentRunStage.FINALIZING
+            else -> AgentRunStage.UNDERSTANDING
+        }
 
     private fun AgentChatRequest.toJson(settings: AgentSettings): JSONObject =
         if (settings.serviceMode == AgentModelServiceMode.OFFICIAL) {
@@ -360,6 +492,7 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
                     records = item.optJSONArray("records").toMapList(),
                     scheduledRecords = item.optJSONArray("scheduledRecords").toMapList(),
                     riskNotice = item.optString("riskNotice"),
+                    status = item.optString("status"),
                 )
             }
         }.filterNotNull().filter { it.type.isNotBlank() && it.title.isNotBlank() }
@@ -409,8 +542,9 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
     }
 
     private companion object {
-        const val CONNECT_TIMEOUT_MILLIS = 15_000
-        const val CHAT_READ_TIMEOUT_MILLIS = 90_000
+        const val CONNECT_TIMEOUT_MILLIS = 30_000
+        const val CHAT_READ_TIMEOUT_MILLIS = 300_000
+        const val STREAM_READ_TIMEOUT_MILLIS = 600_000
         const val FEEDBACK_READ_TIMEOUT_MILLIS = 10_000
     }
 }

@@ -84,8 +84,9 @@ fun SettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .testTag("screen-settings")
-            .verticalScroll(rememberScrollState())
             .imePadding()
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = KeacsSpacing.PageHorizontal, vertical = KeacsSpacing.PageVertical),
         verticalArrangement = Arrangement.spacedBy(KeacsSpacing.Section),
     ) {
@@ -163,6 +164,7 @@ fun SettingsScreen(
                 onClick = { showClearCacheConfirm = true },
             )
         }
+        Spacer(modifier = Modifier.heightIn(min = 80.dp))
     }
 
     if (showAccountSelector) {

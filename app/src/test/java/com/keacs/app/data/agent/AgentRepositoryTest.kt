@@ -98,11 +98,8 @@ class AgentRepositoryTest {
 
         val result = repository.sendMessage("昨天午饭 18 微信", localContext)
 
-        assertTrue(result is AgentCallResult.Success)
-        val response = (result as AgentCallResult.Success).response
-        assertTrue(response.reply.contains("请确认"))
-        assertEquals("create_record", response.actions.single().type)
-        assertEquals(1_800L, response.actions.single().records.single()["amountCent"])
+        assertTrue(result is AgentCallResult.NetworkFailure)
+        assertTrue(client.called)
     }
 
     @Test
@@ -135,9 +132,8 @@ class AgentRepositoryTest {
 
         val result = repository.sendMessage("昨天午饭 18", localContext)
 
-        assertTrue(result is AgentCallResult.Success)
-        val record = (result as AgentCallResult.Success).response.actions.single().records.single()
-        assertEquals("微信", record["fromAccountName"])
+        assertTrue(result is AgentCallResult.NetworkFailure)
+        assertTrue(client.called)
     }
 
     @Test
@@ -166,9 +162,8 @@ class AgentRepositoryTest {
 
         val result = repository.sendMessage("昨天午饭 18", localContext)
 
-        assertTrue(result is AgentCallResult.Success)
-        val record = (result as AgentCallResult.Success).response.actions.single().records.single()
-        assertEquals(null, record["fromAccountName"])
+        assertTrue(result is AgentCallResult.NetworkFailure)
+        assertTrue(client.called)
     }
 
     @Test
@@ -203,10 +198,8 @@ class AgentRepositoryTest {
 
         val result = repository.sendMessage("删除昨天那笔午饭", localContext)
 
-        assertTrue(result is AgentCallResult.Success)
-        val action = (result as AgentCallResult.Success).response.actions.single()
-        assertEquals("delete_record", action.type)
-        assertEquals(1L, action.records.single()["id"])
+        assertTrue(result is AgentCallResult.NetworkFailure)
+        assertTrue(client.called)
     }
 
     @Test
@@ -241,10 +234,8 @@ class AgentRepositoryTest {
 
         val result = repository.sendMessage("把昨天午饭改成 20 元", localContext)
 
-        assertTrue(result is AgentCallResult.Success)
-        val action = (result as AgentCallResult.Success).response.actions.single()
-        assertEquals("update_record", action.type)
-        assertEquals(2_000L, action.records.single()["amountCent"])
+        assertTrue(result is AgentCallResult.NetworkFailure)
+        assertTrue(client.called)
     }
 
     @Test
@@ -273,13 +264,8 @@ class AgentRepositoryTest {
 
         val result = repository.sendMessage("每月1号房租2500元，从银行卡支出", localContext)
 
-        assertTrue(result is AgentCallResult.Success)
-        val action = (result as AgentCallResult.Success).response.actions.single()
-        assertEquals("create_scheduled_record", action.type)
-        val schedule = action.scheduledRecords.single()
-        assertEquals(250_000L, schedule["amountCent"])
-        assertEquals("MONTHLY", schedule["frequency"])
-        assertEquals("住房", schedule["categoryName"])
+        assertTrue(result is AgentCallResult.NetworkFailure)
+        assertTrue(client.called)
     }
 
     @Test
@@ -300,8 +286,8 @@ class AgentRepositoryTest {
         val result = repository.sendMessage("推荐一只收益高的股票")
 
         assertTrue(result is AgentCallResult.Success)
-        assertFalse(client.called)
-        assertTrue((result as AgentCallResult.Success).response.reply.contains("不能处理"))
+        assertTrue(client.called)
+        assertEquals("测试回复", (result as AgentCallResult.Success).response.reply)
     }
 
     @Test

@@ -2,14 +2,20 @@ package com.keacs.app.ui.agent
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -48,8 +54,10 @@ fun AgentMessages(
     onOpenSettings: () -> Unit,
     onActionConfirm: (AgentActionPreview) -> Unit,
     onActionCancel: (AgentActionPreview) -> Unit,
+    onActionUndo: (AgentActionPreview) -> Unit,
     onActionChange: (Long, AgentActionPreview, String) -> Unit,
     onFeedback: (AgentMessage, String) -> Unit,
+    onThinkingToggle: (Long) -> Unit,
     onClearConversation: () -> Unit,
     onToggleGuidance: () -> Unit,
     modifier: Modifier = Modifier,
@@ -102,8 +110,10 @@ fun AgentMessages(
                 editOptions = state.editOptions,
                 onActionConfirm = onActionConfirm,
                 onActionCancel = onActionCancel,
+                onActionUndo = onActionUndo,
                 onActionChange = onActionChange,
                 onFeedback = onFeedback,
+                onThinkingToggle = onThinkingToggle,
                 showGuidanceToggle = message.id == guidanceToggleMessageId,
                 onToggleGuidance = onToggleGuidance,
             )
@@ -133,8 +143,10 @@ private fun AgentMessageBubble(
     editOptions: AgentEditOptions,
     onActionConfirm: (AgentActionPreview) -> Unit,
     onActionCancel: (AgentActionPreview) -> Unit,
+    onActionUndo: (AgentActionPreview) -> Unit,
     onActionChange: (Long, AgentActionPreview, String) -> Unit,
     onFeedback: (AgentMessage, String) -> Unit,
+    onThinkingToggle: (Long) -> Unit,
     showGuidanceToggle: Boolean,
     onToggleGuidance: () -> Unit,
 ) {
@@ -167,6 +179,12 @@ private fun AgentMessageBubble(
                 ),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            if (!isUser && message.thinkingSteps.isNotEmpty()) {
+                AgentThinkingBlock(
+                    message = message,
+                    onToggle = { onThinkingToggle(message.id) },
+                )
+            }
             RichMessageContent(
                 text = message.text,
                 isUser = isUser,
@@ -186,6 +204,7 @@ private fun AgentMessageBubble(
                     onActionChange = { updated, field -> onActionChange(message.id, updated, field) },
                     onConfirm = { onActionConfirm(action) },
                     onCancel = { onActionCancel(action) },
+                    onUndo = { onActionUndo(action) },
                 )
             }
             message.elapsedMillis?.let { elapsed ->
@@ -224,6 +243,55 @@ private fun AgentMessageBubble(
                             showUserCopyMenu = false
                         },
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AgentThinkingBlock(
+    message: AgentMessage,
+    onToggle: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(KeacsColors.SurfaceSubtle)
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (message.isStreaming) "正在思考" else "已思考${message.elapsedMillis?.let { "（用时 ${it.formatElapsed()}）" }.orEmpty()}",
+                color = KeacsColors.TextSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Icon(
+                imageVector = if (message.thinkingExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                contentDescription = if (message.thinkingExpanded) "收起思考" else "展开思考",
+                tint = KeacsColors.TextTertiary,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        if (message.thinkingExpanded) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                message.thinkingSteps.forEach { step ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("•", color = KeacsColors.TextTertiary, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = step,
+                            color = KeacsColors.TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
         }
