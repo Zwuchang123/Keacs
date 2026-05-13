@@ -16,7 +16,7 @@ internal fun List<AgentMessage>.lastRegenerableAssistantId(): Long? =
     lastOrNull { it.role == AgentMessageRole.ASSISTANT }?.id
 
 internal fun List<AgentMessage>.canRegenerateMessage(messageId: Long): Boolean =
-    lastRegenerableAssistantId() == messageId
+    lastRegenerableAssistantId() == messageId && none { it.id == messageId && it.isStreaming }
 
 internal fun List<AgentMessage>.withMessageFeedback(
     messageId: Long,
@@ -36,6 +36,7 @@ internal fun List<AgentMessage>.replaceAssistantMessage(
     actions: List<AgentActionPreview> = emptyList(),
     warnings: List<String> = emptyList(),
     elapsedMillis: Long? = null,
+    isStreaming: Boolean = false,
 ): List<AgentMessage> =
     map { message ->
         if (message.id == messageId && message.role == AgentMessageRole.ASSISTANT) {
@@ -44,6 +45,7 @@ internal fun List<AgentMessage>.replaceAssistantMessage(
                 actions = actions,
                 warnings = warnings,
                 elapsedMillis = elapsedMillis,
+                isStreaming = isStreaming,
                 feedback = "",
             )
         } else {

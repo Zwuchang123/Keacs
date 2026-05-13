@@ -43,6 +43,9 @@ data class AgentMessage(
     val text: String,
     val actions: List<AgentActionPreview> = emptyList(),
     val warnings: List<String> = emptyList(),
+    val thinkingSteps: List<String> = emptyList(),
+    val thinkingExpanded: Boolean = true,
+    val isStreaming: Boolean = false,
     val elapsedMillis: Long? = null,
     val feedback: String = "",
 )
@@ -121,21 +124,35 @@ class AgentViewModel(
 
         viewModelScope.launch {
             val localContext = contextProvider.buildForMessage(message)
-            when (val result = agentRepository.sendMessage(message, localContext, history)) {
+            val assistantId = nextMessageId++
+            _uiState.update { current ->
+                current.copy(
+                    messages = (current.messages + AgentMessage(
+                        id = assistantId,
+                        role = AgentMessageRole.ASSISTANT,
+                        text = "",
+                        thinkingSteps = listOf("正在理解"),
+                        isStreaming = true,
+                    )).takeLast(MAX_STORED_MESSAGES),
+                )
+            }
+            when (val result = agentRepository.streamMessage(message, localContext, history) { event ->
+                applyStreamEvent(assistantId, event, startedAt)
+            }) {
                 is AgentCallResult.Success -> {
                     val actions = result.response.actions.withStableActionIds(result.response.clientRequestId)
                     actions.filter { it.requiresConfirmation() }.forEach { action ->
                         runStore.savePendingAction(result.response.clientRequestId, action)
                     }
                     _uiState.update { current ->
-                        val messages = (current.messages + AgentMessage(
-                            id = nextMessageId++,
-                            role = AgentMessageRole.ASSISTANT,
+                        val messages = current.messages.replaceAssistantMessage(
+                            messageId = assistantId,
                             text = result.response.reply,
                             actions = actions,
                             warnings = result.response.warnings,
                             elapsedMillis = System.currentTimeMillis() - startedAt,
-                        )).takeLast(MAX_STORED_MESSAGES)
+                            isStreaming = false,
+                        ).takeLast(MAX_STORED_MESSAGES)
                         current.copy(
                             isSending = false,
                             sendingStartedAtMillis = null,
@@ -147,9 +164,9 @@ class AgentViewModel(
                     refreshSuggestions(_uiState.value.messages)
                     persistConversation()
                 }
-                is AgentCallResult.ConfigurationRequired -> keepInputAndShowError(message, result.message)
-                is AgentCallResult.NetworkFailure -> keepInputAndShowError(message, result.message)
-                is AgentCallResult.InvalidResponse -> keepInputAndShowError(message, result.message)
+                is AgentCallResult.ConfigurationRequired -> replaceStreamingMessageWithError(assistantId, message, result.message, startedAt)
+                is AgentCallResult.NetworkFailure -> replaceStreamingMessageWithError(assistantId, message, result.message, startedAt)
+                is AgentCallResult.InvalidResponse -> replaceStreamingMessageWithError(assistantId, message, result.message, startedAt)
             }
         }
     }
@@ -165,7 +182,6 @@ class AgentViewModel(
             it.copy(
                 isSending = true,
                 sendingStartedAtMillis = System.currentTimeMillis(),
-                messages = it.messages.removeAction(action),
             )
         }
         persistConversation()
@@ -175,12 +191,15 @@ class AgentViewModel(
                 is AgentExecutionResult.Success -> {
                     sendActionFeedback(action, "confirmed")
                     _uiState.update { current ->
-                        val messages = (current.messages + AgentMessage(
-                            id = nextMessageId++,
-                            role = AgentMessageRole.RESULT,
-                            text = "**操作已完成**\n\n${result.message}",
-                            elapsedMillis = System.currentTimeMillis() - startedAt,
-                        )).takeLast(MAX_STORED_MESSAGES)
+                        val messages = current.messages.replaceAction(
+                            oldAction = action,
+                            newAction = action.copy(
+                                title = "已执行",
+                                description = result.message,
+                                riskNotice = "",
+                                status = "executed",
+                            ),
+                        ).takeLast(MAX_STORED_MESSAGES)
                         current.copy(
                             isSending = false,
                             sendingStartedAtMillis = null,
@@ -202,11 +221,15 @@ class AgentViewModel(
     fun cancelAction(action: AgentActionPreview) {
         runStore.markActionCancelled(action.onceActionId())
         _uiState.update { current ->
-            val messages = (current.messages.removeAction(action) + AgentMessage(
-                    id = nextMessageId++,
-                    role = AgentMessageRole.RESULT,
-                    text = "**已取消**\n\n${action.title}",
-                )).takeLast(MAX_STORED_MESSAGES)
+            val messages = current.messages.replaceAction(
+                oldAction = action,
+                newAction = action.copy(
+                    title = "已取消",
+                    description = action.title,
+                    riskNotice = "",
+                    status = "cancelled",
+                ),
+            ).takeLast(MAX_STORED_MESSAGES)
             current.copy(
                 messages = messages,
                 suggestions = buildSuggestions(messages),
@@ -214,6 +237,19 @@ class AgentViewModel(
         }
         persistConversation()
         sendActionFeedback(action, "cancelled")
+    }
+
+    fun undoActionStatus(action: AgentActionPreview) {
+        if (action.status == "cancelled") {
+            val restored = action.copy(status = "", title = action.description.ifBlank { action.title })
+            runStore.savePendingAction(_uiState.value.lastClientRequestId, restored)
+            _uiState.update { current ->
+                current.copy(messages = current.messages.replaceAction(action, restored))
+            }
+            persistConversation()
+            return
+        }
+        keepInputAndShowError(_uiState.value.input, "已执行的操作暂不能自动撤销，可以在账目详情中修改。")
     }
 
     fun clearConversation() {
@@ -256,6 +292,21 @@ class AgentViewModel(
         runStore.updatePendingAction(action)
         persistConversation()
         sendActionFeedback(action, "edited", reason = changedField)
+    }
+
+    fun toggleThinking(messageId: Long) {
+        _uiState.update { current ->
+            current.copy(
+                messages = current.messages.map { message ->
+                    if (message.id == messageId) {
+                        message.copy(thinkingExpanded = !message.thinkingExpanded)
+                    } else {
+                        message
+                    }
+                },
+            )
+        }
+        persistConversation()
     }
 
     fun submitMessageFeedback(message: AgentMessage, feedback: String) {
@@ -352,6 +403,83 @@ class AgentViewModel(
         persistConversation()
     }
 
+    private fun replaceStreamingMessageWithError(
+        messageId: Long,
+        input: String,
+        error: String,
+        startedAt: Long,
+    ) {
+        _uiState.update { current ->
+            current.copy(
+                input = input,
+                isSending = false,
+                sendingStartedAtMillis = null,
+                messages = current.messages.map { message ->
+                    if (message.id == messageId) {
+                        message.copy(
+                            role = AgentMessageRole.ERROR,
+                            text = error,
+                            isStreaming = false,
+                            elapsedMillis = System.currentTimeMillis() - startedAt,
+                        )
+                    } else {
+                        message
+                    }
+                },
+            )
+        }
+        persistConversation()
+    }
+
+    private fun applyStreamEvent(
+        messageId: Long,
+        event: com.keacs.app.data.agent.AgentRunEvent,
+        startedAt: Long,
+    ) {
+        _uiState.update { current ->
+            current.copy(
+                messages = current.messages.map { message ->
+                    if (message.id != messageId) {
+                        message
+                    } else {
+                        when (event) {
+                            is com.keacs.app.data.agent.AgentRunEvent.StageChanged -> {
+                                message.copy(thinkingSteps = (message.thinkingSteps + event.stage.label).distinct())
+                            }
+                            is com.keacs.app.data.agent.AgentRunEvent.ContextRequested -> {
+                                val text = event.requests.joinToString("，") { it.reason.ifBlank { it.type } }
+                                message.copy(thinkingSteps = (message.thinkingSteps + text).filter { it.isNotBlank() }.distinct())
+                            }
+                            is com.keacs.app.data.agent.AgentRunEvent.PartialMessage -> {
+                                message.copy(text = message.text + event.content)
+                            }
+                            is com.keacs.app.data.agent.AgentRunEvent.ActionPreview -> {
+                                message.copy(actions = event.actions)
+                            }
+                            is com.keacs.app.data.agent.AgentRunEvent.FinalMessage -> {
+                                message.copy(
+                                    text = event.reply,
+                                    warnings = event.warnings,
+                                    isStreaming = false,
+                                    elapsedMillis = System.currentTimeMillis() - startedAt,
+                                )
+                            }
+                            is com.keacs.app.data.agent.AgentRunEvent.RunFailed -> {
+                                message.copy(
+                                    role = AgentMessageRole.ERROR,
+                                    text = event.message,
+                                    isStreaming = false,
+                                    elapsedMillis = System.currentTimeMillis() - startedAt,
+                                )
+                            }
+                            else -> message
+                        }
+                    }
+                },
+            )
+        }
+    }
+
     private fun sendActionFeedback(
         action: AgentActionPreview,
         result: String,
@@ -415,6 +543,20 @@ class AgentViewModel(
         val key = action.stableKey()
         return map { message ->
             message.copy(actions = message.actions.filterNot { it.stableKey() == key })
+        }
+    }
+
+    private fun List<AgentMessage>.replaceAction(
+        oldAction: AgentActionPreview,
+        newAction: AgentActionPreview,
+    ): List<AgentMessage> {
+        val key = oldAction.stableKey()
+        return map { message ->
+            message.copy(
+                actions = message.actions.map { existing ->
+                    if (existing.stableKey() == key) newAction else existing
+                },
+            )
         }
     }
 

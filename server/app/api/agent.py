@@ -1,6 +1,7 @@
 from time import perf_counter
 from uuid import uuid4
 import json
+import asyncio
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request, status
@@ -142,50 +143,38 @@ def create_agent_router(settings: Settings, audit_log: AuditLog) -> APIRouter:
                     message=payload.message,
                 )
             )
-            chat_request = _chat_request_from_run(payload)
-            try:
-                response = await orchestrator.handle_chat(chat_request, request)
-            except Exception:
-                error_type = "model_call_failed"
-                response = build_fallback_response(
-                    chat_request,
-                    warning="模型服务暂时不稳定，已使用本地规则生成结果。",
-                )
-            events = _build_stream_events(run_id, payload, response)
-            preview_actions = [
-                action
-                for event in events
-                if event["type"] == "action_preview"
-                for action in event.get("actions", [])
-            ]
-            action_types = [str(action.get("type")) for action in preview_actions]
-            run_store.set_pending_actions(
-                run_id,
-                [
-                    str(action.get("actionId") or action.get("title") or index)
-                    for index, action in enumerate(preview_actions)
-                ],
-            )
             return StreamingResponse(
-                _iter_sse(events),
+                _stream_agent_run(
+                    run_id=run_id,
+                    payload=payload,
+                    request=request,
+                    settings=settings,
+                    orchestrator=orchestrator,
+                    run_store=run_store,
+                    audit_log=audit_log,
+                    model_provider=settings.model_provider,
+                    started_at=started_at,
+                    close_client=owned_client,
+                ),
                 media_type="text/event-stream",
-                headers={"Cache-Control": "no-cache"},
+                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
             )
         except HTTPException as exc:
             error_type = error_type or _http_error_type(exc.status_code)
             raise exc
         finally:
-            audit_log.record(
-                endpoint=str(request.url.path),
-                status="failed" if error_type else "ok",
-                duration_ms=int((perf_counter() - started_at) * 1000),
-                device_id_hash=payload.device_id_hash,
-                model_provider=settings.model_provider,
-                action_types=action_types,
-                error_type=error_type,
-            )
-            if owned_client is not None:
-                await owned_client.aclose()
+            if error_type:
+                audit_log.record(
+                    endpoint=str(request.url.path),
+                    status="failed",
+                    duration_ms=int((perf_counter() - started_at) * 1000),
+                    device_id_hash=payload.device_id_hash,
+                    model_provider=settings.model_provider,
+                    action_types=action_types,
+                    error_type=error_type,
+                )
+                if owned_client is not None:
+                    await owned_client.aclose()
 
     @router.post("/runs/{run_id}/context")
     async def continue_context(run_id: str, payload: AgentRunContextRequest) -> dict[str, str]:
@@ -305,6 +294,96 @@ def _build_stream_events(
     return events
 
 
+async def _stream_agent_run(
+    run_id: str,
+    payload: AgentRunRequest,
+    request: Request,
+    settings: Settings,
+    orchestrator: AgentOrchestrator,
+    run_store: AgentRunStore,
+    audit_log: AuditLog,
+    model_provider: str,
+    started_at: float,
+    close_client: httpx.AsyncClient | None,
+):
+    error_type = ""
+    action_types: list[str] = []
+    try:
+        early_events = [
+            {"type": "run_started", "runId": run_id},
+            {"type": "stage_changed", "stage": "understanding"},
+        ]
+        for event in early_events:
+            yield _format_sse(event)
+            await asyncio.sleep(0)
+
+        context_requests = _context_requests_for(payload.message)
+        if context_requests:
+            yield _format_sse({"type": "context_requested", "runId": run_id, "requests": context_requests})
+            yield _format_sse({"type": "stage_changed", "stage": "reading_context"})
+            await asyncio.sleep(0)
+
+        yield _format_sse({"type": "stage_changed", "stage": "reasoning"})
+        yield ": heartbeat\n\n"
+        chat_request = _chat_request_from_run(payload)
+        try:
+            response = await orchestrator.handle_chat(chat_request, request)
+        except Exception:
+            error_type = "model_call_failed"
+            response = build_fallback_response(
+                chat_request,
+                warning="模型服务暂时不稳定，已使用本地规则生成结果。",
+            )
+
+        if await request.is_disconnected():
+            error_type = error_type or "client_disconnected"
+            return
+
+        reply = response.reply or ""
+        for chunk in _chunk_text(reply):
+            yield _format_sse({"type": "partial_message", "content": chunk})
+            await asyncio.sleep(0.02)
+
+        yield _format_sse({"type": "stage_changed", "stage": "validating"})
+        action_payloads = [
+            _action_to_event_payload(action, index)
+            for index, action in enumerate(response.actions)
+            if action.type != "answer_only"
+        ]
+        if action_payloads and any(action["type"] != "ask_user" for action in action_payloads):
+            action_ids = [action["actionId"] for action in action_payloads]
+            action_types = [str(action.get("type")) for action in action_payloads]
+            run_store.set_pending_actions(run_id, action_ids)
+            yield _format_sse({"type": "action_preview", "runId": run_id, "actions": action_payloads})
+            yield _format_sse({"type": "stage_changed", "stage": "awaiting_confirmation"})
+            yield _format_sse({"type": "awaiting_confirmation", "runId": run_id, "actionIds": action_ids})
+        else:
+            yield _format_sse({"type": "stage_changed", "stage": "finalizing"})
+            yield _format_sse({"type": "final_message", "reply": reply, "warnings": response.warnings})
+    except Exception:
+        error_type = error_type or "stream_failed"
+        yield _format_sse(
+            {
+                "type": "run_failed",
+                "errorType": error_type,
+                "message": "助手处理失败，请稍后再试。",
+                "retryable": True,
+            }
+        )
+    finally:
+        audit_log.record(
+            endpoint=str(request.url.path),
+            status="failed" if error_type else "ok",
+            duration_ms=int((perf_counter() - started_at) * 1000),
+            device_id_hash=payload.device_id_hash,
+            model_provider=model_provider,
+            action_types=action_types,
+            error_type=error_type,
+        )
+        if close_client is not None:
+            await close_client.aclose()
+
+
 def _local_context_for_run(payload: AgentRunRequest) -> LocalContext:
     context = payload.local_context
     has_client_context = any(
@@ -360,7 +439,17 @@ def _action_to_event_payload(action: AgentActionPreview, index: int) -> dict:
 
 def _iter_sse(events: list[dict]):
     for event in events:
-        yield "data: " + json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n\n"
+        yield _format_sse(event)
+
+
+def _format_sse(event: dict) -> str:
+    return "data: " + json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n\n"
+
+
+def _chunk_text(text: str, size: int = 18) -> list[str]:
+    if not text:
+        return []
+    return [text[index : index + size] for index in range(0, len(text), size)]
 
 
 def _build_suggestions(payload: AgentSuggestionRequest) -> list[AgentSuggestion]:

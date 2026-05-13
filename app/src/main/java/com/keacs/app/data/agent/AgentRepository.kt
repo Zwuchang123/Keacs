@@ -31,6 +31,24 @@ class AgentRepository(
         localContext: AgentLocalContext = AgentLocalContext(),
         conversationHistory: List<AgentConversationTurn> = emptyList(),
     ): AgentCallResult {
+        return sendMessageInternal(message, localContext, conversationHistory, onEvent = null)
+    }
+
+    suspend fun streamMessage(
+        message: String,
+        localContext: AgentLocalContext = AgentLocalContext(),
+        conversationHistory: List<AgentConversationTurn> = emptyList(),
+        onEvent: (AgentRunEvent) -> Unit,
+    ): AgentCallResult {
+        return sendMessageInternal(message, localContext, conversationHistory, onEvent)
+    }
+
+    private suspend fun sendMessageInternal(
+        message: String,
+        localContext: AgentLocalContext,
+        conversationHistory: List<AgentConversationTurn>,
+        onEvent: ((AgentRunEvent) -> Unit)?,
+    ): AgentCallResult {
         val settings = settingsProvider()
         val validation = settings.validateForRequest()
         if (!validation.canRequest) {
@@ -38,9 +56,6 @@ class AgentRepository(
         }
         if (message.isBlank()) {
             return AgentCallResult.ConfigurationRequired("请输入要发送的内容。")
-        }
-        if (message.isHighRiskAdvice()) {
-            return AgentCallResult.Success(boundaryResponse())
         }
 
         val request = AgentChatRequest(
@@ -51,16 +66,17 @@ class AgentRepository(
             conversationHistory = conversationHistory.trimForRequest(),
             appVersion = com.keacs.app.BuildConfig.VERSION_NAME,
         )
-        return when (val result = client.chat(settings, request)) {
+        val callResult = if (onEvent != null && settings.serviceMode == AgentModelServiceMode.OFFICIAL) {
+            client.streamChat(settings, request, onEvent)
+        } else {
+            client.chat(settings, request)
+        }
+        return when (val result = callResult) {
             is AgentCallResult.Success -> AgentCallResult.Success(
                 response = result.response.toUserFacingResponse().copy(clientRequestId = request.clientRequestId),
             )
-            is AgentCallResult.NetworkFailure -> localFallback(message, localContext, null)
-                ?.let { AgentCallResult.Success(it.copy(clientRequestId = request.clientRequestId)) }
-                ?: AgentCallResult.NetworkFailure("服务连接失败。已保留输入内容，可以稍后重试或检查配置。")
-            is AgentCallResult.InvalidResponse -> localFallback(message, localContext, null)
-                ?.let { AgentCallResult.Success(it.copy(clientRequestId = request.clientRequestId)) }
-                ?: AgentCallResult.InvalidResponse("没有返回清晰内容。已保留输入内容，可以换个说法再试。")
+            is AgentCallResult.NetworkFailure -> AgentCallResult.NetworkFailure("服务连接失败。已保留输入内容，可以稍后重试或检查配置。")
+            is AgentCallResult.InvalidResponse -> AgentCallResult.InvalidResponse("没有返回清晰内容。已保留输入内容，可以换个说法再试。")
             else -> result
         }
     }
@@ -121,6 +137,20 @@ class AgentRepository(
 
 interface AgentNetworkClient {
     suspend fun chat(settings: AgentSettings, request: AgentChatRequest): AgentCallResult
+    suspend fun streamChat(
+        settings: AgentSettings,
+        request: AgentChatRequest,
+        onEvent: (AgentRunEvent) -> Unit,
+    ): AgentCallResult {
+        val result = chat(settings, request)
+        if (result is AgentCallResult.Success) {
+            result.response.actions.takeIf { it.isNotEmpty() }?.let { actions ->
+                onEvent(AgentRunEvent.ActionPreview(result.response.clientRequestId, actions))
+            }
+            onEvent(AgentRunEvent.FinalMessage(result.response.reply, result.response.warnings))
+        }
+        return result
+    }
     suspend fun feedback(settings: AgentSettings, request: AgentFeedbackRequest): Boolean = true
     suspend fun suggestions(settings: AgentSettings, request: AgentSuggestionRequest): List<AgentSuggestion> = emptyList()
 }
@@ -189,6 +219,7 @@ data class AgentActionPreview(
     val records: List<Map<String, Any?>> = emptyList(),
     val scheduledRecords: List<Map<String, Any?>> = emptyList(),
     val riskNotice: String = "",
+    val status: String = "",
 )
 
 sealed interface AgentCallResult {
@@ -199,6 +230,7 @@ sealed interface AgentCallResult {
 }
 
 fun AgentActionPreview.requiresConfirmation(): Boolean =
+    status.isBlank() &&
     type in setOf(
         "create_record",
         "update_record",

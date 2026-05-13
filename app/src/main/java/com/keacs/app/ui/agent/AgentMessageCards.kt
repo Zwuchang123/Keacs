@@ -3,6 +3,7 @@ package com.keacs.app.ui.agent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Refresh
@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keacs.app.ui.components.CategoryIcon
@@ -118,23 +119,8 @@ internal fun AgentGuidedSuggestions(
     onExampleClick: (String) -> Unit,
     onToggle: () -> Unit,
 ) {
-    val items = suggestions.ifEmpty {
-        listOf("记一笔今天的支出", "分析最近7天消费", "查看本月收入支出")
-    }
+    val items = suggestions
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            IconButton(onClick = onToggle, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = Icons.Rounded.Close,
-                    contentDescription = "关闭引导",
-                    tint = KeacsColors.TextTertiary,
-                    modifier = Modifier.size(16.dp),
-                )
-            }
-        }
         items.forEach { example ->
             ExampleRow(text = example, onClick = { onExampleClick(example) })
         }
@@ -168,20 +154,9 @@ internal fun AgentEmptyState(
                         .weight(1f)
                         .padding(start = 12.dp),
                 )
-                IconButton(onClick = onToggle, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = "关闭引导",
-                        tint = KeacsColors.TextTertiary,
-                        modifier = Modifier.size(16.dp),
-                    )
-                }
-            }
-            val examples = suggestions.ifEmpty {
-                listOf("记一笔午饭 18 元", "这个月花了多少？", "帮我看看本月支出")
             }
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                examples.forEach { example ->
+                suggestions.forEach { example ->
                     ExampleRow(
                         text = example,
                         onClick = { onExampleClick(example) },
@@ -243,14 +218,34 @@ internal fun AgentFeedbackRow(
         }
         if (showGuidanceToggle) {
             IconButton(onClick = onToggleGuidance, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = Icons.Rounded.AutoAwesome,
-                    contentDescription = "打开引导",
-                    tint = KeacsColors.Primary,
-                    modifier = Modifier.size(16.dp),
-                )
+                GuidanceSlashIcon()
             }
         }
+    }
+}
+
+@Composable
+private fun GuidanceSlashIcon() {
+    val lineColor = KeacsColors.TextTertiary
+    Box(
+        modifier = Modifier
+            .size(18.dp)
+            .drawWithContent {
+                drawContent()
+                drawLine(
+                    color = lineColor,
+                    start = androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.82f),
+                    end = androidx.compose.ui.geometry.Offset(size.width * 0.82f, size.height * 0.18f),
+                    strokeWidth = 2.dp.toPx(),
+                )
+            },
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.AutoAwesome,
+            contentDescription = "关闭引导",
+            tint = KeacsColors.TextTertiary,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 

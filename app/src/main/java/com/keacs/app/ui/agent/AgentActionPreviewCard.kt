@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBackIosNew
 import androidx.compose.material.icons.rounded.EventRepeat
@@ -53,6 +54,7 @@ internal fun AgentActionCard(
     onActionChange: (AgentActionPreview, String) -> Unit,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
+    onUndo: () -> Unit,
 ) {
     var editRequest by remember(action.onceActionId()) { mutableStateOf<AgentEditRequest?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -90,7 +92,27 @@ internal fun AgentActionCard(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        if (action.requiresConfirmation()) {
+        if (action.status.isNotBlank()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = if (action.status == "executed") "已执行" else "已取消",
+                    color = if (action.status == "executed") KeacsColors.Primary else KeacsColors.TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                IconButton(onClick = onUndo, modifier = Modifier.size(40.dp)) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.Undo,
+                        contentDescription = "撤销",
+                        tint = KeacsColors.TextTertiary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        } else if (action.requiresConfirmation()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
