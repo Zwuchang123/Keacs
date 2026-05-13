@@ -171,7 +171,7 @@ internal fun AgentEmptyState(
 internal fun AgentFeedbackRow(
     selectedFeedback: String,
     canRegenerate: Boolean,
-    showGuidanceToggle: Boolean,
+    guidanceVisible: Boolean,
     onLike: () -> Unit,
     onDislike: () -> Unit,
     onRegenerate: () -> Unit,
@@ -216,9 +216,17 @@ internal fun AgentFeedbackRow(
                 )
             }
         }
-        if (showGuidanceToggle) {
-            IconButton(onClick = onToggleGuidance, modifier = Modifier.size(32.dp)) {
+        // 引导开关按钮：常驻在“重新生成”旁边，随时可开/关
+        IconButton(onClick = onToggleGuidance, modifier = Modifier.size(32.dp)) {
+            if (guidanceVisible) {
                 GuidanceSlashIcon()
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.AutoAwesome,
+                    contentDescription = "打开引导",
+                    tint = KeacsColors.TextTertiary,
+                    modifier = Modifier.size(18.dp),
+                )
             }
         }
     }

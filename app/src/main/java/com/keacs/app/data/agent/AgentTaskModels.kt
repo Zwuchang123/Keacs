@@ -26,6 +26,11 @@ sealed interface AgentRunEvent {
         val runId: String,
         val requests: List<AgentContextRequest>,
     ) : AgentRunEvent
+    /**
+     * 服务端推送的“思考过程”增量步骤，用于在模型返回最终回复前持续给用户可见反馈。
+     * 注意：这不是模型原始链路的隐式思考，而是面向用户的进度描述。
+     */
+    data class ThinkingStep(val content: String) : AgentRunEvent
     data class PartialMessage(val content: String) : AgentRunEvent
     data class ActionPreview(
         val runId: String,
@@ -69,6 +74,7 @@ object AgentEventReducer {
                 stage = AgentRunStage.READING_CONTEXT,
                 contextNotice = event.requests.joinToString("，") { it.reason.ifBlank { it.type } },
             )
+            is AgentRunEvent.ThinkingStep -> state
             is AgentRunEvent.PartialMessage -> state.copy(partialMessage = state.partialMessage + event.content)
             is AgentRunEvent.ActionPreview -> state.copy(
                 runId = event.runId,

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 @dataclass(frozen=True)
@@ -16,7 +16,8 @@ class DeviceRateLimiter:
         self._hits: dict[str, list[datetime]] = {}
 
     def check(self, device_id_hash: str) -> RateLimitResult:
-        now = datetime.now(UTC)
+        # Python 3.10 兼容：datetime.UTC 仅在 3.11+ 提供
+        now = datetime.now(timezone.utc)
         day_start = now - timedelta(days=1)
         minute_start = now - timedelta(minutes=1)
         hits = [hit for hit in self._hits.get(device_id_hash, []) if hit >= day_start]

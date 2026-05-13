@@ -250,6 +250,7 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
         val contextRequests = mutableListOf<AgentContextRequest>()
         events.forEach { event ->
             when (event.optString("type")) {
+                "thinking_step" -> Unit
                 "partial_message" -> partialText.append(event.optString("content"))
                 "context_requested" -> contextRequests += event.optJSONArray("requests").toContextRequests()
                 "action_preview" -> actions += event.optJSONArray("actions").toActionPreviews()
@@ -282,6 +283,7 @@ class HttpUrlConnectionAgentClient : AgentNetworkClient {
                 runId = optString("runId"),
                 requests = optJSONArray("requests").toContextRequests(),
             )
+            "thinking_step" -> AgentRunEvent.ThinkingStep(optString("content"))
             "partial_message" -> AgentRunEvent.PartialMessage(optString("content"))
             "action_preview" -> AgentRunEvent.ActionPreview(
                 runId = optString("runId"),

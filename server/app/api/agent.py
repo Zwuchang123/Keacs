@@ -156,7 +156,8 @@ def create_agent_router(settings: Settings, audit_log: AuditLog) -> APIRouter:
                     started_at=started_at,
                     close_client=owned_client,
                 ),
-                media_type="text/event-stream",
+                # 明确声明 utf-8，避免部分客户端/代理按默认编码解码导致乱码
+                media_type="text/event-stream; charset=utf-8",
                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
             )
         except HTTPException as exc:
@@ -324,25 +325,52 @@ async def _stream_agent_run(
             await asyncio.sleep(0)
 
         yield _format_sse({"type": "stage_changed", "stage": "reasoning"})
-        yield ": heartbeat\n\n"
         chat_request = _chat_request_from_run(payload)
-        try:
-            response = await orchestrator.handle_chat(chat_request, request)
-        except Exception:
-            error_type = "model_call_failed"
-            response = build_fallback_response(
-                chat_request,
-                warning="模型服务暂时不稳定，已使用本地规则生成结果。",
-            )
+        # 在模型调用期间持续输出“思考过程”的增量内容（同一条系统消息内），
+        # 避免长时间无输出导致用户感觉卡住/流式不明显。
+        async def _run_model_call() -> AgentChatResponse:
+            return await orchestrator.handle_chat(chat_request, request)
 
-        if await request.is_disconnected():
-            error_type = error_type or "client_disconnected"
-            return
+        model_task = asyncio.create_task(_run_model_call())
+        thinking_steps = [
+            "解析输入，识别意图与关键信息…",
+            "检查是否需要读取分类/账户/账目候选…",
+            "组织回答结构，准备生成自然语言结果…",
+        ]
+        if context_requests:
+            thinking_steps.insert(1, "已请求本地上下文，等待账本数据…")
+
+        step_index = 0
+        response: AgentChatResponse | None = None
+        while True:
+            if await request.is_disconnected():
+                error_type = error_type or "client_disconnected"
+                model_task.cancel()
+                return
+            if model_task.done():
+                try:
+                    response = model_task.result()
+                except Exception:
+                    error_type = "model_call_failed"
+                    response = build_fallback_response(
+                        chat_request,
+                        warning="模型服务暂时不稳定，已使用本地规则生成结果。",
+                    )
+                break
+            # 每隔一段时间追加一条“思考步骤”，让用户感知到阶段推进
+            if step_index < len(thinking_steps):
+                yield _format_sse({"type": "thinking_step", "content": thinking_steps[step_index]})
+                step_index += 1
+            else:
+                # 保持连接活跃（部分中间层会因长时间无数据而断开）
+                yield ": heartbeat\n\n"
+            await asyncio.sleep(0.6)
+        assert response is not None
 
         reply = response.reply or ""
         for chunk in _chunk_text(reply):
             yield _format_sse({"type": "partial_message", "content": chunk})
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.035)
 
         yield _format_sse({"type": "stage_changed", "stage": "validating"})
         action_payloads = [
@@ -357,6 +385,8 @@ async def _stream_agent_run(
             yield _format_sse({"type": "action_preview", "runId": run_id, "actions": action_payloads})
             yield _format_sse({"type": "stage_changed", "stage": "awaiting_confirmation"})
             yield _format_sse({"type": "awaiting_confirmation", "runId": run_id, "actionIds": action_ids})
+            # 让“思考过程”和“最终回复”在同一条系统回复中落地：即使需要确认，也发送 final_message。
+            yield _format_sse({"type": "final_message", "reply": reply, "warnings": response.warnings})
         else:
             yield _format_sse({"type": "stage_changed", "stage": "finalizing"})
             yield _format_sse({"type": "final_message", "reply": reply, "warnings": response.warnings})
@@ -446,7 +476,7 @@ def _format_sse(event: dict) -> str:
     return "data: " + json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n\n"
 
 
-def _chunk_text(text: str, size: int = 18) -> list[str]:
+def _chunk_text(text: str, size: int = 8) -> list[str]:
     if not text:
         return []
     return [text[index : index + size] for index in range(0, len(text), size)]

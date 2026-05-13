@@ -450,6 +450,13 @@ class AgentViewModel(
                                 val text = event.requests.joinToString("，") { it.reason.ifBlank { it.type } }
                                 message.copy(thinkingSteps = (message.thinkingSteps + text).filter { it.isNotBlank() }.distinct())
                             }
+                            is com.keacs.app.data.agent.AgentRunEvent.ThinkingStep -> {
+                                message.copy(
+                                    thinkingSteps = (message.thinkingSteps + event.content)
+                                        .filter { it.isNotBlank() }
+                                        .takeLast(24),
+                                )
+                            }
                             is com.keacs.app.data.agent.AgentRunEvent.PartialMessage -> {
                                 message.copy(text = message.text + event.content)
                             }

@@ -1,6 +1,6 @@
 import json
 import sqlite3
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -30,7 +30,7 @@ class AuditLog:
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    datetime.now(UTC).isoformat(),
+                    datetime.now(timezone.utc).isoformat(),
                     endpoint,
                     status,
                     duration_ms,

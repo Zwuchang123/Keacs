@@ -69,11 +69,6 @@ fun AgentMessages(
             listState.animateScrollToItem(lastIndex - 1)
         }
     }
-    val guidanceToggleMessageId = if (!state.isGuidanceVisible && !state.isSending) {
-        state.messages.lastOrNull { it.role != AgentMessageRole.USER }?.id
-    } else {
-        null
-    }
 
     LazyColumn(
         state = listState,
@@ -114,11 +109,13 @@ fun AgentMessages(
                 onActionChange = onActionChange,
                 onFeedback = onFeedback,
                 onThinkingToggle = onThinkingToggle,
-                showGuidanceToggle = message.id == guidanceToggleMessageId,
+                guidanceVisible = state.isGuidanceVisible,
                 onToggleGuidance = onToggleGuidance,
             )
         }
-        if (state.isSending && state.messages.lastOrNull()?.text != "正在重新生成") {
+        // 流式回复期间已经有“助手消息气泡”承载输出，不再额外显示 SendingBubble，
+        // 否则会让“思考块”和“最终回复”被插入一条额外气泡隔开，且削弱流式感知。
+        if (state.isSending && state.messages.none { it.isStreaming } && state.messages.lastOrNull()?.text != "正在重新生成") {
             item {
                 SendingBubble(startedAtMillis = state.sendingStartedAtMillis)
             }
@@ -147,7 +144,7 @@ private fun AgentMessageBubble(
     onActionChange: (Long, AgentActionPreview, String) -> Unit,
     onFeedback: (AgentMessage, String) -> Unit,
     onThinkingToggle: (Long) -> Unit,
-    showGuidanceToggle: Boolean,
+    guidanceVisible: Boolean,
     onToggleGuidance: () -> Unit,
 ) {
     val isUser = message.role == AgentMessageRole.USER
@@ -218,7 +215,7 @@ private fun AgentMessageBubble(
                 AgentFeedbackRow(
                     selectedFeedback = message.feedback,
                     canRegenerate = canRegenerate,
-                    showGuidanceToggle = showGuidanceToggle,
+                    guidanceVisible = guidanceVisible,
                     onLike = { onFeedback(message, AgentFeedbackLike) },
                     onDislike = { onFeedback(message, AgentFeedbackDislike) },
                     onRegenerate = { onFeedback(message, AgentFeedbackRegenerate) },
