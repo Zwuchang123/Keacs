@@ -35,9 +35,6 @@ def should_replace_model_response(request: AgentChatRequest, response: AgentChat
         return True
     if _looks_like_agent_task(message) and _looks_like_generic_model_reply(response.reply):
         return True
-    confusing_reply_terms = ("乱码", "没能理解", "无法理解", "不清楚", "换个说法")
-    if any(term in response.reply for term in confusing_reply_terms):
-        return _looks_like_agent_task(message)
     return False
 
 

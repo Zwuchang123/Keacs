@@ -38,13 +38,32 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.keacs.app.data.agent.AgentActionPreview
 import com.keacs.app.data.agent.AgentEditOptions
 import com.keacs.app.ui.theme.KeacsColors
 import com.keacs.app.ui.theme.KeacsSpacing
+import org.commonmark.parser.Parser
+import org.commonmark.node.BlockQuote
+import org.commonmark.node.BulletList
+import org.commonmark.node.Code
+import org.commonmark.node.Document
+import org.commonmark.node.Emphasis
+import org.commonmark.node.HardLineBreak
+import org.commonmark.node.Heading
+import org.commonmark.node.IndentedCodeBlock
+import org.commonmark.node.Link
+import org.commonmark.node.Node
+import org.commonmark.node.OrderedList
+import org.commonmark.node.Paragraph
+import org.commonmark.node.SoftLineBreak
+import org.commonmark.node.StrongEmphasis
+import org.commonmark.node.Text
+import org.commonmark.node.ThematicBreak
 
 @Composable
 fun AgentMessages(
@@ -306,32 +325,40 @@ private fun RichMessageContent(
         isError -> KeacsColors.Error
         else -> KeacsColors.TextPrimary
     }
-    val blocks = parseRichBlocks(text)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        blocks.forEach { block ->
-            when (block) {
-                is AgentRichBlock.Paragraph -> Text(
-                    text = richText(block.text),
-                    color = baseColor,
-                    style = if (isUser) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
-                )
-                is AgentRichBlock.Bullets -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    block.items.forEach { item ->
-                        Row(
-                            modifier = if (isUser) Modifier else Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(
-                                text = "•",
-                                color = if (isUser) KeacsColors.TextSecondary else KeacsColors.TextSecondary,
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            Text(
-                                text = richText(item),
-                                color = baseColor,
-                                style = if (isUser) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.weight(1f),
-                            )
+    if (isUser) {
+        Text(
+            text = text,
+            color = baseColor,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    } else {
+        val blocks = parseRichBlocks(text)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            blocks.forEach { block ->
+                when (block) {
+                    is AgentRichBlock.Paragraph -> MarkdownText(
+                        markdown = block.text,
+                        color = baseColor,
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    is AgentRichBlock.Bullets -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        block.items.forEach { item ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Text(
+                                    text = "•",
+                                    color = KeacsColors.TextSecondary,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                                MarkdownText(
+                                    markdown = item,
+                                    color = baseColor,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
                         }
                     }
                 }
@@ -346,8 +373,8 @@ private fun AgentInfoBlock(
     color: Color,
     style: TextStyle,
 ) {
-    Text(
-        text = richText(label),
+    MarkdownText(
+        markdown = label,
         color = color,
         style = style,
         modifier = Modifier
@@ -356,6 +383,136 @@ private fun AgentInfoBlock(
             .background(color.copy(alpha = 0.1f))
             .padding(horizontal = 12.dp, vertical = 9.dp),
     )
+}
+
+@Composable
+private fun MarkdownText(
+    markdown: String,
+    color: Color,
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+) {
+    val parser = remember { Parser.builder().build() }
+
+    val annotatedString = remember(markdown) {
+        buildAnnotatedString {
+            val document = parser.parse(markdown)
+            processNodes(document.firstChild, this, color, style)
+        }
+    }
+
+    Text(
+        text = annotatedString,
+        color = color,
+        style = style,
+        modifier = modifier,
+    )
+}
+
+private fun processNodes(node: Node?, builder: androidx.compose.ui.text.AnnotatedString.Builder, color: Color, style: TextStyle) {
+    var current = node
+    while (current != null) {
+        when (current) {
+            is Text -> builder.append(current.literal)
+            is SoftLineBreak, is HardLineBreak -> builder.append("\n")
+            is StrongEmphasis -> {
+                builder.withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                    processNodes(current.firstChild, builder, color, style)
+                }
+            }
+            is Emphasis -> {
+                builder.withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+                    processNodes(current.firstChild, builder, color, style)
+                }
+            }
+            is Code -> {
+                builder.withStyle(SpanStyle(
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    background = color.copy(alpha = 0.1f),
+                )) {
+                    builder.append(current.literal)
+                }
+            }
+            is Link -> {
+                builder.withStyle(SpanStyle(
+                    color = KeacsColors.Primary,
+                    textDecoration = TextDecoration.Underline,
+                )) {
+                    processNodes(current.firstChild, builder, color, style)
+                }
+            }
+            is Heading -> {
+                if (builder.toAnnotatedString().isNotEmpty()) {
+                    builder.append("\n")
+                }
+                val headingStyle = when (current.level) {
+                    1 -> style.copy(fontWeight = FontWeight.Bold, fontSize = style.fontSize * 1.5f)
+                    2 -> style.copy(fontWeight = FontWeight.Bold, fontSize = style.fontSize * 1.3f)
+                    3 -> style.copy(fontWeight = FontWeight.Bold, fontSize = style.fontSize * 1.15f)
+                    else -> style.copy(fontWeight = FontWeight.Bold)
+                }
+                builder.withStyle(SpanStyle(
+                    fontWeight = headingStyle.fontWeight,
+                    fontSize = headingStyle.fontSize,
+                )) {
+                    processNodes(current.firstChild, builder, color, style)
+                }
+                builder.append("\n")
+            }
+            is Paragraph -> {
+                if (builder.toAnnotatedString().isNotEmpty()) {
+                    builder.append("\n\n")
+                }
+                processNodes(current.firstChild, builder, color, style)
+            }
+            is BulletList -> {
+                if (builder.toAnnotatedString().isNotEmpty()) {
+                    builder.append("\n")
+                }
+                var item = current.firstChild
+                while (item != null) {
+                    builder.append("• ")
+                    processNodes(item.firstChild, builder, color, style)
+                    builder.append("\n")
+                    item = item.next
+                }
+            }
+            is OrderedList -> {
+                if (builder.toAnnotatedString().isNotEmpty()) {
+                    builder.append("\n")
+                }
+                var item = current.firstChild
+                var index = 1
+                while (item != null) {
+                    builder.append("$index. ")
+                    processNodes(item.firstChild, builder, color, style)
+                    builder.append("\n")
+                    item = item.next
+                    index++
+                }
+            }
+            is ThematicBreak -> {
+                if (builder.toAnnotatedString().isNotEmpty()) {
+                    builder.append("\n---\n")
+                }
+            }
+            is BlockQuote -> {
+                builder.append("> ")
+                processNodes(current.firstChild, builder, color, style)
+                builder.append("\n")
+            }
+            is IndentedCodeBlock -> {
+                if (builder.toAnnotatedString().isNotEmpty()) {
+                    builder.append("\n")
+                }
+                builder.withStyle(SpanStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)) {
+                    processNodes(current.firstChild, builder, color, style)
+                }
+                builder.append("\n")
+            }
+        }
+        current = current.next
+    }
 }
 
 private sealed interface AgentRichBlock {
@@ -404,25 +561,4 @@ private fun parseRichBlocks(text: String): List<AgentRichBlock> {
     flushParagraph()
     flushBullets()
     return blocks.ifEmpty { listOf(AgentRichBlock.Paragraph(text)) }
-}
-
-private fun richText(text: String) = buildAnnotatedString {
-    var index = 0
-    while (index < text.length) {
-        val start = text.indexOf("**", index)
-        if (start < 0) {
-            append(text.substring(index))
-            break
-        }
-        append(text.substring(index, start))
-        val end = text.indexOf("**", start + 2)
-        if (end < 0) {
-            append(text.substring(start))
-            break
-        }
-        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
-            append(text.substring(start + 2, end))
-        }
-        index = end + 2
-    }
 }

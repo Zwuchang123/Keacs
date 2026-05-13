@@ -15,9 +15,9 @@ class Settings:
     request_per_day_limit: int = 200
     max_message_length: int = 1500
     max_context_items: int = 10000
-    model_request_timeout_seconds: int = 90
+    model_request_timeout_seconds: int = 120
     model_max_retries: int = 2
-    model_max_completion_tokens: int = 700
+    model_max_completion_tokens: int = 4000
     audit_db_path: str = "server/data/audit.sqlite3"
 
     @classmethod
@@ -32,9 +32,9 @@ class Settings:
             request_per_day_limit=_read_int("KEACS_RATE_LIMIT_PER_DAY", 200),
             max_message_length=_read_int("KEACS_MAX_MESSAGE_LENGTH", 1500),
             max_context_items=_read_int("KEACS_MAX_CONTEXT_ITEMS", 10000),
-            model_request_timeout_seconds=_read_int("KEACS_MODEL_REQUEST_TIMEOUT_SECONDS", 90),
+            model_request_timeout_seconds=_read_int("KEACS_MODEL_REQUEST_TIMEOUT_SECONDS", 120),
             model_max_retries=_read_int("KEACS_MODEL_MAX_RETRIES", 2),
-            model_max_completion_tokens=_read_int("KEACS_MODEL_MAX_COMPLETION_TOKENS", 700),
+            model_max_completion_tokens=_read_int("KEACS_MODEL_MAX_COMPLETION_TOKENS", 4000),
             audit_db_path=os.getenv("KEACS_AUDIT_DB_PATH", "server/data/audit.sqlite3").strip()
             or "server/data/audit.sqlite3",
         )
