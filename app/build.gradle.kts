@@ -38,8 +38,8 @@ android {
         applicationId = "com.keacs.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 18
-        versionName = "1.4.4"
+        versionCode = 22
+        versionName = "1.6.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField(
