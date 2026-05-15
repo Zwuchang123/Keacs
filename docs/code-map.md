@@ -30,4 +30,7 @@
 | Agent 后端状态 | `server/app/storage/agent_run_store.py`                                  | 保存任务阶段、待确认动作、上下文观察和反馈的轻量运行状态 |
 | Agent 部署  | `server/Dockerfile`、`server/docker-compose.yml`、`server/Caddyfile`       | 官方助手后端容器化部署和 HTTPS 反向代理配置 |
 | Agent 后端测试 | `server/tests`                                                           | 后端健康检查、mock 模型、限流和日志安全测试 |
-
+| 平台公共组件文档 | `docs/components.md`                                                     | Markdown、语音转文字、Agent 卡片、确认卡片、权限提示等公共组件契约 |
+| 模块文档框架 | `docs/modules`                                                           | 记账、待办、搜索/攻略、资产观察等 Capability Modules 的轻量 PRD |
+| 当前 Markdown 实现 | `app/src/main/java/com/keacs/app/ui/agent/AgentMessages.kt`              | 当前 Android 助手 Markdown 渲染仍在 Agent 消息内部，后续平台化时应提取为公共文本组件 |
+| 语音转文字规划 | `docs/components.md`                                                     | 当前仅作为公共输入组件规划，不改变 Android 首版只支持文字输入的范围 |

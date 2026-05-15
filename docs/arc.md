@@ -2,7 +2,7 @@
 
 ## 1. 架构目标
 
-Keacs 采用“本地可信账本 + 可选在线 AI 助手”的架构。
+Keacs 当前采用“本地可信账本 + 可选在线 AI 助手”的架构，长期演进为“1 个 Agent + N 个 Capability Modules + Shared Component Layer”的个人助手平台。
 
 目标：
 
@@ -10,7 +10,9 @@ Keacs 采用“本地可信账本 + 可选在线 AI 助手”的架构。
 - 账本写入路径简单、统一、可校验。
 - AI 能力可替换，不能绑定单一模型供应商。
 - AI 只能生成候选结果和操作预览，不能直接写入账本。
-- 架构保持轻量，不为未确认的未来能力预留复杂框架。
+- Capability Modules 能独立表达功能边界、工具能力、上下文摘要和写入入口。
+- Shared Component Layer 沉淀跨模块复用的 Markdown、语音输入、消息卡片、确认卡片、权限提示和基础可视化组件。
+- 架构保持轻量，只为已经纳入平台验证路线的模块和公共组件定义边界。
 
 ## 2. 系统边界
 
@@ -39,6 +41,13 @@ Agent 后端：
 - 负责理解自然语言、生成回答和候选操作。
 - 不可信任为最终事实来源。
 - 输出必须经过结构化校验和本地业务校验。
+
+平台化边界：
+
+- Core Shell 负责导航、设置、权限入口、模块发现和全局主题。
+- Agent Runtime 负责对话、任务状态、工具注册、模型路由、确认中断和反馈采集。
+- Capability Modules 提供业务 UI、Domain、Data、Agent 工具和可共享上下文。
+- Shared Component Layer 提供跨模块组件，不能直接依赖具体业务模块或读写模块数据库。
 
 ## 3. 技术栈
 
@@ -72,6 +81,14 @@ Agent 后端：
 - 优先按 OpenAI 兼容的访问地址、API Key 和模型名接入。
 - 支持对话生成、结构化输出和 Tool Use。
 
+iOS 平台化方向：
+
+- 平台：iOS 优先，后续扩展 macOS。
+- 语言和 UI：Swift + SwiftUI。
+- 模块拆分：优先使用 Swift Package，按 `DesignSystem`、`AgentUI`、`SharedServices`、`CapabilityInterfaces`、具体功能模块拆分。
+- 系统集成：通过 App Intents 将稳定模块动作暴露给 Siri、Shortcuts、Spotlight 和系统搜索。
+- 本地智能：可评估 Apple Foundation Models 作为可插拔模型 Provider，用于轻量摘要、分类和输入理解。
+
 ## 4. 分层结构
 
 Android 分层：
@@ -94,6 +111,15 @@ AI 助手本地边界：
 - Agent 层负责状态图、上下文规划、模型调用、结构化校验和错误恢复。
 - Security 层负责设备识别、限流和访问保护。
 - Storage 层负责任务检查点、对话、账本、反馈、用户记忆和评估数据。
+
+平台分层：
+
+- Core Shell：应用外壳、一级导航、模块入口、全局设置和权限解释。
+- Agent Runtime：AgentChatSurface、AgentInputComposer、工具调用、任务阶段、Action Approval 和模型适配。
+- Capability Modules：记账、待办、搜索/攻略、资产观察等功能模块，模块之间不直接依赖实现。
+- Capability Registry：收集模块声明的入口、工具、上下文摘要、写入动作和权限需求。
+- Context Broker：按任务从模块读取最小必要上下文摘要，禁止跨模块直接读库。
+- Shared Component Layer：Markdown 渲染、语音转文字入口、消息卡片、确认卡片、错误提示、权限门禁和基础可视化组件。
 
 ## 5. 核心数据模型
 
@@ -196,6 +222,8 @@ Agent 本地数据：
 - 所有账本写入必须通过 UseCase。
 - Agent、Repository 和后端都不能直接绕过 UseCase 写入账本。
 - 新增、修改、删除、批量处理和定时记账写入，必须在用户确认后执行。
+- 平台公共组件不能直接执行模块写入；涉及写入时只能产生事件、操作草稿或用户确认结果。
+- 非记账模块也必须有自己的 UseCase 或等价业务入口，Agent 只能在 Action Approval 后调用。
 
 余额计算：
 
@@ -220,6 +248,21 @@ transfer: fromAccount -= amount, toAccount += amount
 - 导入时重新生成本地 ID。
 - 使用临时 ID 映射恢复关联关系。
 - 全流程数据库事务。
+
+Capability Modules：
+
+- 每个模块必须声明模块 ID、显示名称、入口、权限需求、可共享上下文、Agent tools 和写入动作。
+- 模块只暴露接口和摘要，不暴露内部数据库、DAO 或 Repository 实现。
+- 模块之间通信通过事件、上下文摘要或平台服务完成，不允许直接调用彼此内部实现。
+- 模块成熟后应能独立成 App，并继续复用公共组件和 Agent 工具契约。
+
+Shared Component Layer：
+
+- 公共组件必须声明输入、输出、状态、错误、权限、隐私影响和可复用场景。
+- Markdown 渲染是基础文本组件，统一支持标题、列表、加粗、链接、代码块和表格降级展示。
+- 语音转文字是输入组件能力，不默认启用；必须经过麦克风权限说明，并支持失败回退到文本输入。
+- Agent 消息卡片必须支持普通回答、工具结果、候选选择、确认预览、错误和长任务阶段。
+- 公共组件只依赖设计 token、平台服务接口和数据模型接口，不依赖具体模块实现。
 
 ## 8. 关键数据流
 
