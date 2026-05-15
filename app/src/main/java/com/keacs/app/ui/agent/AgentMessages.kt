@@ -5,6 +5,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,6 +55,7 @@ import org.commonmark.node.BulletList
 import org.commonmark.node.Code
 import org.commonmark.node.Document
 import org.commonmark.node.Emphasis
+import org.commonmark.node.FencedCodeBlock
 import org.commonmark.node.HardLineBreak
 import org.commonmark.node.Heading
 import org.commonmark.node.IndentedCodeBlock
@@ -174,90 +177,103 @@ private fun AgentMessageBubble(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
     ) {
-        Column(
-            modifier = Modifier
-                .then(
-                    if (isUser) {
-                        Modifier
-                            .widthIn(max = 288.dp)
-                            .clip(MaterialTheme.shapes.large)
-                            .background(KeacsColors.PrimaryLight)
-                            .combinedClickable(
-                                onClick = {},
-                                onLongClick = { showUserCopyMenu = true },
-                            )
-                            .padding(horizontal = 15.dp, vertical = 12.dp)
-                    } else {
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
+        if (isUser) {
+            Box(modifier = Modifier.widthIn(max = 288.dp)) {
+                Column(
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.large)
+                        .background(KeacsColors.PrimaryLight)
+                        .combinedClickable(
+                            onClick = {},
+                            onLongClick = { showUserCopyMenu = true },
+                        )
+                        .padding(horizontal = 15.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    RichMessageContent(
+                        text = message.text,
+                        isUser = true,
+                        isError = false,
+                    )
+                    message.elapsedMillis?.let { elapsed ->
+                        Text(
+                            text = elapsed.formatElapsed(),
+                            color = KeacsColors.TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
-                ),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (!isUser && message.thinkingSteps.isNotEmpty()) {
-                AgentThinkingBlock(
-                    message = message,
-                    onToggle = { onThinkingToggle(message.id) },
-                )
-            }
-            RichMessageContent(
-                text = message.text,
-                isUser = isUser,
-                isError = isError,
-            )
-            message.warnings.forEach { warning ->
-                AgentInfoBlock(
-                    label = warning,
-                    color = KeacsColors.Warning,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            message.actions.forEach { action ->
-                AgentActionCard(
-                    action = action,
-                    editOptions = editOptions,
-                    onActionChange = { updated, field -> onActionChange(message.id, updated, field) },
-                    onConfirm = { onActionConfirm(action) },
-                    onCancel = { onActionCancel(action) },
-                    onUndo = { onActionUndo(action) },
-                )
-            }
-            message.elapsedMillis?.let { elapsed ->
-                Text(
-                    text = elapsed.formatElapsed(),
-                    color = if (isUser) KeacsColors.TextSecondary else KeacsColors.TextTertiary,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            if (message.role == AgentMessageRole.ASSISTANT) {
-                AgentFeedbackRow(
-                    selectedFeedback = message.feedback,
-                    canRegenerate = canRegenerate,
-                    guidanceVisible = guidanceVisible,
-                    onLike = { onFeedback(message, AgentFeedbackLike) },
-                    onDislike = { onFeedback(message, AgentFeedbackDislike) },
-                    onRegenerate = { onFeedback(message, AgentFeedbackRegenerate) },
-                    onCopy = { clipboard.setText(AnnotatedString(message.text)) },
-                    onToggleGuidance = onToggleGuidance,
-                )
-            } else if (!isUser) {
-                AgentCopyRow(
-                    isUser = isUser,
-                    onCopy = { clipboard.setText(AnnotatedString(message.text)) },
-                )
-            }
-            if (isUser) {
+                }
                 DropdownMenu(
                     expanded = showUserCopyMenu,
                     onDismissRequest = { showUserCopyMenu = false },
+                    containerColor = KeacsColors.Surface,
                 ) {
                     DropdownMenuItem(
-                        text = { Text("复制") },
+                        text = { Text("复制", color = KeacsColors.TextPrimary) },
                         onClick = {
                             clipboard.setText(AnnotatedString(message.text))
                             showUserCopyMenu = false
                         },
+                    )
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (!isUser && message.thinkingSteps.isNotEmpty()) {
+                    AgentThinkingBlock(
+                        message = message,
+                        onToggle = { onThinkingToggle(message.id) },
+                    )
+                }
+                RichMessageContent(
+                    text = message.text,
+                    isUser = isUser,
+                    isError = isError,
+                )
+                message.warnings.forEach { warning ->
+                    AgentInfoBlock(
+                        label = warning,
+                        color = KeacsColors.Warning,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                message.actions.forEach { action ->
+                    AgentActionCard(
+                        action = action,
+                        editOptions = editOptions,
+                        onActionChange = { updated, field -> onActionChange(message.id, updated, field) },
+                        onConfirm = { onActionConfirm(action) },
+                        onCancel = { onActionCancel(action) },
+                        onUndo = { onActionUndo(action) },
+                    )
+                }
+                message.elapsedMillis?.let { elapsed ->
+                    Text(
+                        text = elapsed.formatElapsed(),
+                        color = KeacsColors.TextTertiary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (message.role == AgentMessageRole.ASSISTANT) {
+                    AgentFeedbackRow(
+                        selectedFeedback = message.feedback,
+                        canRegenerate = canRegenerate,
+                        guidanceVisible = guidanceVisible,
+                        onLike = { onFeedback(message, AgentFeedbackLike) },
+                        onDislike = { onFeedback(message, AgentFeedbackDislike) },
+                        onRegenerate = { onFeedback(message, AgentFeedbackRegenerate) },
+                        onCopy = { clipboard.setText(AnnotatedString(message.text)) },
+                        onToggleGuidance = onToggleGuidance,
+                    )
+                } else {
+                    AgentCopyRow(
+                        isUser = isUser,
+                        onCopy = { clipboard.setText(AnnotatedString(message.text)) },
                     )
                 }
             }
@@ -285,7 +301,11 @@ private fun AgentThinkingBlock(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = if (message.isStreaming) "正在思考" else "已思考${message.elapsedMillis?.let { "（用时 ${it.formatElapsed()}）" }.orEmpty()}",
+                text = if (message.isStreaming) {
+                    "正在思考${message.elapsedMillis?.let { "（已用 ${it.formatElapsed()}）" }.orEmpty()}"
+                } else {
+                    "已思考${message.elapsedMillis?.let { "（用时 ${it.formatElapsed()}）" }.orEmpty()}"
+                },
                 color = KeacsColors.TextSecondary,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -359,6 +379,49 @@ private fun RichMessageContent(
                                     modifier = Modifier.weight(1f),
                                 )
                             }
+                        }
+                    }
+                    is AgentRichBlock.Table -> AgentMarkdownTable(block)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AgentMarkdownTable(table: AgentRichBlock.Table) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(KeacsColors.SurfaceSubtle)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        table.rows.forEachIndexed { index, row ->
+            if (index > 0) {
+                HorizontalDivider(color = KeacsColors.Border)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                table.headers.forEachIndexed { cellIndex, header ->
+                    val value = row.getOrNull(cellIndex).orEmpty()
+                    if (value.isNotBlank()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Text(
+                                text = header,
+                                color = KeacsColors.TextSecondary,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(0.34f),
+                            )
+                            MarkdownText(
+                                markdown = value,
+                                color = KeacsColors.TextPrimary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(0.66f),
+                            )
                         }
                     }
                 }
@@ -510,20 +573,36 @@ private fun processNodes(node: Node?, builder: androidx.compose.ui.text.Annotate
                 }
                 builder.append("\n")
             }
+            is FencedCodeBlock -> {
+                if (builder.toAnnotatedString().isNotEmpty()) {
+                    builder.append("\n")
+                }
+                builder.withStyle(
+                    SpanStyle(
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        background = color.copy(alpha = 0.08f),
+                    ),
+                ) {
+                    builder.append(current.literal)
+                }
+                builder.append("\n")
+            }
         }
         current = current.next
     }
 }
 
-private sealed interface AgentRichBlock {
+internal sealed interface AgentRichBlock {
     data class Paragraph(val text: String) : AgentRichBlock
     data class Bullets(val items: List<String>) : AgentRichBlock
+    data class Table(val headers: List<String>, val rows: List<List<String>>) : AgentRichBlock
 }
 
-private fun parseRichBlocks(text: String): List<AgentRichBlock> {
+internal fun parseRichBlocks(text: String): List<AgentRichBlock> {
     val blocks = mutableListOf<AgentRichBlock>()
     val bullets = mutableListOf<String>()
     val paragraph = StringBuilder()
+    val tableLines = mutableListOf<String>()
 
     fun flushParagraph() {
         val value = paragraph.toString().trim()
@@ -540,13 +619,34 @@ private fun parseRichBlocks(text: String): List<AgentRichBlock> {
         }
     }
 
+    fun flushTable() {
+        if (tableLines.isNotEmpty()) {
+            parseMarkdownTable(tableLines)?.let { blocks += it }
+                ?: run {
+                    if (paragraph.isNotEmpty()) {
+                        paragraph.append('\n')
+                    }
+                    paragraph.append(tableLines.joinToString("\n"))
+                }
+            tableLines.clear()
+        }
+    }
+
     text.lineSequence().forEach { rawLine ->
         val line = rawLine.trim()
         if (line.isBlank()) {
+            flushTable()
             flushParagraph()
             flushBullets()
             return@forEach
         }
+        if (line.looksLikeTableLine()) {
+            flushParagraph()
+            flushBullets()
+            tableLines += line
+            return@forEach
+        }
+        flushTable()
         val bullet = line.removePrefix("- ").removePrefix("• ").takeIf { it != line }
         if (bullet != null) {
             flushParagraph()
@@ -558,7 +658,35 @@ private fun parseRichBlocks(text: String): List<AgentRichBlock> {
         }
         paragraph.append(line)
     }
+    flushTable()
     flushParagraph()
     flushBullets()
     return blocks.ifEmpty { listOf(AgentRichBlock.Paragraph(text)) }
 }
+
+private fun String.looksLikeTableLine(): Boolean =
+    count { it == '|' } >= 2
+
+private fun parseMarkdownTable(lines: List<String>): AgentRichBlock.Table? {
+    if (lines.size < 2 || !lines[1].isMarkdownDividerRow()) {
+        return null
+    }
+    val headers = lines.first().toMarkdownCells()
+    val rows = lines.drop(2).map { it.toMarkdownCells() }.filter { it.isNotEmpty() }
+    if (headers.isEmpty() || rows.isEmpty()) {
+        return null
+    }
+    return AgentRichBlock.Table(headers = headers, rows = rows)
+}
+
+private fun String.isMarkdownDividerRow(): Boolean =
+    toMarkdownCells().all { cell ->
+        cell.replace(":", "").all { it == '-' } && cell.count { it == '-' } >= 3
+    }
+
+private fun String.toMarkdownCells(): List<String> =
+    trim()
+        .trim('|')
+        .split('|')
+        .map { it.trim() }
+        .filter { it.isNotBlank() }

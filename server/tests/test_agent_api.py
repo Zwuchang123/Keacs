@@ -1,5 +1,6 @@
 import sqlite3
 from uuid import uuid4
+from pathlib import Path
 
 import httpx
 import pytest
@@ -104,6 +105,19 @@ def test_ready_returns_503_when_upstream_config_missing(tmp_path):
     assert response.status_code == 503
     assert response.json()["status"] == "not_ready"
     assert response.json()["checks"]["model_provider"] == "missing_config"
+
+
+def test_docker_healthcheck_uses_liveness_endpoint():
+    compose_text = Path("docker-compose.yml").read_text(encoding="utf-8")
+
+    assert "127.0.0.1:8000/health" in compose_text
+    assert "127.0.0.1:8000/ready" not in compose_text
+
+
+def test_docker_default_completion_tokens_prevents_short_reply_truncation():
+    compose_text = Path("docker-compose.yml").read_text(encoding="utf-8")
+
+    assert "KEACS_MODEL_MAX_COMPLETION_TOKENS:-1600" in compose_text
 
 
 def test_chat_uses_mock_model_and_returns_useful_result(tmp_path):
@@ -330,6 +344,13 @@ def test_model_content_empty_reply_gets_readable_message():
     payload = _parse_model_content('{"reply":"","actions":[{"type":"create_record","title":"新增账目"}]}')
 
     assert "待确认" in payload["reply"]
+
+
+def test_model_content_truncated_json_gets_readable_message():
+    payload = _parse_model_content('{"reply":"这是一段没有结束的长回复')
+
+    assert "没有拿到稳定的结果" in payload["reply"]
+    assert payload["actions"] == []
 
 
 def test_model_timeout_returns_fast_user_message():

@@ -39,6 +39,9 @@ git push gitee vX.Y.Z
 固定约定：
 
 - 连接别名：`keacs-prod`
+- 登录用户：`deploy`
+- 服务器 IP：`43.138.174.171`
+- MacBook Air 私钥：`~/.ssh/macbookair_openssh`
 - 部署目录：`/opt/keacs`
 - 后端目录：`/opt/keacs/server`
 - 容器入口：`server/docker-compose.yml`
@@ -48,6 +51,24 @@ git push gitee vX.Y.Z
 服务器只对外开放 `80` 和 `443`。FastAPI 的 `8000` 端口只在 Docker 内部暴露。域名必须先解析到服务器公网 IP，Caddy 才能申请 HTTPS 证书。
 
 过渡阶段，App 默认官方助手地址可临时使用 `http://43.138.174.171`；正式域名配置完成后切换为 HTTPS 域名。
+
+首次配置本机 SSH：
+
+```bash
+cp ~/Downloads/macbookair.pem ~/.ssh/macbookair.pem
+chmod 600 ~/.ssh/macbookair.pem
+cp ~/.ssh/macbookair.pem ~/.ssh/macbookair_openssh
+ssh-keygen -p -o -f ~/.ssh/macbookair_openssh -P "" -N ""
+cat >> ~/.ssh/config <<'EOF'
+Host keacs-prod
+  HostName 43.138.174.171
+  User deploy
+  IdentityFile ~/.ssh/macbookair_openssh
+  IdentitiesOnly yes
+EOF
+chmod 600 ~/.ssh/config
+ssh keacs-prod "whoami && hostname && pwd"
+```
 
 ## 4. 后端更新与回滚
 
@@ -61,10 +82,11 @@ git push gitee vX.Y.Z
 4. 检查容器、日志、健康检查和 App 官方服务主路径。
 
 ```bash
-ssh keacs-prod "cd /opt/keacs && git fetch --all --tags && git checkout <分支或标签> && cd server && docker compose up -d --build"
+ssh keacs-prod "cd /opt/keacs && git fetch --all --tags && git checkout <分支或标签> && git pull --ff-only && cd server && docker compose up -d --build"
 ssh keacs-prod "cd /opt/keacs/server && docker compose ps"
 ssh keacs-prod "cd /opt/keacs/server && docker compose logs --tail 200"
-ssh keacs-prod "curl -fsS https://<正式域名>/health"
+ssh keacs-prod "curl -fsS http://127.0.0.1:8000/health"
+curl -fsS http://43.138.174.171/health
 ```
 
 如果更新后健康检查失败，或 App 主路径无法连接，先回滚后端，不发布新的 APK。
@@ -72,7 +94,8 @@ ssh keacs-prod "curl -fsS https://<正式域名>/health"
 ```bash
 ssh keacs-prod "cd /opt/keacs && git checkout <上一个可用标签或提交> && cd server && docker compose up -d --build"
 ssh keacs-prod "cd /opt/keacs/server && docker compose ps"
-ssh keacs-prod "curl -fsS https://<正式域名>/health"
+ssh keacs-prod "curl -fsS http://127.0.0.1:8000/health"
+curl -fsS http://43.138.174.171/health
 ```
 
 如果只是环境变量错误，修改服务器 `/opt/keacs/server/.env` 后重启：
@@ -95,9 +118,16 @@ ssh keacs-prod "cd /opt/keacs/server && docker compose up -d"
 
 ```bash
 ssh keacs-prod
+ssh deploy@43.138.174.171
 ssh keacs-prod "whoami && hostname && pwd"
 ssh keacs-prod "top -bn1 | head -20 && free -h && df -h"
 ssh keacs-prod "docker ps -a"
+ssh keacs-prod "cd /opt/keacs/server && docker compose ps"
+ssh keacs-prod "cd /opt/keacs/server && docker compose logs --tail 200"
+ssh keacs-prod "cd /opt/keacs/server && docker compose logs --tail 200 keacs-agent"
+ssh keacs-prod "cd /opt/keacs/server && docker compose logs --tail 200 caddy"
+ssh keacs-prod "cd /opt/keacs/server && docker compose restart keacs-agent"
+ssh keacs-prod "cd /opt/keacs/server && docker compose restart caddy"
 ssh keacs-prod "docker logs --tail 200 容器名"
 ssh keacs-prod "docker restart 容器名"
 ssh keacs-prod "systemctl status 服务名 --no-pager"

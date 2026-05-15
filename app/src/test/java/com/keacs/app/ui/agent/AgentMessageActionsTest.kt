@@ -16,9 +16,34 @@ class AgentMessageActionsTest {
     }
 
     @Test
-    fun guidanceCanToggleVisibleState() {
-        assertFalse(toggleAgentGuidance(true))
-        assertTrue(toggleAgentGuidance(false))
+    fun emptyGuidanceStaysVisibleAndConversationGuidanceCanToggle() {
+        assertTrue(nextAgentGuidanceVisibility(current = true, hasMessages = false))
+        assertTrue(nextAgentGuidanceVisibility(current = false, hasMessages = false))
+        assertFalse(nextAgentGuidanceVisibility(current = true, hasMessages = true))
+        assertTrue(nextAgentGuidanceVisibility(current = false, hasMessages = true))
+    }
+
+    @Test
+    fun assistantThinkingDefaultsCollapsed() {
+        val message = AgentMessage(1, AgentMessageRole.ASSISTANT, "好的")
+
+        assertFalse(message.thinkingExpanded)
+    }
+
+    @Test
+    fun markdownTableFallsBackToGroupedRows() {
+        val blocks = parseRichBlocks(
+            """
+            | 分类 | 金额 |
+            | --- | ---: |
+            | 餐饮 | ¥18 |
+            | 交通 | ¥6 |
+            """.trimIndent(),
+        )
+
+        val table = blocks.single() as AgentRichBlock.Table
+        assertEquals(listOf("分类", "金额"), table.headers)
+        assertEquals(listOf("餐饮", "¥18"), table.rows.first())
     }
 
     @Test

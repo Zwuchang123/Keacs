@@ -113,6 +113,8 @@ def _parse_model_content(content: str) -> dict[str, Any]:
     try:
         payload = json.loads(normalized)
     except json.JSONDecodeError:
+        if _looks_like_truncated_json(normalized):
+            return _timeout_response()
         payload = _parse_json_fragment(normalized) or {"reply": normalized}
     if not isinstance(payload, dict):
         payload = {
@@ -181,6 +183,13 @@ def _parse_json_fragment(content: str) -> dict[str, Any] | None:
     except json.JSONDecodeError:
         return None
     return payload if isinstance(payload, dict) else None
+
+
+def _looks_like_truncated_json(content: str) -> bool:
+    stripped = content.lstrip()
+    if not stripped.startswith(("{", "[")):
+        return False
+    return not stripped.rstrip().endswith(("}", "]"))
 
 
 def _timeout_response() -> dict[str, Any]:

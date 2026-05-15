@@ -44,7 +44,7 @@ data class AgentMessage(
     val actions: List<AgentActionPreview> = emptyList(),
     val warnings: List<String> = emptyList(),
     val thinkingSteps: List<String> = emptyList(),
-    val thinkingExpanded: Boolean = true,
+    val thinkingExpanded: Boolean = false,
     val isStreaming: Boolean = false,
     val elapsedMillis: Long? = null,
     val feedback: String = "",
@@ -270,7 +270,14 @@ class AgentViewModel(
     }
 
     fun toggleGuidance() {
-        _uiState.update { it.copy(isGuidanceVisible = toggleAgentGuidance(it.isGuidanceVisible)) }
+        _uiState.update {
+            it.copy(
+                isGuidanceVisible = nextAgentGuidanceVisibility(
+                    current = it.isGuidanceVisible,
+                    hasMessages = it.messages.isNotEmpty(),
+                ),
+            )
+        }
     }
 
     fun updateAction(messageId: Long, action: AgentActionPreview, changedField: String) {
@@ -444,17 +451,24 @@ class AgentViewModel(
                     } else {
                         when (event) {
                             is com.keacs.app.data.agent.AgentRunEvent.StageChanged -> {
-                                message.copy(thinkingSteps = (message.thinkingSteps + event.stage.label).distinct())
+                                message.copy(
+                                    thinkingSteps = (message.thinkingSteps + event.stage.label).distinct(),
+                                    elapsedMillis = System.currentTimeMillis() - startedAt,
+                                )
                             }
                             is com.keacs.app.data.agent.AgentRunEvent.ContextRequested -> {
                                 val text = event.requests.joinToString("，") { it.reason.ifBlank { it.type } }
-                                message.copy(thinkingSteps = (message.thinkingSteps + text).filter { it.isNotBlank() }.distinct())
+                                message.copy(
+                                    thinkingSteps = (message.thinkingSteps + text).filter { it.isNotBlank() }.distinct(),
+                                    elapsedMillis = System.currentTimeMillis() - startedAt,
+                                )
                             }
                             is com.keacs.app.data.agent.AgentRunEvent.ThinkingStep -> {
                                 message.copy(
                                     thinkingSteps = (message.thinkingSteps + event.content)
                                         .filter { it.isNotBlank() }
                                         .takeLast(24),
+                                    elapsedMillis = System.currentTimeMillis() - startedAt,
                                 )
                             }
                             is com.keacs.app.data.agent.AgentRunEvent.PartialMessage -> {

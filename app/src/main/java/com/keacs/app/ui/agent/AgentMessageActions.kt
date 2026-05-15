@@ -12,6 +12,9 @@ internal fun toggleAgentFeedback(current: String, selected: String): String =
 internal fun toggleAgentGuidance(current: Boolean): Boolean =
     !current
 
+internal fun nextAgentGuidanceVisibility(current: Boolean, hasMessages: Boolean): Boolean =
+    if (hasMessages) !current else true
+
 internal fun List<AgentMessage>.lastRegenerableAssistantId(): Long? =
     lastOrNull { it.role == AgentMessageRole.ASSISTANT }?.id
 
